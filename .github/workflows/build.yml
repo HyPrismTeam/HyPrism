@@ -8,20 +8,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - os: ubuntu-22.04
-            name: linux-amd64
-          - os: macos-latest
-            name: darwin-amd64
-          - os: macos-14
-            name: darwin-arm64
-          - os: windows-latest
-            name: windows-amd64
-    
-    runs-on: ${{ matrix.platform.os }}
+    runs-on: macos-14
     
     steps:
       - uses: actions/checkout@v4
@@ -39,67 +26,13 @@ jobs:
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
       
-      - name: Install dependencies (Linux)
-        if: matrix.platform.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
-      
       - name: Build
         run: wails build -clean
-      
-      - name: Create AppImage (Linux)
-        if: matrix.platform.os == 'ubuntu-22.04'
-        run: |
-          # Download appimagetool
-          wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x appimagetool
-          
-          # Create AppDir structure
-          mkdir -p HyPrism.AppDir/usr/bin
-          mkdir -p HyPrism.AppDir/usr/share/applications
-          mkdir -p HyPrism.AppDir/usr/share/icons/hicolor/256x256/apps
-          
-          # Copy binary
-          cp build/bin/HyPrism HyPrism.AppDir/usr/bin/
-          
-          # Copy icon
-          cp build/appicon.png HyPrism.AppDir/usr/share/icons/hicolor/256x256/apps/hyprism.png
-          cp build/appicon.png HyPrism.AppDir/hyprism.png
-          
-          # Create desktop file
-          cat > HyPrism.AppDir/hyprism.desktop << 'DESKTOP'
-          [Desktop Entry]
-          Name=HyPrism
-          Exec=HyPrism
-          Icon=hyprism
-          Type=Application
-          Categories=Game;
-          Terminal=false
-          DESKTOP
-          
-          # Create AppRun
-          cat > HyPrism.AppDir/AppRun << 'APPRUN'
-          #!/bin/bash
-          SELF=$(readlink -f "$0")
-          HERE=${SELF%/*}
-          export PATH="${HERE}/usr/bin:${PATH}"
-          export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
-          exec "${HERE}/usr/bin/HyPrism" "$@"
-          APPRUN
-          chmod +x HyPrism.AppDir/AppRun
-          
-          # Build AppImage using --appimage-extract-and-run for CI compatibility
-          ./appimagetool --appimage-extract-and-run HyPrism.AppDir HyPrism-x86_64.AppImage
-          
-          # Replace binary with AppImage
-          rm -rf build/bin/*
-          mv HyPrism-x86_64.AppImage build/bin/
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HyPrism-${{ matrix.platform.name }}
+          name: HyPrism-macOS-arm64
           path: build/bin/*
           
   release:
@@ -114,6 +47,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            HyPrism-*/*
+            HyPrism-macOS-arm64/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
