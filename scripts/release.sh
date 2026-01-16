@@ -28,18 +28,7 @@ fi
 
 echo "Creating release $TAG..."
 
-# Update version in wails.json
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" wails.json
-else
-    sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" wails.json
-fi
-
-# Commit version bump
-git add wails.json
-git commit -m "chore: bump version to $VERSION"
-
-# Create and push tag
+# Create and push tag (no need to update wails.json as it doesn't have a version field)
 git tag -a "$TAG" -m "Release $VERSION"
 git push origin main
 git push origin "$TAG"
