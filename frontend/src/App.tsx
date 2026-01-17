@@ -12,7 +12,7 @@ import hytaleLogo from './assets/logo.png';
 
 import { 
   DownloadAndLaunch, 
-  OpenFolder, 
+  OpenGameFolder, 
   GetNick, 
   SetNick, 
   DeleteGame, 
@@ -211,7 +211,7 @@ const App: React.FC = () => {
           downloaded={downloaded}
           total={total}
           actions={{
-            openFolder: OpenFolder,
+            openFolder: OpenGameFolder,
             showDelete: () => setShowDelete(true),
             showModManager: () => setShowModManager(true)
           }}
