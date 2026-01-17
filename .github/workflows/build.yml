@@ -254,6 +254,8 @@ jobs:
       - name: Build Flatpak (Linux)
         if: matrix.platform == 'linux'
         run: |
+          set -e
+          
           # Install Flatpak and flatpak-builder
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
@@ -261,29 +263,44 @@ jobs:
           # Add Flathub remote
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
-          # Install required runtime
-          sudo flatpak install -y --noninteractive flathub org.gnome.Platform//46 org.gnome.Sdk//46
+          # Install required runtime (version 45 is more stable)
+          echo "Installing GNOME Platform 45..."
+          sudo flatpak install -y --noninteractive flathub org.gnome.Platform//45 org.gnome.Sdk//45
+          
+          # Verify runtime is installed
+          flatpak list | grep org.gnome.Platform || exit 1
           
           # Prepare all files in the flatpak directory where the manifest expects them
           cp /tmp/HyPrism-binary flatpak/HyPrism
           chmod +x flatpak/HyPrism
           cp build/appicon.png flatpak/dev.hyprism.HyPrism.png
           
+          # Verify files exist
+          ls -lh flatpak/HyPrism flatpak/dev.hyprism.HyPrism.png
+          
           # Build the Flatpak from the flatpak directory
           cd flatpak
+          echo "Building Flatpak..."
           flatpak-builder \
             --force-clean \
             --repo=repo \
+            --install-deps-from=flathub \
             builddir \
             dev.hyprism.HyPrism.json
           
-          # Create bundle
+          echo "Creating bundle..."
           flatpak build-bundle repo HyPrism.flatpak dev.hyprism.HyPrism
+          
+          # Verify bundle was created
+          ls -lh HyPrism.flatpak
+          
           mv HyPrism.flatpak ../build/bin/
           
           # Clean up generated files
           rm -f HyPrism dev.hyprism.HyPrism.png
           rm -rf repo builddir .flatpak-builder
+          
+          echo "Flatpak build successful!"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
