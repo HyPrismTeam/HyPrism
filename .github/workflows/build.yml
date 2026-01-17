@@ -270,9 +270,9 @@ jobs:
           sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           
           # Install required runtime with retries
-          echo "Installing GNOME Platform 47..."
+          echo "Installing GNOME Platform 46..."
           for i in 1 2 3; do
-            if sudo flatpak install -y --noninteractive flathub org.gnome.Platform//47 org.gnome.Sdk//47; then
+            if sudo flatpak install -y --noninteractive flathub org.gnome.Platform//46 org.gnome.Sdk//46; then
               echo "Runtime installed successfully"
               break
             else
