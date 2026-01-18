@@ -13,3 +13,4 @@ Downloads are available in releases
 - Windows (fully supported)
 - macOS (ARM64, Intel)
 - Linux (Flatpak recommended, AppImage has dependency issues)
+  - For Arch Users use https://aur.archlinux.org/packages/hyprism-git (paru / yay -S hyprism-git). DO NOT USE UPDATE BUTTON IN LAUNCHER! UPDATE ONLY USE AUR REPO!
