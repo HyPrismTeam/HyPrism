@@ -3,6 +3,7 @@ package pwr
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -256,50 +257,100 @@ func DownloadPWR(ctx context.Context, versionType string, fromVer, toVer int, pr
 		progressCallback("download", 0, "Downloading Hytale...", filepath.Base(pwrPath), "", 0, 0)
 	}
 
+	// Download with retries and resume capability
+	maxRetries := 5
+	var lastErr error
+	
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if attempt > 1 {
+			fmt.Printf("Retry attempt %d/%d for PWR download...\n", attempt, maxRetries)
+			if progressCallback != nil {
+				progressCallback("download", 0, fmt.Sprintf("Retrying download (attempt %d/%d)...", attempt, maxRetries), filepath.Base(pwrPath), "", 0, 0)
+			}
+			time.Sleep(2 * time.Second)
+		}
+		
+		err := downloadPWRFile(ctx, url, pwrPath, expectedSize, progressCallback)
+		if err == nil {
+			return pwrPath, nil
+		}
+		
+		lastErr = err
+		fmt.Printf("Download attempt %d failed: %v\n", attempt, err)
+	}
+	
+	return "", fmt.Errorf("failed to download after %d attempts: %w", maxRetries, lastErr)
+}
+
+func downloadPWRFile(ctx context.Context, url, pwrPath string, expectedSize int64, progressCallback func(stage string, progress float64, message string, currentFile string, speed string, downloaded, total int64)) error {
+	// Check if partial file exists
+	var resumeFrom int64 = 0
+	if stat, err := os.Stat(pwrPath); err == nil {
+		resumeFrom = stat.Size()
+		fmt.Printf("Resuming download from %d bytes\n", resumeFrom)
+	}
+
 	// Create HTTP request with proper headers (like Hytale-F2P)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("Referer", "https://launcher.hytale.com/")
+	
+	if resumeFrom > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", resumeFrom))
+	}
 
 	client := &http.Client{
-		Timeout: 30 * time.Minute,
+		Timeout: 60 * time.Minute, // Increased timeout for large files
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to download patch: %w", err)
+		return fmt.Errorf("failed to download patch: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("patch not available: HTTP %d from %s", resp.StatusCode, url)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		return fmt.Errorf("patch not available: HTTP %d from %s", resp.StatusCode, url)
 	}
 
 	total := resp.ContentLength
-	fmt.Printf("PWR file size: %d bytes (%.2f GB)\n", total, float64(total)/(1024*1024*1024))
+	if resp.StatusCode == http.StatusPartialContent {
+		total += resumeFrom
+	}
+	
+	if resumeFrom == 0 {
+		fmt.Printf("PWR file size: %d bytes (%.2f GB)\n", total, float64(total)/(1024*1024*1024))
+	}
 
-	file, err := os.Create(pwrPath)
+	// Open file for writing (append if resuming)
+	var file *os.File
+	if resp.StatusCode == http.StatusPartialContent && resumeFrom > 0 {
+		file, err = os.OpenFile(pwrPath, os.O_APPEND|os.O_WRONLY, 0644)
+	} else {
+		file, err = os.Create(pwrPath)
+		resumeFrom = 0
+	}
 	if err != nil {
-		return "", fmt.Errorf("failed to create patch file: %w", err)
+		return fmt.Errorf("failed to create patch file: %w", err)
 	}
 	defer file.Close()
 
 	buf := make([]byte, 32*1024)
-	var downloaded int64
+	downloaded := resumeFrom
 	lastUpdate := time.Now()
-	var lastDownloaded int64
+	lastDownloaded := downloaded
 
 	for {
 		n, err := resp.Body.Read(buf)
 		if n > 0 {
 			if _, writeErr := file.Write(buf[:n]); writeErr != nil {
-				return "", writeErr
+				return writeErr
 			}
 			downloaded += int64(n)
 
@@ -318,6 +369,9 @@ func DownloadPWR(ctx context.Context, versionType string, fromVer, toVer int, pr
 			}
 		}
 		if err != nil {
+			if err != io.EOF {
+				return fmt.Errorf("read error: %w", err)
+			}
 			break
 		}
 	}
@@ -326,28 +380,26 @@ func DownloadPWR(ctx context.Context, versionType string, fromVer, toVer int, pr
 
 	// Verify download is complete
 	if total > 0 && downloaded < total {
-		os.Remove(pwrPath)
-		return "", fmt.Errorf("download incomplete: got %d of %d bytes (%.1f%%), please try again", 
+		return fmt.Errorf("download incomplete: got %d of %d bytes (%.1f%%), will retry", 
 			downloaded, total, float64(downloaded)/float64(total)*100)
 	}
 
 	// Final size verification
 	info, err := os.Stat(pwrPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to verify downloaded file: %w", err)
+		return fmt.Errorf("failed to verify downloaded file: %w", err)
 	}
 	if total > 0 && info.Size() != total {
-		os.Remove(pwrPath)
-		return "", fmt.Errorf("downloaded file size mismatch: expected %d, got %d bytes", total, info.Size())
+		return fmt.Errorf("downloaded file size mismatch: expected %d, got %d bytes", total, info.Size())
 	}
 
 	fmt.Printf("Download verified: %d bytes\n", info.Size())
-
+	
 	if progressCallback != nil {
 		progressCallback("download", 100, "Download complete", "", "", downloaded, total)
 	}
-
-	return pwrPath, nil
+	
+	return nil
 }
 
 func formatSpeed(bytesPerSec float64) string {

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 // GetDefaultAppDir returns the default application directory
@@ -163,33 +162,24 @@ func ListInstances() ([]string, error) {
 }
 
 // IsVersionInstalled checks if a specific branch/version is installed
-// It checks if the game client executable exists
+// It checks if the instance directory and game files exist
 func IsVersionInstalled(branch string, version int) bool {
-	appDir := GetDefaultAppDir()
+	instanceDir := GetInstanceDir(branch, version)
+	gameDir := GetInstanceGameDir(branch, version)
 	
-	// First check if version.txt exists and has a valid version
-	versionFile := filepath.Join(appDir, "version.txt")
-	if data, err := os.ReadFile(versionFile); err == nil {
-		versionStr := strings.TrimSpace(string(data))
-		if versionStr != "" && versionStr != "0" {
-			fmt.Printf("[DEBUG] IsVersionInstalled: Found version.txt with value: %s\n", versionStr)
-			return true
-		}
+	fmt.Printf("[DEBUG] IsVersionInstalled: Checking %s v%d\n", branch, version)
+	fmt.Printf("[DEBUG] Instance dir: %s\n", instanceDir)
+	fmt.Printf("[DEBUG] Game dir: %s\n", gameDir)
+	
+	// First check if instance directory exists
+	if _, err := os.Stat(instanceDir); os.IsNotExist(err) {
+		fmt.Printf("[DEBUG] Instance directory does not exist\n")
+		return false
 	}
 	
-	// Game is installed to the legacy path: release/package/game/latest
-	// This matches where InstallGame and Launch actually use
-	gameDir := filepath.Join(appDir, "release", "package", "game", "latest")
-	
-	// Check if the game directory exists
+	// Check if game directory exists
 	if _, err := os.Stat(gameDir); os.IsNotExist(err) {
-		fmt.Printf("[DEBUG] IsVersionInstalled: Game dir does not exist: %s\n", gameDir)
-		// Also check if signature file exists (written by butler after patching)
-		sigFile := filepath.Join(appDir, "release", "package", "game", "latest.sig")
-		if _, err := os.Stat(sigFile); err == nil {
-			fmt.Printf("[DEBUG] IsVersionInstalled: Found signature file, game is installed\n")
-			return true
-		}
+		fmt.Printf("[DEBUG] Game directory does not exist\n")
 		return false
 	}
 	
@@ -204,27 +194,27 @@ func IsVersionInstalled(branch string, version int) bool {
 		clientPath = filepath.Join(gameDir, "Client", "HytaleClient")
 	}
 	
-	fmt.Printf("[DEBUG] IsVersionInstalled: Checking client at: %s\n", clientPath)
+	fmt.Printf("[DEBUG] Checking client at: %s\n", clientPath)
 	
 	if _, err := os.Stat(clientPath); err == nil {
-		fmt.Printf("[DEBUG] IsVersionInstalled: Client executable found!\n")
+		fmt.Printf("[DEBUG] Client executable found!\n")
 		return true
 	}
 	
 	// Fallback: check if Client folder exists with any content
 	clientDir := filepath.Join(gameDir, "Client")
 	if entries, err := os.ReadDir(clientDir); err == nil && len(entries) > 0 {
-		fmt.Printf("[DEBUG] IsVersionInstalled: Client folder has %d entries\n", len(entries))
+		fmt.Printf("[DEBUG] Client folder has %d entries, considering installed\n", len(entries))
 		return true
 	}
 	
-	// Final fallback: check if any files exist in the game directory
-	if entries, err := os.ReadDir(gameDir); err == nil && len(entries) > 0 {
-		fmt.Printf("[DEBUG] IsVersionInstalled: Game dir has %d entries, considering installed\n", len(entries))
+	// Final fallback: check if game directory has any content (at least a few files)
+	if entries, err := os.ReadDir(gameDir); err == nil && len(entries) >= 3 {
+		fmt.Printf("[DEBUG] Game dir has %d entries, considering installed\n", len(entries))
 		return true
 	}
 	
-	fmt.Printf("[DEBUG] IsVersionInstalled: No game found\n")
+	fmt.Printf("[DEBUG] No valid game installation found\n")
 	return false
 }
 

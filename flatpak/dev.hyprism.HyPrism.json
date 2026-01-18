@@ -1,7 +1,7 @@
 {
   "app-id": "dev.hyprism.HyPrism",
   "runtime": "org.gnome.Platform",
-  "runtime-version": "46",
+  "runtime-version": "44",
   "sdk": "org.gnome.Sdk",
   "command": "HyPrism",
   "finish-args": [
