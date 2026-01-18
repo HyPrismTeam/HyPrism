@@ -106,13 +106,23 @@ func LaunchInstance(playerName string, branch string, version int) error {
 			"--uuid", "00000000-1337-1337-1337-000000000000",
 			"--name", playerName,
 		)
-		cmd.Env = append(os.Environ(), fmt.Sprintf("LD_LIBRARY_PATH=%s:%s", clientDir, os.Getenv("LD_LIBRARY_PATH")))
+		// Set LD_LIBRARY_PATH for Linux to find SDL3_image and other libraries
+		env := os.Environ()
+		existingLD := os.Getenv("LD_LIBRARY_PATH")
+		if existingLD != "" {
+			cmd.Env = append(env, fmt.Sprintf("LD_LIBRARY_PATH=%s:%s", clientDir, existingLD))
+		} else {
+			cmd.Env = append(env, fmt.Sprintf("LD_LIBRARY_PATH=%s", clientDir))
+		}
 	}
 	
 	cmd.Dir = baseDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	// Set environment for non-Linux platforms (Linux already has it set above)
+	if runtime.GOOS != "linux" {
+		cmd.Env = os.Environ()
+	}
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start game: %w", err)
