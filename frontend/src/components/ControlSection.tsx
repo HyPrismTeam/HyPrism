@@ -257,7 +257,14 @@ export const ControlSection: React.FC<ControlSectionProps> = ({
         />
         <NavBtn onClick={openGitHub} icon={<Github size={20} />} tooltip="GitHub" />
         <NavBtn onClick={openBugReport} icon={<Bug size={20} />} tooltip="Report Bug" />
-        <NavBtn onClick={openCoffee} icon={<Coffee size={20} />} tooltip="Buy Me a Coffee" />
+        <button
+          onClick={openCoffee}
+          className="h-12 px-4 rounded-xl glass border border-white/5 flex items-center justify-center gap-2 text-white/60 hover:text-[#FFA845] hover:bg-[#FFA845]/10 active:scale-95 transition-all duration-150"
+          title="Buy Me a Coffee"
+        >
+          <span className="text-sm font-medium">Buy me a</span>
+          <Coffee size={20} />
+        </button>
         
         {/* Spacer + Disclaimer in center */}
         <div className="flex-1 flex justify-center">
