@@ -97,6 +97,7 @@ func LaunchInstance(playerName string, branch string, version int) error {
 		)
 		cmd.SysProcAttr = getWindowsSysProcAttr()
 	} else {
+		// Linux - must set LD_LIBRARY_PATH to find SDL3_image and other native libraries
 		clientDir := filepath.Join(gameDir, "Client")
 		cmd = exec.Command(clientPath,
 			"--app-dir", gameDir,
@@ -106,13 +107,18 @@ func LaunchInstance(playerName string, branch string, version int) error {
 			"--uuid", "00000000-1337-1337-1337-000000000000",
 			"--name", playerName,
 		)
-		cmd.Env = append(os.Environ(), fmt.Sprintf("LD_LIBRARY_PATH=%s:%s", clientDir, os.Getenv("LD_LIBRARY_PATH")))
+		// Preserve LD_LIBRARY_PATH with Client directory first
+		existingLdPath := os.Getenv("LD_LIBRARY_PATH")
+		newLdPath := clientDir
+		if existingLdPath != "" {
+			newLdPath = fmt.Sprintf("%s:%s", clientDir, existingLdPath)
+		}
+		cmd.Env = append(os.Environ(), fmt.Sprintf("LD_LIBRARY_PATH=%s", newLdPath))
 	}
 	
 	cmd.Dir = baseDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start game: %w", err)
