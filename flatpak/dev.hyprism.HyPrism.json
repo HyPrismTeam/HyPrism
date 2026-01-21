@@ -1,8 +1,9 @@
 {
   "app-id": "dev.hyprism.HyPrism",
-  "runtime": "org.gnome.Platform",
-  "runtime-version": "46",
-  "sdk": "org.gnome.Sdk",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "22.08",
+  "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.golang", "org.freedesktop.Sdk.Extension.node18"],
   "command": "HyPrism",
   "finish-args": [
     "--share=ipc",
@@ -11,7 +12,6 @@
     "--socket=pulseaudio",
     "--share=network",
     "--device=dri",
-    "--filesystem=home",
     "--filesystem=xdg-documents",
     "--filesystem=xdg-download",
     "--talk-name=org.freedesktop.Notifications",
@@ -19,6 +19,12 @@
     "--env=XDG_CURRENT_DESKTOP=GNOME"
   ],
   "modules": [
+    {
+      "name": "webkit2gtk-4.0",
+      "buildsystem": "simple",
+      "build-commands": [],
+      "sources": []
+    },
     {
       "name": "HyPrism",
       "buildsystem": "simple",

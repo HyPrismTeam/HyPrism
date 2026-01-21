@@ -7,7 +7,21 @@ import (
 	"runtime"
 )
 
+// IsFlatpak returns true if running inside a Flatpak sandbox
+func IsFlatpak() bool {
+	// Flatpak sets FLATPAK_ID environment variable
+	if os.Getenv("FLATPAK_ID") != "" {
+		return true
+	}
+	// Also check for /.flatpak-info file which exists in Flatpak sandboxes
+	if _, err := os.Stat("/.flatpak-info"); err == nil {
+		return true
+	}
+	return false
+}
+
 // GetDefaultAppDir returns the default application directory
+// On Linux, respects XDG_DATA_HOME for proper Flatpak sandboxing
 func GetDefaultAppDir() string {
 	var baseDir string
 
@@ -21,8 +35,15 @@ func GetDefaultAppDir() string {
 		home, _ := os.UserHomeDir()
 		baseDir = filepath.Join(home, "Library", "Application Support")
 	default: // Linux and others
-		home, _ := os.UserHomeDir()
-		baseDir = filepath.Join(home, ".local", "share")
+		// Use XDG_DATA_HOME if set (Flatpak sets this to ~/.var/app/<app-id>/data)
+		// This ensures proper sandboxing in Flatpak
+		xdgDataHome := os.Getenv("XDG_DATA_HOME")
+		if xdgDataHome != "" {
+			baseDir = xdgDataHome
+		} else {
+			home, _ := os.UserHomeDir()
+			baseDir = filepath.Join(home, ".local", "share")
+		}
 	}
 
 	return filepath.Join(baseDir, "HyPrism")

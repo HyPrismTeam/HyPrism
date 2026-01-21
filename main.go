@@ -53,6 +53,8 @@ func main() {
 		Linux: &linux.Options{
 			WindowIsTranslucent: false,
 			WebviewGpuPolicy:    linux.WebviewGpuPolicyNever,
+			// ProgramName helps with window grouping on Linux desktops
+			ProgramName: "HyPrism",
 		},
 	})
 

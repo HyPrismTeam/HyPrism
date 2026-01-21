@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, X, Copy, RefreshCw } from 'lucide-react';
+import { AlertTriangle, X, Copy, RefreshCw, Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 
 interface ErrorModalProps {
   error: {
@@ -22,6 +23,35 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
     navigator.clipboard.writeText(errorText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const reportIssue = () => {
+    const title = encodeURIComponent(`[Bug] ${error.type}: ${error.message}`);
+    const body = encodeURIComponent(
+`## Description
+<!-- Please describe what you were doing when the error occurred -->
+
+## Error Details
+- **Type:** ${error.type}
+- **Message:** ${error.message}
+- **Technical:** ${error.technical || 'N/A'}
+- **Timestamp:** ${error.timestamp || new Date().toISOString()}
+
+## System Info
+- **Platform:** ${navigator.platform}
+- **User Agent:** ${navigator.userAgent}
+
+## Steps to Reproduce
+1. 
+2. 
+3. 
+
+## Additional Context
+<!-- Add any other context about the problem here -->
+`
+    );
+    const url = `https://github.com/yyyumeniku/HyPrism/issues/new?title=${title}&body=${body}&labels=bug`;
+    BrowserOpenURL(url);
   };
 
   const getErrorColor = (type: string) => {
@@ -93,13 +123,22 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
 
         {/* Footer */}
         <div className="flex items-center justify-between p-5 border-t border-white/10 bg-black/30">
-          <button
-            onClick={copyError}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 transition-colors text-sm"
-          >
-            <Copy size={14} />
-            {copied ? t('Copied!') : t('Copy Error')}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={copyError}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 transition-colors text-sm"
+            >
+              <Copy size={14} />
+              {copied ? t('Copied!') : t('Copy Error')}
+            </button>
+            <button
+              onClick={reportIssue}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors text-sm"
+            >
+              <Bug size={14} />
+              {t('Report Issue')}
+            </button>
+          </div>
 
           <div className="flex gap-3">
             <button
