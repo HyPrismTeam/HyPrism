@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+	
 	"HyPrism/internal/config"
 	"HyPrism/internal/env"
 	"HyPrism/internal/pwr"
@@ -110,5 +112,34 @@ func (a *App) GetAutoUpdateLatest() bool {
 // SetAutoUpdateLatest sets whether the latest instance should auto-update
 func (a *App) SetAutoUpdateLatest(enabled bool) error {
 	a.cfg.AutoUpdateLatest = enabled
+	return config.Save(a.cfg)
+}
+
+// GetOnlineMode returns whether online mode is enabled
+func (a *App) GetOnlineMode() bool {
+	return a.cfg.OnlineMode
+}
+
+// SetOnlineMode sets whether online mode is enabled
+func (a *App) SetOnlineMode(enabled bool) error {
+	// If switching from online to offline, restore original binaries
+	if !enabled && a.cfg.OnlineMode {
+		fmt.Println("Switching to offline mode, restoring original binaries...")
+		// This is a placeholder - in current version we don't patch binaries
+		// so no restoration needed
+	}
+	
+	a.cfg.OnlineMode = enabled
+	return config.Save(a.cfg)
+}
+
+// GetAuthDomain returns the custom auth domain
+func (a *App) GetAuthDomain() string {
+	return a.cfg.AuthDomain
+}
+
+// SetAuthDomain sets the custom auth domain
+func (a *App) SetAuthDomain(domain string) error {
+	a.cfg.AuthDomain = domain
 	return config.Save(a.cfg)
 }

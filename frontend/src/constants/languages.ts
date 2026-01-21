@@ -32,4 +32,40 @@ export const LANGUAGE_CONFIG: Record<Language, LanguageMetadata> = {
         code: Language.FRENCH,
         searchQuery: 'French Translation',
     },
+    [Language.SPANISH]: {
+        name: 'Spanish',
+        nativeName: 'Español',
+        code: Language.SPANISH,
+        searchQuery: 'Spanish Translation',
+    },
+    [Language.PORTUGUESE]: {
+        name: 'Portuguese',
+        nativeName: 'Português',
+        code: Language.PORTUGUESE,
+        searchQuery: 'Portuguese Translation',
+    },
+    [Language.GERMAN]: {
+        name: 'German',
+        nativeName: 'Deutsch',
+        code: Language.GERMAN,
+        searchQuery: 'German Translation',
+    },
+    [Language.CHINESE]: {
+        name: 'Chinese',
+        nativeName: '中文',
+        code: Language.CHINESE,
+        searchQuery: 'Chinese Translation',
+    },
+    [Language.JAPANESE]: {
+        name: 'Japanese',
+        nativeName: '日本語',
+        code: Language.JAPANESE,
+        searchQuery: 'Japanese Translation',
+    },
+    [Language.KOREAN]: {
+        name: 'Korean',
+        nativeName: '한국어',
+        code: Language.KOREAN,
+        searchQuery: 'Korean Translation',
+    },
 };

@@ -169,6 +169,8 @@ export namespace config {
 	    selectedVersion: number;
 	    customInstanceDir: string;
 	    autoUpdateLatest: boolean;
+	    onlineMode: boolean;
+	    authDomain: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -183,6 +185,8 @@ export namespace config {
 	        this.selectedVersion = source["selectedVersion"];
 	        this.customInstanceDir = source["customInstanceDir"];
 	        this.autoUpdateLatest = source["autoUpdateLatest"];
+	        this.onlineMode = source["onlineMode"];
+	        this.authDomain = source["authDomain"];
 	    }
 	}
 

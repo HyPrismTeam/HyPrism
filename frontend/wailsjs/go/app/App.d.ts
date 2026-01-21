@@ -24,6 +24,8 @@ export function DownloadVersion(arg1:string,arg2:string):Promise<void>;
 
 export function ExitGame():Promise<void>;
 
+export function GetAuthDomain():Promise<string>;
+
 export function GetAutoUpdateLatest():Promise<boolean>;
 
 export function GetAvailableVersions():Promise<Record<string, number>>;
@@ -63,6 +65,8 @@ export function GetMusicEnabled():Promise<boolean>;
 export function GetNews(arg1:number):Promise<Array<news.NewsItem>>;
 
 export function GetNick():Promise<string>;
+
+export function GetOnlineMode():Promise<boolean>;
 
 export function GetPlatformInfo():Promise<Record<string, string>>;
 
@@ -110,6 +114,8 @@ export function SearchMods(arg1:string,arg2:number,arg3:number):Promise<mods.Sea
 
 export function SelectInstanceDirectory():Promise<string>;
 
+export function SetAuthDomain(arg1:string):Promise<void>;
+
 export function SetAutoUpdateLatest(arg1:boolean):Promise<void>;
 
 export function SetCustomInstanceDir(arg1:string):Promise<void>;
@@ -117,6 +123,8 @@ export function SetCustomInstanceDir(arg1:string):Promise<void>;
 export function SetMusicEnabled(arg1:boolean):Promise<void>;
 
 export function SetNick(arg1:string):Promise<void>;
+
+export function SetOnlineMode(arg1:boolean):Promise<void>;
 
 export function SetSelectedVersion(arg1:number):Promise<void>;
 

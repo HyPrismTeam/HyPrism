@@ -3,6 +3,12 @@ export enum Language {
     RUSSIAN = 'ru',
     TURKISH = 'tr',
     FRENCH = 'fr',
+    SPANISH = 'es',
+    PORTUGUESE = 'pt',
+    GERMAN = 'de',
+    CHINESE = 'zh',
+    JAPANESE = 'ja',
+    KOREAN = 'ko',
 }
 
 export enum GameBranch {

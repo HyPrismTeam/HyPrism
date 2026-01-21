@@ -10,17 +10,67 @@ import (
 	"runtime"
 	"strings"
 
+	"HyPrism/internal/auth"
 	"HyPrism/internal/env"
+	"HyPrism/internal/patcher"
 )
+
+// LaunchOptions contains options for launching the game
+type LaunchOptions struct {
+	PlayerName  string
+	Branch      string
+	Version     int
+	OnlineMode  bool   // If true, use online auth mode with patched binaries
+	AuthDomain  string // Custom auth domain (empty for default)
+}
 
 // Legacy Launch() removed - use LaunchInstance() instead
 
-// LaunchInstance launches a specific branch/version instance
+// LaunchInstance launches a specific branch/version instance (offline mode)
 func LaunchInstance(playerName string, branch string, version int) error {
+	return LaunchInstanceWithOptions(LaunchOptions{
+		PlayerName: playerName,
+		Branch:     branch,
+		Version:    version,
+		OnlineMode: false,
+		AuthDomain: "",
+	})
+}
+
+// LaunchInstanceOnline launches a specific branch/version instance with online mode
+func LaunchInstanceOnline(playerName string, branch string, version int, authDomain string) error {
+	return LaunchInstanceWithOptions(LaunchOptions{
+		PlayerName: playerName,
+		Branch:     branch,
+		Version:    version,
+		OnlineMode: true,
+		AuthDomain: authDomain,
+	})
+}
+
+// signMacOSBinaries signs Java runtime and other binaries on macOS to avoid Gatekeeper issues
+func signMacOSBinaries(jreDir, jrePath string) {
+	fmt.Println("Signing macOS binaries...")
+	
+	// Remove quarantine attributes
+	xattrCmd := exec.Command("xattr", "-cr", jreDir)
+	xattrCmd.Run()
+	
+	// Sign the Java binary
+	codesignCmd := exec.Command("codesign", "--force", "--deep", "--sign", "-", jreDir)
+	if output, err := codesignCmd.CombinedOutput(); err != nil {
+		fmt.Printf("Warning: Failed to sign JRE: %s\n", string(output))
+	} else {
+		fmt.Println("JRE signed successfully")
+	}
+}
+
+// LaunchInstanceWithOptions launches a specific branch/version instance with given options
+func LaunchInstanceWithOptions(opts LaunchOptions) error {
 	baseDir := env.GetDefaultAppDir()
 	
 	// Get instance-specific game directory
-	gameDir := env.GetInstanceGameDir(branch, version)
+	gameDir := env.GetInstanceGameDir(opts.Branch, opts.Version)
 	
 	// Verify client exists
 	var clientPath string
@@ -34,11 +84,11 @@ func LaunchInstance(playerName string, branch string, version int) error {
 	}
 
 	if _, err := os.Stat(clientPath); err != nil {
-		return fmt.Errorf("game client not found at %s (instance %s v%d not installed): %w", clientPath, branch, version, err)
+		return fmt.Errorf("game client not found at %s (instance %s v%d not installed): %w", clientPath, opts.Branch, opts.Version, err)
 	}
 
 	// Use instance-specific UserData
-	userDataDir := env.GetInstanceUserDataDir(branch, version)
+	userDataDir := env.GetInstanceUserDataDir(opts.Branch, opts.Version)
 	_ = os.MkdirAll(userDataDir, 0755)
 
 	// Set up Java path
@@ -67,46 +117,148 @@ func LaunchInstance(playerName string, branch string, version int) error {
 		return fmt.Errorf("Java not found at %s: %w", jrePath, err)
 	}
 
+	// On macOS, sign Java runtime to avoid Gatekeeper issues
+	if runtime.GOOS == "darwin" {
+		signMacOSBinaries(jreDir, jrePath)
+	}
+
+	// Generate UUID from player name
+	uuid := OfflineUUID(opts.PlayerName)
+	uuidStr := uuid.String()
+
+	// Determine auth mode and tokens
+	authMode := "offline"
+	var tokens *auth.AuthTokens
+
+	if opts.OnlineMode {
+		// Online mode: patch binaries and authenticate with server
+		authDomain := opts.AuthDomain
+		if authDomain == "" {
+			authDomain = patcher.DefaultAuthDomain
+		}
+
+		fmt.Printf("Online mode enabled (domain: %s)\n", authDomain)
+		
+		// Create patcher and patch game binaries
+		clientPatcher := patcher.NewClientPatcher(authDomain)
+		fmt.Println("Patching game binaries for online mode...")
+		
+		patchResult := clientPatcher.EnsurePatched(gameDir, func(msg string, percent int) {
+			fmt.Printf("  [%d%%] %s\n", percent, msg)
+		})
+		
+		if !patchResult.Success {
+			return fmt.Errorf("failed to patch game for online mode: %s", patchResult.Error)
+		}
+		
+		if patchResult.AlreadyPatched {
+			fmt.Println("Game already patched for online mode")
+		} else {
+			fmt.Printf("Successfully patched game (%d occurrences)\n", patchResult.PatchCount)
+		}
+		
+		// On macOS, sign binaries AFTER patching (critical for it to work)
+		if runtime.GOOS == "darwin" {
+			fmt.Println("Signing patched binaries (macOS)...")
+			
+			clientPath := clientPatcher.FindClientPath(gameDir)
+			if clientPath != "" {
+				// Check if it's in an app bundle
+				appBundlePath := filepath.Dir(filepath.Dir(filepath.Dir(clientPath)))
+				if strings.HasSuffix(appBundlePath, ".app") {
+					fmt.Printf("Found app bundle: %s\n", appBundlePath)
+					// Remove quarantine attribute first
+					exec.Command("xattr", "-cr", appBundlePath).Run()
+					// Sign the entire app bundle with deep signing
+					cmd := exec.Command("codesign", "--force", "--deep", "--sign", "-", appBundlePath)
+					if output, err := cmd.CombinedOutput(); err != nil {
+						fmt.Printf("Warning: Failed to sign app bundle: %v\nOutput: %s\n", err, string(output))
+					} else {
+						fmt.Println("Successfully signed app bundle")
+					}
+				} else {
+					// Sign just the binary
+					exec.Command("xattr", "-cr", clientPath).Run()
+					cmd := exec.Command("codesign", "--force", "--sign", "-", clientPath)
+					if output, err := cmd.CombinedOutput(); err != nil {
+						fmt.Printf("Warning: Failed to sign binary: %v\nOutput: %s\n", err, string(output))
+					} else {
+						fmt.Println("Successfully signed binary")
+					}
+				}
+			}
+			
+			// Sign Java runtime too
+			signMacOSBinaries(jreDir, jrePath)
+			
+			// Sign server if it exists
+			serverPath := clientPatcher.FindServerPath(gameDir)
+			if serverPath != "" {
+				serverDir := filepath.Dir(serverPath)
+				exec.Command("xattr", "-cr", serverDir).Run()
+			}
+		}
+		
+		// Try to fetch auth tokens from server
+		fmt.Println("Fetching auth tokens...")
+		var err error
+		tokens, err = auth.FetchAuthTokens(uuidStr, opts.PlayerName, authDomain)
+		if err != nil {
+			fmt.Printf("Warning: Failed to fetch auth tokens: %v\n", err)
+			fmt.Println("Falling back to offline mode for this session...")
+			tokens = auth.GenerateLocalTokens(uuidStr, opts.PlayerName)
+			authMode = "offline"
+		} else {
+			fmt.Println("Auth tokens received successfully")
+			authMode = "authenticated"
+		}
+	} else {
+		fmt.Println("Offline mode enabled")
+		tokens = auth.GenerateLocalTokens(uuidStr, opts.PlayerName)
+		authMode = "offline"
+	}
+
 	fmt.Printf("=== LAUNCH INSTANCE ===\n")
-	fmt.Printf("Branch: %s, Version: %d\n", branch, version)
+	fmt.Printf("Branch: %s, Version: %d\n", opts.Branch, opts.Version)
 	fmt.Printf("Game dir: %s\n", gameDir)
 	fmt.Printf("UserData: %s\n", userDataDir)
+	fmt.Printf("Auth mode: %s\n", authMode)
+	fmt.Printf("Online mode: %v\n", opts.OnlineMode)
 	fmt.Printf("========================\n")
+
+	// Build common arguments
+	commonArgs := []string{
+		"--app-dir", gameDir,
+		"--user-dir", userDataDir,
+		"--java-exec", jrePath,
+		"--auth-mode", authMode,
+		"--uuid", uuidStr,
+		"--name", opts.PlayerName,
+	}
+
+	// Add auth tokens if available and in authenticated mode
+	if authMode == "authenticated" && tokens != nil {
+		if tokens.IdentityToken != "" {
+			commonArgs = append(commonArgs, "--identity-token", tokens.IdentityToken)
+		}
+		if tokens.SessionToken != "" {
+			commonArgs = append(commonArgs, "--session-token", tokens.SessionToken)
+		}
+	}
 
 	var cmd *exec.Cmd
 	if runtime.GOOS == "darwin" {
 		appBundlePath := filepath.Join(gameDir, "Client", "Hytale.app")
-		cmd = exec.Command("open", appBundlePath, 
-			"--args",
-			"--app-dir", gameDir,
-			"--user-dir", userDataDir,
-			"--java-exec", jrePath,
-			"--auth-mode", "offline",
-			"--uuid", "00000000-1337-1337-1337-000000000000",
-			"--name", playerName,
-		)
+		args := append([]string{appBundlePath, "--args"}, commonArgs...)
+		cmd = exec.Command("open", args...)
 	} else if runtime.GOOS == "windows" {
 		// Windows - launch directly without special working directory
-		cmd = exec.Command(clientPath,
-			"--app-dir", gameDir,
-			"--user-dir", userDataDir,
-			"--java-exec", jrePath,
-			"--auth-mode", "offline",
-			"--uuid", "00000000-1337-1337-1337-000000000000",
-			"--name", playerName,
-		)
+		cmd = exec.Command(clientPath, commonArgs...)
 		cmd.SysProcAttr = getWindowsSysProcAttr()
 	} else {
 		// Linux - must set LD_LIBRARY_PATH to find SDL3_image and other native libraries
 		clientDir := filepath.Join(gameDir, "Client")
-		cmd = exec.Command(clientPath,
-			"--app-dir", gameDir,
-			"--user-dir", userDataDir,
-			"--java-exec", jrePath,
-			"--auth-mode", "offline",
-			"--uuid", "00000000-1337-1337-1337-000000000000",
-			"--name", playerName,
-		)
+		cmd = exec.Command(clientPath, commonArgs...)
 		// Preserve LD_LIBRARY_PATH with Client directory first
 		existingLdPath := os.Getenv("LD_LIBRARY_PATH")
 		newLdPath := clientDir

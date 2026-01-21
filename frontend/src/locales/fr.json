@@ -117,5 +117,15 @@
     "Download": "Télécharger",
     "Failed to load logs: ": "Échec du chargement des journaux : ",
     "Failed to update launcher": "Échec de la mise à jour du lanceur",
-    "Failed to change instance directory": "Échec du changement de dossier d'instance"
+    "Failed to change instance directory": "Échec du changement de dossier d'instance",
+    "Install Translation?": "Installer la traduction ?",
+    "Would you like to search for {{lang}} translation mods?": "Voulez-vous rechercher des mods de traduction pour {{lang}} ?",
+    "Yes, search": "Oui, rechercher",
+    "No": "Non",
+    "Don't ask again": "Ne plus demander",
+    "Online Mode": "Mode en ligne",
+    "Offline Mode": "Mode hors ligne",
+    "Online Mode (Click to disable)": "Mode en ligne (Cliquez pour désactiver)",
+    "Offline Mode (Click to enable online)": "Mode hors ligne (Cliquez pour activer en ligne)",
+    "Report Issue": "Signaler un problème"
 }

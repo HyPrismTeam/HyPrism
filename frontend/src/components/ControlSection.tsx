@@ -4,6 +4,7 @@ import { FolderOpen, Play, Package, Square, Github, Bug, GitBranch, Loader2, Dow
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { GameBranch } from '../constants/enums';
 import { LanguageSelector } from './LanguageSelector';
+import { OnlineToggle } from './OnlineToggle';
 
 interface ControlSectionProps {
   onPlay: () => void;
@@ -271,6 +272,8 @@ export const ControlSection: React.FC<ControlSectionProps> = ({
           currentVersion={currentVersion}
           onShowModManager={actions.showModManager}
         />
+
+        <OnlineToggle />
 
         <button
           onClick={openCoffee}

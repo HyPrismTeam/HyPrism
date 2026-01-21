@@ -38,6 +38,10 @@ export function ExitGame() {
   return window['go']['app']['App']['ExitGame']();
 }
 
+export function GetAuthDomain() {
+  return window['go']['app']['App']['GetAuthDomain']();
+}
+
 export function GetAutoUpdateLatest() {
   return window['go']['app']['App']['GetAutoUpdateLatest']();
 }
@@ -116,6 +120,10 @@ export function GetNews(arg1) {
 
 export function GetNick() {
   return window['go']['app']['App']['GetNick']();
+}
+
+export function GetOnlineMode() {
+  return window['go']['app']['App']['GetOnlineMode']();
 }
 
 export function GetPlatformInfo() {
@@ -210,6 +218,10 @@ export function SelectInstanceDirectory() {
   return window['go']['app']['App']['SelectInstanceDirectory']();
 }
 
+export function SetAuthDomain(arg1) {
+  return window['go']['app']['App']['SetAuthDomain'](arg1);
+}
+
 export function SetAutoUpdateLatest(arg1) {
   return window['go']['app']['App']['SetAutoUpdateLatest'](arg1);
 }
@@ -224,6 +236,10 @@ export function SetMusicEnabled(arg1) {
 
 export function SetNick(arg1) {
   return window['go']['app']['App']['SetNick'](arg1);
+}
+
+export function SetOnlineMode(arg1) {
+  return window['go']['app']['App']['SetOnlineMode'](arg1);
 }
 
 export function SetSelectedVersion(arg1) {

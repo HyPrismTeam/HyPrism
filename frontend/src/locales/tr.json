@@ -122,5 +122,10 @@
     "Would you like to search for {{lang}} translation mods?": "{{lang}} çeviri modlarını aramak ister misiniz?",
     "Yes, search": "Evet, ara",
     "No": "Hayır",
-    "Don't ask again": "Bir daha sorma"
+    "Don't ask again": "Bir daha sorma",
+    "Online Mode": "Çevrimiçi Mod",
+    "Offline Mode": "Çevrimdışı Mod",
+    "Online Mode (Click to disable)": "Çevrimiçi Mod (Devre dışı bırakmak için tıklayın)",
+    "Offline Mode (Click to enable online)": "Çevrimdışı Mod (Çevrimiçi etkinleştirmek için tıklayın)",
+    "Report Issue": "Sorun Bildir"
 }

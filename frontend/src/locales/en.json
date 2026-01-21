@@ -122,5 +122,10 @@
     "Would you like to search for {{lang}} translation mods?": "Would you like to search for {{lang}} translation mods?",
     "Yes, search": "Yes, search",
     "No": "No",
-    "Don't ask again": "Don't ask again"
+    "Don't ask again": "Don't ask again",
+    "Online Mode": "Online Mode",
+    "Offline Mode": "Offline Mode",
+    "Online Mode (Click to disable)": "Online Mode (Click to disable)",
+    "Offline Mode (Click to enable online)": "Offline Mode (Click to enable online)",
+    "Report Issue": "Report Issue"
 }

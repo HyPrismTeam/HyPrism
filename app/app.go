@@ -185,10 +185,19 @@ func (a *App) DownloadAndLaunch(playerName string) error {
 		return wrappedErr
 	}
 
-	// Launch the game with branch and version
+	// Launch the game with branch, version, and online mode settings
 	a.progressCallback("launch", 100, "Launching game...", "", "", 0, 0)
 
-	if err := game.LaunchInstance(playerName, versionType, version); err != nil {
+	// Use online mode from config
+	opts := game.LaunchOptions{
+		PlayerName: playerName,
+		Branch:     versionType,
+		Version:    version,
+		OnlineMode: a.cfg.OnlineMode,
+		AuthDomain: a.cfg.AuthDomain,
+	}
+
+	if err := game.LaunchInstanceWithOptions(opts); err != nil {
 		wrappedErr := GameError("Failed to launch game", err)
 		a.emitError(wrappedErr)
 		return wrappedErr

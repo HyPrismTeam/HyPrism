@@ -122,5 +122,10 @@
     "Would you like to search for {{lang}} translation mods?": "Хотите найти моды перевода для {{lang}}?",
     "No": "Нет",
     "Yes, search": "Да, искать",
-    "Don't ask again": "Больше не спрашивать"
+    "Don't ask again": "Больше не спрашивать",
+    "Online Mode": "Онлайн режим",
+    "Offline Mode": "Оффлайн режим",
+    "Online Mode (Click to disable)": "Онлайн режим (Нажмите для отключения)",
+    "Offline Mode (Click to enable online)": "Оффлайн режим (Нажмите для включения онлайна)",
+    "Report Issue": "Сообщить об ошибке"
 }
