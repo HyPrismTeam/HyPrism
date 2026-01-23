@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import datetime
 import shutil
 import requests
@@ -10,13 +9,11 @@ OWNER = "Aarav2709"
 REPO = "HyPrism"
 HEADERS = {"User-Agent": "HyPrism-installer"}
 
-
 def backup_zip(install_dir: Path):
     print("Backup Hytale")
-    y = input("Do you want backup(just in case)[y/N]?: ").lower()
+    y = input("Do you want a backup (just in case)? [y/N]: ").strip().lower()
 
-    if y not in ("y","yes"):
-        
+    if y in ("y","yes"):
         pass
     else: 
         print("Skipping backup")
