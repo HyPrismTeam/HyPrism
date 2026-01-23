@@ -17,6 +17,23 @@ else
     exit 1
 fi
 
+#!/bin/bash
+
+# Check if FUSE is supported by the kernel and if fusermount3 is installed
+# 1. Check for FUSE3 (System standard)
+if ! command -v fusermount3 >/dev/null 2>&1; then
+    echo "Missing fuse3."
+    exit 3
+fi
+
+
+if ! dpkg -s libfuse2 >/dev/null 2>&1 && ! dpkg -s libfuse2t64 >/dev/null 2>&1; then
+    echo "Warning: libfuse2 is missing. Older AppImages might not launch."
+fi
+
+echo "FUSE check passed."
+
+
 # Create venv if not exists
 if [ ! -d ".venv" ]; then
     python3 -m venv .venv
