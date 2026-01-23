@@ -90,6 +90,7 @@ def ins_shortcut(app_path: Path, install_dir: Path):
 Name=HyPrism
 Comment=Hytale Launcher
 Exec={app_path}
+TryExec={app_path}
 Icon={install_dir}/HyPrism_icon.png
 Terminal=false
 Type=Application
