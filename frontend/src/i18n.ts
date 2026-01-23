@@ -11,6 +11,7 @@ import de from './locales/de.json';
 import zh from './locales/zh.json';
 import ja from './locales/ja.json';
 import ko from './locales/ko.json';
+import be from './locales/be.json';
 
 const getSavedLanguage = (): string => {
     const saved = localStorage.getItem('i18nextLng');
@@ -55,6 +56,9 @@ i18n
             },
             [Language.KOREAN]: {
                 translation: ko,
+            },
+            [Language.BELARUSIAN]: {
+                translation: be,
             },
         },
         lng: getSavedLanguage(),
