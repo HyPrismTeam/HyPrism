@@ -32,7 +32,8 @@ import {
   GetInstalledVersionsForBranch,
   CheckLatestNeedsUpdate,
   // Settings
-  SelectInstanceDirectory,
+  GetCustomInstanceDir,
+  SetInstanceDirectory,
   GetNews,
   GetLauncherVersion,
 } from '../wailsjs/go/app/App';
@@ -145,7 +146,7 @@ const App: React.FC = () => {
   const [isLoadingVersions, setIsLoadingVersions] = useState<boolean>(false);
   const [isVersionInstalled, setIsVersionInstalled] = useState<boolean>(false);
   const [isCheckingInstalled, setIsCheckingInstalled] = useState<boolean>(false);
-  // const [customInstanceDir, setCustomInstanceDir] = useState<string>("");
+  const [customInstanceDir, setCustomInstanceDir] = useState<string>("");
   const [latestNeedsUpdate, setLatestNeedsUpdate] = useState<boolean>(false);
 
   // Check if current version is installed when branch or version changes
@@ -305,7 +306,7 @@ const App: React.FC = () => {
     GetNick().then((n: string) => n && setUsername(n));
     GetUUID().then((u: string) => u && setUuid(u));
     GetLauncherVersion().then((v: string) => setLauncherVersion(v));
-    // GetCustomInstanceDir().then((dir: string) => setCustomInstanceDir(dir));
+    GetCustomInstanceDir().then((dir: string) => dir && setCustomInstanceDir(dir));
 
     // Load saved branch and version - must load branch first, then version
     const loadSettings = async () => {
@@ -527,41 +528,58 @@ const App: React.FC = () => {
 
   const handleCustomDirChange = async () => {
     try {
-      const selectedDir = await SelectInstanceDirectory();
-      if (selectedDir) {
-        console.log('Instance directory updated to:', selectedDir);
+      const input = window.prompt(
+        t('Enter the full path where you want HyPrism instances stored:'),
+        customInstanceDir || ''
+      );
 
-        // Show info about what gets moved
+      if (!input || !input.trim()) return;
+
+      const selectedDir = await SetInstanceDirectory(input.trim());
+
+      if (!selectedDir) {
         setError({
-          type: 'INFO',
-          message: t('Instance Directory Updated'),
-          technical: t('Game instances will now be stored in:\n{{dir}}\n\nNote: The following remain in AppData:\n• Java Runtime (JRE)\n• Butler tool\n• Cache files\n• Logs\n• Launcher settings\n• WebView2 (EBWebView folder)\n\nYou may need to reinstall the game if switching drives.', { dir: selectedDir }),
+          type: 'SETTINGS_ERROR',
+          message: t('Failed to change instance directory'),
+          technical: t('The path could not be used. Please check it exists and you have write permissions.'),
           timestamp: new Date().toISOString()
         });
-
-        // Reload version list and check installed versions for new directory
-        setIsLoadingVersions(true);
-        try {
-          const versions = await GetVersionList(currentBranch);
-          setAvailableVersions(versions || []);
-
-          const installed = await GetInstalledVersionsForBranch(currentBranch);
-          setInstalledVersions(installed || []);
-
-          // Re-check if current version is installed in new directory
-          const isInstalled = await IsVersionInstalled(currentBranch, currentVersion);
-          setIsVersionInstalled(isInstalled);
-
-          // Check if latest needs update
-          if (currentVersion === 0) {
-            const needsUpdate = await CheckLatestNeedsUpdate(currentBranch);
-            setLatestNeedsUpdate(needsUpdate);
-          }
-        } catch (e) {
-          console.error('Failed to reload versions after directory change:', e);
-        }
-        setIsLoadingVersions(false);
+        return;
       }
+
+      setCustomInstanceDir(selectedDir);
+      console.log('Instance directory updated to:', selectedDir);
+
+      // Show info about what gets moved
+      setError({
+        type: 'INFO',
+        message: t('Instance Directory Updated'),
+        technical: t('Game instances will now be stored in:\n{{dir}}\n\nNote: The following remain in AppData:\n• Java Runtime (JRE)\n• Butler tool\n• Cache files\n• Logs\n• Launcher settings\n• WebView2 (EBWebView folder)\n\nYou may need to reinstall the game if switching drives.', { dir: selectedDir }),
+        timestamp: new Date().toISOString()
+      });
+
+      // Reload version list and check installed versions for new directory
+      setIsLoadingVersions(true);
+      try {
+        const versions = await GetVersionList(currentBranch);
+        setAvailableVersions(versions || []);
+
+        const installed = await GetInstalledVersionsForBranch(currentBranch);
+        setInstalledVersions(installed || []);
+
+        // Re-check if current version is installed in new directory
+        const isInstalled = await IsVersionInstalled(currentBranch, currentVersion);
+        setIsVersionInstalled(isInstalled);
+
+        // Check if latest needs update
+        if (currentVersion === 0) {
+          const needsUpdate = await CheckLatestNeedsUpdate(currentBranch);
+          setLatestNeedsUpdate(needsUpdate);
+        }
+      } catch (e) {
+        console.error('Failed to reload versions after directory change:', e);
+      }
+      setIsLoadingVersions(false);
     } catch (err) {
       console.error('Failed to change instance directory:', err);
       setError({

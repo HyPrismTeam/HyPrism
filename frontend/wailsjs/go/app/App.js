@@ -311,6 +311,10 @@ export function SelectInstanceDirectory() {
     return callBackend('SelectInstanceDirectory');
 }
 
+export function SetInstanceDirectory(path) {
+    return callBackend('SetInstanceDirectory', path);
+}
+
 export function SetAuthDomain(domain) {
     return callBackend('SetAuthDomain', domain);
 }

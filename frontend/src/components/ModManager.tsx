@@ -168,8 +168,8 @@ export const ModManager: React.FC<ModManagerProps> = ({
   const [highlightedBrowseMods, setHighlightedBrowseMods] = useState<Set<number | string>>(new Set());
 
   // Mod files cache and selection
-  const [modFilesCache, setModFilesCache] = useState<Map<number | string, ModFile[]>>(new Map());
-  const [, setLoadingModFiles] = useState<Set<number | string>>(new Set());
+  const [modFilesCache, setModFilesCache] = useState<Map<string, ModFile[]>>(new Map());
+  const [, setLoadingModFiles] = useState<Set<string>>(new Set());
   const [selectedVersions, setSelectedVersions] = useState<Map<string, number | string>>(new Map());
 
   const normalizeModKey = (id: number | string | undefined | null) => String(id ?? '');
@@ -371,8 +371,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
 
   // Load mod files
   const loadModFiles = async (modId: number | string): Promise<ModFile[]> => {
-    // Use the modId directly as key - can be either string or number
-    const cacheKey = modId;
+    const cacheKey = normalizeModKey(modId);
+    if (!cacheKey) return [];
+
     if (modFilesCache.has(cacheKey)) {
       return modFilesCache.get(cacheKey) || [];
     }
@@ -482,14 +483,25 @@ export const ModManager: React.FC<ModManagerProps> = ({
     setActiveScreenshot(0);
     setIsLoadingModFilesState(true);
 
-    const modId = 'curseForgeId' in mod ? mod.curseForgeId : 'id' in mod && typeof mod.id === 'number' ? mod.id : undefined;
+    const modId = 'curseForgeId' in mod && mod.curseForgeId
+      ? mod.curseForgeId
+      : 'id' in mod
+        ? (mod as any).id
+        : undefined;
     const modKey = normalizeModKey(modId);
     if (modId) {
       const files = await loadModFiles(modId);
+      const selectedFileId = selectedVersions.get(modKey) || files[0]?.id;
       setSelectedModFiles(files);
-      setDetailSelectedFileId(selectedVersions.get(modKey) || files[0]?.id);
+      if (selectedFileId) {
+        setDetailSelectedFileId(selectedFileId);
+        setSelectedVersions((prev) => new Map(prev).set(modKey, selectedFileId));
+      } else {
+        setDetailSelectedFileId(undefined);
+      }
     } else {
       setSelectedModFiles([]);
+      setDetailSelectedFileId(undefined);
     }
     setIsLoadingModFilesState(false);
   };

@@ -112,7 +112,7 @@ public class AppService : IDisposable
         if (info?.Version > 0) return info.Version;
 
         string resolvedBranch = string.IsNullOrWhiteSpace(branch) ? _config.VersionType : branch;
-        string branchDir = Path.Combine(_appDir, "instance", NormalizeVersionType(resolvedBranch));
+        string branchDir = GetBranchPath(resolvedBranch);
         if (Directory.Exists(branchDir))
         {
             var latest = Directory.GetDirectories(branchDir)
@@ -145,10 +145,35 @@ public class AppService : IDisposable
         public DateTime UpdatedAt { get; set; }
     }
 
+    private string GetInstanceRoot()
+    {
+        var root = string.IsNullOrWhiteSpace(_config.InstanceDirectory)
+            ? Path.Combine(_appDir, "instance")
+            : _config.InstanceDirectory;
+
+        root = Environment.ExpandEnvironmentVariables(root);
+
+        if (!Path.IsPathRooted(root))
+        {
+            root = Path.GetFullPath(Path.Combine(_appDir, root));
+        }
+
+        try
+        {
+            Directory.CreateDirectory(root);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Config", $"Failed to create instance root at {root}: {ex.Message}");
+        }
+
+        return root;
+    }
+
     private string GetBranchPath(string branch)
     {
         string normalizedBranch = NormalizeVersionType(branch);
-        return Path.Combine(_appDir, "instance", normalizedBranch);
+        return Path.Combine(GetInstanceRoot(), normalizedBranch);
     }
 
     private string GetLatestInstancePath(string branch)
@@ -198,7 +223,7 @@ public class AppService : IDisposable
             return GetLatestInstancePath(branch);
         }
         string normalizedBranch = NormalizeVersionType(branch);
-        return Path.Combine(_appDir, "instance", normalizedBranch, version.ToString());
+        return Path.Combine(GetInstanceRoot(), normalizedBranch, version.ToString());
     }
 
     private async Task<(string branch, int version)> ResolveLatestCompositeAsync()
@@ -294,6 +319,8 @@ public class AppService : IDisposable
     
     public string GetUUID() => _config.UUID;
 
+    public string GetCustomInstanceDir() => _config.InstanceDirectory ?? "";
+
     public bool SetUUID(string uuid)
     {
         if (string.IsNullOrWhiteSpace(uuid)) return false;
@@ -308,6 +335,34 @@ public class AppService : IDisposable
         _config.Nick = nick;
         SaveConfig();
         return true;
+    }
+
+    public async Task<string?> SetInstanceDirectoryAsync(string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+
+            var expanded = Environment.ExpandEnvironmentVariables(path.Trim());
+
+            if (!Path.IsPathRooted(expanded))
+            {
+                expanded = Path.GetFullPath(Path.Combine(_appDir, expanded));
+            }
+
+            Directory.CreateDirectory(expanded);
+
+            _config.InstanceDirectory = expanded;
+            SaveConfig();
+
+            Logger.Success("Config", $"Instance directory set to {expanded}");
+            return expanded;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Config", $"Failed to set instance directory: {ex.Message}");
+            return null;
+        }
     }
 
     public string GetLauncherVersion() => "2.0.0";
@@ -394,7 +449,7 @@ public class AppService : IDisposable
             return hasClient;
         }
         
-        string versionPath = Path.Combine(_appDir, "instance", normalizedBranch, versionNumber.ToString());
+        string versionPath = Path.Combine(GetInstanceRoot(), normalizedBranch, versionNumber.ToString());
 
         if (!IsClientPresent(versionPath))
         {
@@ -447,7 +502,7 @@ public class AppService : IDisposable
         var normalizedBranch = NormalizeVersionType(branch);
         var result = new List<int>();
 
-        string branchPath = Path.Combine(_appDir, "instance", normalizedBranch);
+        string branchPath = Path.Combine(GetInstanceRoot(), normalizedBranch);
         
         if (Directory.Exists(branchPath))
         {
@@ -518,7 +573,7 @@ public class AppService : IDisposable
 
             string versionPath = isLatestInstance
                 ? GetLatestInstancePath(branch)
-                : Path.Combine(_appDir, "instance", branch, targetVersion.ToString());
+                : Path.Combine(GetInstanceRoot(), branch, targetVersion.ToString());
             Directory.CreateDirectory(versionPath);
 
             // Check if we need to download/install - verify all components
@@ -1860,9 +1915,9 @@ public class AppService : IDisposable
 
     public Task<string?> SelectInstanceDirectoryAsync()
     {
-        // Folder picker not available in Photino - return null to indicate not supported
-        // The frontend should handle this gracefully
-        return Task.FromResult<string?>(null);
+        // Folder picker is not available in Photino. Return the current path so
+        // the frontend can show it and collect user input manually.
+        return Task.FromResult<string?>(_config.InstanceDirectory);
     }
 
     // News - matches Go implementation
@@ -2232,6 +2287,34 @@ public class AppService : IDisposable
         }
     }
 
+    private string GetModsPath(string versionPath)
+    {
+        var userDataPath = Path.Combine(versionPath, "UserData");
+        var preferredPath = Path.Combine(userDataPath, "Mods");
+        var legacyPath = Path.Combine(userDataPath, "mods");
+
+        if (Directory.Exists(preferredPath))
+        {
+            return preferredPath;
+        }
+
+        if (Directory.Exists(legacyPath))
+        {
+            try
+            {
+                Directory.Move(legacyPath, preferredPath);
+                return preferredPath;
+            }
+            catch
+            {
+                return legacyPath;
+            }
+        }
+
+        Directory.CreateDirectory(preferredPath);
+        return preferredPath;
+    }
+
     // Photino bridge calls non-Async names; provide thin wrapper
     public Task<bool> InstallModFileToInstance(string modId, string fileId, string branch, int version)
     {
@@ -2287,8 +2370,7 @@ public class AppService : IDisposable
         string versionPath = GetInstancePath(resolvedBranch, version);
         if (!Directory.Exists(versionPath)) return result;
         
-        string userDataPath = Path.Combine(versionPath, "UserData");
-        string modsPath = Path.Combine(userDataPath, "mods");
+        string modsPath = GetModsPath(versionPath);
         
         if (Directory.Exists(modsPath))
         {
@@ -2328,9 +2410,7 @@ public class AppService : IDisposable
             // Get the target instance path and create mods directory inside UserData
             string resolvedBranch = string.IsNullOrWhiteSpace(branch) ? _config.VersionType : branch;
             string versionPath = GetInstancePath(resolvedBranch, version);
-            string userDataPath = Path.Combine(versionPath, "UserData");
-            string modsPath = Path.Combine(userDataPath, "mods");
-            Directory.CreateDirectory(modsPath);
+            string modsPath = GetModsPath(versionPath);
             
             Logger.Info("Mods", $"Installing mod to: {modsPath}");
             
@@ -2434,8 +2514,7 @@ public class AppService : IDisposable
             string versionPath = GetInstancePath(resolvedBranch, version);
             if (!Directory.Exists(versionPath)) return false;
             
-            string userDataPath = Path.Combine(versionPath, "UserData");
-            string modsPath = Path.Combine(userDataPath, "mods");
+            string modsPath = GetModsPath(versionPath);
             var manifestPath = Path.Combine(modsPath, "manifest.json");
             
             if (!File.Exists(manifestPath))
@@ -2487,9 +2566,7 @@ public class AppService : IDisposable
             string versionPath = GetInstancePath(resolvedBranch, version);
             if (!Directory.Exists(versionPath)) Directory.CreateDirectory(versionPath);
             
-            string userDataPath = Path.Combine(versionPath, "UserData");
-            string modsPath = Path.Combine(userDataPath, "mods");
-            Directory.CreateDirectory(modsPath);
+            string modsPath = GetModsPath(versionPath);
             
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

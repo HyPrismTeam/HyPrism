@@ -114,6 +114,8 @@ export function SearchMods(arg1:string,arg2:number,arg3:number,arg4:Array<string
 
 export function SelectInstanceDirectory():Promise<string>;
 
+export function SetInstanceDirectory(arg1:string):Promise<string>;
+
 export function SetAuthDomain(arg1:string):Promise<void>;
 
 export function SetAutoUpdateLatest(arg1:boolean):Promise<void>;

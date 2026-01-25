@@ -188,6 +188,8 @@ class Program
                         "GetLauncherVersion" => app.GetLauncherVersion(),
                         "GetUUID" => app.GetUUID(),
                         "SetUUID" => app.SetUUID(GetArg<string>(request.Args, 0)),
+                        "GetCustomInstanceDir" => app.GetCustomInstanceDir(),
+                        "SetInstanceDirectory" => await app.SetInstanceDirectoryAsync(GetArg<string>(request.Args, 0)),
                         
                         // Version Management
                         "GetVersionType" => app.GetVersionType(),
