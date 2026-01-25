@@ -170,14 +170,6 @@ jobs:
           npm ci
           npm run build
 
-      - name: Build macOS x64
-        run: |
-          dotnet restore
-          dotnet publish -c Release -r osx-x64 --self-contained true \
-            /p:PublishSingleFile=true /p:PublishReadyToRun=true \
-            /p:IncludeNativeLibrariesForSelfExtract=true \
-            -o artifacts/osx-x64
-
       - name: Build macOS arm64
         run: |
           dotnet publish -c Release -r osx-arm64 --self-contained true \
@@ -187,114 +179,43 @@ jobs:
 
       - name: Debug - List build outputs
         run: |
-          echo "=== osx-x64 contents ==="
-          ls -la artifacts/osx-x64/ || echo "osx-x64 directory missing"
           echo "=== osx-arm64 contents ==="
           ls -la artifacts/osx-arm64/ || echo "osx-arm64 directory missing"
 
-      - name: Create macOS app bundles
+      - name: Create macOS app bundle
         run: |
-          set -e  # Exit on any error
+          set -e
           
-          # x64 app bundle
-          mkdir -p "artifacts/HyPrism-x64.app/Contents/MacOS"
-          mkdir -p "artifacts/HyPrism-x64.app/Contents/Resources"
+          mkdir -p "artifacts/HyPrism.app/Contents/MacOS"
+          mkdir -p "artifacts/HyPrism.app/Contents/Resources"
           
-          # Check if binary exists before copying
-          if [ ! -f "artifacts/osx-x64/HyPrism" ]; then
-            echo "ERROR: HyPrism binary not found in osx-x64!"
-            ls -la artifacts/osx-x64/
-            exit 1
-          fi
-          
-          cp artifacts/osx-x64/HyPrism "artifacts/HyPrism-x64.app/Contents/MacOS/"
-          cp -R artifacts/osx-x64/wwwroot "artifacts/HyPrism-x64.app/Contents/Resources/"
-          cp artifacts/osx-x64/jre.json "artifacts/HyPrism-x64.app/Contents/Resources/" || true
-          cp packaging/macos/Info.plist "artifacts/HyPrism-x64.app/Contents/"
-          cp packaging/macos/HyPrism.icns "artifacts/HyPrism-x64.app/Contents/Resources/"
-          chmod +x "artifacts/HyPrism-x64.app/Contents/MacOS/HyPrism"
-          
-          # Fix rpath for dylib
-          install_name_tool -add_rpath "@executable_path" "artifacts/HyPrism-x64.app/Contents/MacOS/HyPrism" || true
-          
-          # Create PkgInfo
-          echo "APPL????" > "artifacts/HyPrism-x64.app/Contents/PkgInfo"
-
-          # arm64 app bundle
-          mkdir -p "artifacts/HyPrism-arm64.app/Contents/MacOS"
-          mkdir -p "artifacts/HyPrism-arm64.app/Contents/Resources"
-          
-          # Check if binary exists before copying
           if [ ! -f "artifacts/osx-arm64/HyPrism" ]; then
-            echo "ERROR: HyPrism binary not found in osx-arm64!"
+            echo "ERROR: HyPrism binary not found!"
             ls -la artifacts/osx-arm64/
             exit 1
           fi
           
-          cp artifacts/osx-arm64/HyPrism "artifacts/HyPrism-arm64.app/Contents/MacOS/"
-          cp -R artifacts/osx-arm64/wwwroot "artifacts/HyPrism-arm64.app/Contents/Resources/"
-          cp artifacts/osx-arm64/jre.json "artifacts/HyPrism-arm64.app/Contents/Resources/" || true
-          cp packaging/macos/Info.plist "artifacts/HyPrism-arm64.app/Contents/"
-          cp packaging/macos/HyPrism.icns "artifacts/HyPrism-arm64.app/Contents/Resources/"
-          chmod +x "artifacts/HyPrism-arm64.app/Contents/MacOS/HyPrism"
+          cp artifacts/osx-arm64/HyPrism "artifacts/HyPrism.app/Contents/MacOS/"
+          cp -R artifacts/osx-arm64/wwwroot "artifacts/HyPrism.app/Contents/Resources/"
+          cp artifacts/osx-arm64/jre.json "artifacts/HyPrism.app/Contents/Resources/" || true
+          cp packaging/macos/Info.plist "artifacts/HyPrism.app/Contents/"
+          cp packaging/macos/HyPrism.icns "artifacts/HyPrism.app/Contents/Resources/"
+          chmod +x "artifacts/HyPrism.app/Contents/MacOS/HyPrism"
           
-          # Fix rpath for dylib
-          install_name_tool -add_rpath "@executable_path" "artifacts/HyPrism-arm64.app/Contents/MacOS/HyPrism" || true
+          echo "APPL????" > "artifacts/HyPrism.app/Contents/PkgInfo"
           
-          # Create PkgInfo
-          echo "APPL????" > "artifacts/HyPrism-arm64.app/Contents/PkgInfo"
-          
-          # Verify app bundles
-          echo "=== Verifying x64 app bundle ==="
-          ls -la "artifacts/HyPrism-x64.app/Contents/MacOS/"
-          echo "=== Verifying arm64 app bundle ==="
-          ls -la "artifacts/HyPrism-arm64.app/Contents/MacOS/"
+          echo "=== App bundle created ==="
+          ls -la "artifacts/HyPrism.app/Contents/MacOS/"
 
-      - name: Sign macOS apps (ad-hoc, required after install_name_tool)
+      - name: Create DMG
         run: |
-          codesign --force --deep --sign - "artifacts/HyPrism-x64.app"
-          codesign --force --deep --sign - "artifacts/HyPrism-arm64.app"
-
-      - name: Create DMG files
-        run: |
-          mkdir -p dmg-x64
-          cp -R "artifacts/HyPrism-x64.app" "dmg-x64/HyPrism.app"
-          cat > "dmg-x64/Open_HyPrism.command" << 'EOF'
-          #!/bin/bash
-          APP="$(dirname "$0")/HyPrism.app"
-          xattr -cr "$APP"
-          open "$APP"
-          EOF
-          chmod +x "dmg-x64/Open_HyPrism.command"
-          cat > "dmg-x64/README.txt" << 'EOF'
-          If macOS says the app is damaged or incomplete:
-          1) Drag HyPrism.app into Applications.
-          2) Run Open_HyPrism.command to clear quarantine and launch.
-          EOF
-          ln -s /Applications dmg-x64/Applications
-          hdiutil create -volname "HyPrism-x64" -srcfolder dmg-x64 -ov -format UDZO artifacts/HyPrism-macos-x64.dmg
-
-          mkdir -p dmg-arm64
-          cp -R "artifacts/HyPrism-arm64.app" "dmg-arm64/HyPrism.app"
-          cat > "dmg-arm64/Open_HyPrism.command" << 'EOF'
-          #!/bin/bash
-          APP="$(dirname "$0")/HyPrism.app"
-          xattr -cr "$APP"
-          open "$APP"
-          EOF
-          chmod +x "dmg-arm64/Open_HyPrism.command"
-          cat > "dmg-arm64/README.txt" << 'EOF'
-          If macOS says the app is damaged or incomplete:
-          1) Drag HyPrism.app into Applications.
-          2) Run Open_HyPrism.command to clear quarantine and launch.
-          EOF
-          ln -s /Applications dmg-arm64/Applications
-          hdiutil create -volname "HyPrism-arm64" -srcfolder dmg-arm64 -ov -format UDZO artifacts/HyPrism-macos-arm64.dmg
+          mkdir -p dmg
+          cp -R "artifacts/HyPrism.app" "dmg/HyPrism.app"
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname "HyPrism" -srcfolder dmg -ov -format UDZO artifacts/HyPrism-macos-arm64.dmg
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
-          path: |
-            artifacts/HyPrism-macos-x64.dmg
-            artifacts/HyPrism-macos-arm64.dmg
+          path: artifacts/HyPrism-macos-arm64.dmg
