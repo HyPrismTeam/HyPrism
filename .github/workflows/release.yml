@@ -145,6 +145,7 @@ jobs:
           dotnet publish -c Release -r win-x64 --self-contained true `
             /p:PublishSingleFile=true /p:PublishReadyToRun=true `
             /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:OutputType=WinExe /p:ApplicationManifest=app.manifest `
             -o artifacts/win-x64
 
       - name: Create Windows zip

@@ -67,6 +67,13 @@ class Program
         
         Logger.Success("HyPrism", "Launcher started");
         
+        // Check for updates after window loads (async, non-blocking)
+        Task.Run(async () =>
+        {
+            await Task.Delay(2000); // Wait for UI to load
+            await app.CheckForLauncherUpdatesAsync();
+        });
+        
         window.WaitForClose();
         
         // Stop server when window closes

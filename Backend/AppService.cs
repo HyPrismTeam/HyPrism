@@ -898,7 +898,7 @@ public class AppService : IDisposable
         }
     }
 
-    public string GetLauncherVersion() => "2.0.0";
+    public string GetLauncherVersion() => "2.0.1";
 
     // Version Management
     public string GetVersionType() => _config.VersionType;
@@ -2415,6 +2415,99 @@ public class AppService : IDisposable
     public void SetMainWindow(PhotinoWindow window)
     {
         _mainWindow = window;
+    }
+
+    // Check for launcher updates and emit event if available
+    public async Task CheckForLauncherUpdatesAsync()
+    {
+        if (_mainWindow == null) return;
+
+        try
+        {
+            var apiUrl = "https://api.github.com/repos/yyyumeniku/HyPrism/releases/latest";
+            var json = await HttpClient.GetStringAsync(apiUrl);
+            using var doc = JsonDocument.Parse(json);
+
+            var tagName = doc.RootElement.GetProperty("tag_name").GetString();
+            if (string.IsNullOrWhiteSpace(tagName)) return;
+
+            // Parse version from tag (e.g., "v2.0.1" -> "2.0.1")
+            var remoteVersion = tagName.TrimStart('v', 'V');
+            var currentVersion = GetLauncherVersion();
+
+            // Simple string comparison for semantic versions
+            if (IsNewerVersion(remoteVersion, currentVersion))
+            {
+                Logger.Info("Update", $"Update available: {currentVersion} -> {remoteVersion}");
+                
+                // Pick the right asset for this platform
+                string? downloadUrl = null;
+                string? assetName = null;
+                var assets = doc.RootElement.GetProperty("assets");
+                var arch = RuntimeInformation.ProcessArchitecture;
+
+                string? targetAsset = null;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    targetAsset = "macos-arm64.dmg";
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    targetAsset = "windows-x64.zip";
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    targetAsset = arch == Architecture.Arm64 ? "linux-arm64.tar.gz" : "linux-x64.AppImage";
+
+                if (!string.IsNullOrWhiteSpace(targetAsset))
+                {
+                    foreach (var asset in assets.EnumerateArray())
+                    {
+                        var name = asset.GetProperty("name").GetString();
+                        if (!string.IsNullOrWhiteSpace(name) && name.Contains(targetAsset, StringComparison.OrdinalIgnoreCase))
+                        {
+                            downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                            assetName = name;
+                            break;
+                        }
+                    }
+                }
+
+                var eventData = new
+                {
+                    type = "event",
+                    eventName = "update:available",
+                    data = new
+                    {
+                        version = remoteVersion,
+                        currentVersion = currentVersion,
+                        downloadUrl = downloadUrl ?? "",
+                        assetName = assetName ?? "",
+                        releaseUrl = doc.RootElement.GetProperty("html_url").GetString() ?? ""
+                    }
+                };
+                _mainWindow.SendWebMessage(JsonSerializer.Serialize(eventData, JsonOptions));
+            }
+            else
+            {
+                Logger.Info("Update", $"Launcher is up to date: {currentVersion}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Update", $"Failed to check for updates: {ex.Message}");
+        }
+    }
+
+    private static bool IsNewerVersion(string remote, string current)
+    {
+        // Parse versions like "2.0.1" into comparable parts
+        var remoteParts = remote.Split('.').Select(p => int.TryParse(p, out var n) ? n : 0).ToArray();
+        var currentParts = current.Split('.').Select(p => int.TryParse(p, out var n) ? n : 0).ToArray();
+
+        for (int i = 0; i < Math.Max(remoteParts.Length, currentParts.Length); i++)
+        {
+            var r = i < remoteParts.Length ? remoteParts[i] : 0;
+            var c = i < currentParts.Length ? currentParts[i] : 0;
+            if (r > c) return true;
+            if (r < c) return false;
+        }
+        return false;
     }
 
     private string GenerateOfflineUUID(string playerName)
