@@ -3,7 +3,7 @@
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
-  "sdk-extensions": ["org.freedesktop.Sdk.Extension.golang", "org.freedesktop.Sdk.Extension.node22"],
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.golang", "org.freedesktop.Sdk.Extension.node18", "org.freedesktop.Sdk.Extension.ruby"],
   "command": "HyPrism",
   "finish-args": [
     "--share=ipc",
@@ -12,11 +12,7 @@
     "--socket=pulseaudio",
     "--share=network",
     "--device=dri",
-    "--filesystem=xdg-documents",
-    "--filesystem=xdg-download",
-    "--talk-name=org.freedesktop.Notifications",
-    "--talk-name=org.freedesktop.secrets",
-    "--env=XDG_CURRENT_DESKTOP=GNOME"
+    "--talk-name=org.freedesktop.Notifications"
   ],
   "modules": [
     {
