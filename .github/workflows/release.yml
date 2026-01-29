@@ -483,21 +483,21 @@ jobs:
             "linux": {
               "amd64": {
                 "launcher": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64.AppImage",
+                  "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG_NAME/HyPrism-linux-x64.AppImage",
                   "sha256": ""
                 },
                 "tarball": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64.tar.gz",
+                  "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG_NAME/HyPrism-linux-x64.tar.gz",
                   "sha256": ""
                 }
               },
               "arm64": {
                 "launcher": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
+                  "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
                   "sha256": ""
                 },
                 "tarball": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
+                  "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
                   "sha256": ""
                 }
               }
@@ -505,7 +505,7 @@ jobs:
             "windows": {
               "amd64": {
                 "launcher": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-windows-x64.exe",
+                  "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG_NAME/HyPrism-windows-x64.exe",
                   "sha256": ""
                 }
               }
@@ -513,7 +513,7 @@ jobs:
             "darwin": {
               "arm64": {
                 "launcher": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-macos-arm64.dmg",
+                  "url": "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG_NAME/HyPrism-macos-arm64.dmg",
                   "sha256": ""
                 }
               }
