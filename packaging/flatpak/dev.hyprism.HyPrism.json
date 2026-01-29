@@ -3,7 +3,11 @@
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
-  "sdk-extensions": ["org.freedesktop.Sdk.Extension.golang", "org.freedesktop.Sdk.Extension.node18", "org.freedesktop.Sdk.Extension.ruby"],
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.golang",
+    "org.freedesktop.Sdk.Extension.node18",
+    "org.freedesktop.Sdk.Extension.ruby"
+  ],
   "command": "HyPrism",
   "finish-args": [
     "--share=ipc",
