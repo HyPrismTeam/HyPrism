@@ -16,7 +16,7 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  build-linux:
+  build-linux-modern:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -49,21 +49,23 @@ jobs:
           npm ci
           npm run build
 
-      - name: Build Linux x64
+      - name: Build Linux x64 (Modern - webkit2gtk-4.1)
         run: |
-          dotnet restore
+          dotnet restore /p:PhotinoVersion=modern
           dotnet publish -c Release -r linux-x64 --self-contained true \
             /p:PublishSingleFile=true /p:PublishReadyToRun=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
+            /p:PhotinoVersion=modern \
             -o artifacts/linux-x64
 
-      - name: Build Linux arm64
+      - name: Build Linux arm64 (Modern - webkit2gtk-4.1)
         run: |
           dotnet publish -c Release -r linux-arm64 --self-contained true \
             /p:PublishSingleFile=true /p:PublishReadyToRun=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
+            /p:PhotinoVersion=modern \
             -o artifacts/linux-arm64
 
       - name: Create tar.gz archives
@@ -81,14 +83,14 @@ jobs:
           cp packaging/flatpak/dev.hyprism.HyPrism.desktop pkg/usr/share/applications/ || true
           cp packaging/flatpak/dev.hyprism.HyPrism.png pkg/usr/share/icons/hicolor/256x256/apps/ || true
           fpm -s dir -t deb -n hyprism -v ${GITHUB_REF_NAME#v} -C pkg \
-            --description "HyPrism - Hytale Launcher" \
+            --description "HyPrism - Hytale Launcher (Modern - Ubuntu 22.04+, Debian 11+)" \
             --url "https://github.com/HyPrism/HyPrism" \
             -p artifacts/HyPrism-linux-x64.deb .
 
       - name: Create .rpm package
         run: |
           fpm -s dir -t rpm -n hyprism -v ${GITHUB_REF_NAME#v} -C pkg \
-            --description "HyPrism - Hytale Launcher" \
+            --description "HyPrism - Hytale Launcher (Modern - Fedora 36+, RHEL 9+)" \
             --url "https://github.com/HyPrism/HyPrism" \
             -p artifacts/HyPrism-linux-x64.rpm .
 
@@ -112,13 +114,119 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-builds
+          name: linux-modern-builds
           path: |
             artifacts/HyPrism-linux-x64.tar.gz
             artifacts/HyPrism-linux-arm64.tar.gz
             artifacts/HyPrism-linux-x64.deb
             artifacts/HyPrism-linux-x64.rpm
             artifacts/HyPrism-linux-x64.AppImage
+
+  build-linux-legacy:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential rpm libfuse2
+          sudo gem install --no-document fpm
+
+      - name: Install appimagetool
+        run: |
+          curl -fsSL -o /tmp/appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x /tmp/appimagetool
+          sudo mv /tmp/appimagetool /usr/local/bin/appimagetool
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Build Linux x64 (Legacy - webkit2gtk-4.0)
+        run: |
+          dotnet restore /p:PhotinoVersion=legacy
+          dotnet publish -c Release -r linux-x64 --self-contained true \
+            /p:PublishSingleFile=true /p:PublishReadyToRun=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:PhotinoVersion=legacy \
+            -o artifacts/linux-x64-legacy
+
+      - name: Build Linux arm64 (Legacy - webkit2gtk-4.0)
+        run: |
+          dotnet publish -c Release -r linux-arm64 --self-contained true \
+            /p:PublishSingleFile=true /p:PublishReadyToRun=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:PhotinoVersion=legacy \
+            -o artifacts/linux-arm64-legacy
+
+      - name: Create tar.gz archives
+        run: |
+          cd artifacts/linux-x64-legacy && tar -czf ../HyPrism-linux-x64-legacy.tar.gz . && cd ../..
+          cd artifacts/linux-arm64-legacy && tar -czf ../HyPrism-linux-arm64-legacy.tar.gz . && cd ../..
+
+      - name: Create .deb package
+        run: |
+          mkdir -p pkg-legacy/opt/hyprism pkg-legacy/usr/bin pkg-legacy/usr/share/applications pkg-legacy/usr/share/icons/hicolor/256x256/apps
+          cp -R artifacts/linux-x64-legacy/* pkg-legacy/opt/hyprism/
+          chmod +x pkg-legacy/opt/hyprism/HyPrism
+          ln -sf /opt/hyprism/HyPrism pkg-legacy/usr/bin/hyprism
+          ln -sf /opt/hyprism/HyPrism pkg-legacy/usr/bin/HyPrism
+          cp packaging/flatpak/dev.hyprism.HyPrism.desktop pkg-legacy/usr/share/applications/ || true
+          cp packaging/flatpak/dev.hyprism.HyPrism.png pkg-legacy/usr/share/icons/hicolor/256x256/apps/ || true
+          fpm -s dir -t deb -n hyprism -v ${GITHUB_REF_NAME#v} -C pkg-legacy \
+            --description "HyPrism - Hytale Launcher (Legacy - Ubuntu 18.04/20.04, Debian 10)" \
+            --url "https://github.com/HyPrism/HyPrism" \
+            -p artifacts/HyPrism-linux-x64-legacy.deb .
+
+      - name: Create .rpm package
+        run: |
+          fpm -s dir -t rpm -n hyprism -v ${GITHUB_REF_NAME#v} -C pkg-legacy \
+            --description "HyPrism - Hytale Launcher (Legacy - CentOS 7/8, Fedora 33-35)" \
+            --url "https://github.com/HyPrism/HyPrism" \
+            -p artifacts/HyPrism-linux-x64-legacy.rpm .
+
+      - name: Create AppImage
+        run: |
+          mkdir -p AppDir-legacy/usr/bin AppDir-legacy/usr/lib/hyprism AppDir-legacy/usr/share/applications AppDir-legacy/usr/share/icons/hicolor/256x256/apps
+          cp -R artifacts/linux-x64-legacy/* AppDir-legacy/usr/lib/hyprism/
+          chmod +x AppDir-legacy/usr/lib/hyprism/HyPrism
+          ln -sf ../lib/hyprism/HyPrism AppDir-legacy/usr/bin/HyPrism
+          cp packaging/flatpak/dev.hyprism.HyPrism.desktop AppDir-legacy/usr/share/applications/ || true
+          cp packaging/flatpak/dev.hyprism.HyPrism.png AppDir-legacy/usr/share/icons/hicolor/256x256/apps/ || true
+          cp packaging/flatpak/dev.hyprism.HyPrism.png AppDir-legacy/ || true
+          cat > AppDir-legacy/AppRun << 'EOF'
+          #!/bin/sh
+          exec "$(dirname "$0")/usr/lib/hyprism/HyPrism" "$@"
+          EOF
+          chmod +x AppDir-legacy/AppRun
+          ln -sf usr/share/applications/dev.hyprism.HyPrism.desktop AppDir-legacy/HyPrism.desktop || true
+          ARCH=x86_64 appimagetool -n AppDir-legacy artifacts/HyPrism-linux-x64-legacy.AppImage
+
+      - name: Upload Linux legacy artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-legacy-builds
+          path: |
+            artifacts/HyPrism-linux-x64-legacy.tar.gz
+            artifacts/HyPrism-linux-arm64-legacy.tar.gz
+            artifacts/HyPrism-linux-x64-legacy.deb
+            artifacts/HyPrism-linux-x64-legacy.rpm
+            artifacts/HyPrism-linux-x64-legacy.AppImage
 
   build-windows:
     runs-on: windows-latest
@@ -232,7 +340,7 @@ jobs:
           path: artifacts/HyPrism-macos-arm64.dmg
 
   release:
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-linux-modern, build-linux-legacy, build-windows, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -255,23 +363,51 @@ jobs:
             "version": "$VERSION",
             "linux": {
               "amd64": {
-                "launcher": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64.AppImage",
-                  "sha256": ""
+                "modern": {
+                  "launcher": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64.AppImage",
+                    "sha256": "",
+                    "description": "For Ubuntu 22.04+, Debian 11+, Fedora 36+ (webkit2gtk-4.1)"
+                  },
+                  "tarball": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64.tar.gz",
+                    "sha256": ""
+                  }
                 },
-                "tarball": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64.tar.gz",
-                  "sha256": ""
+                "legacy": {
+                  "launcher": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64-legacy.AppImage",
+                    "sha256": "",
+                    "description": "For Ubuntu 18.04/20.04, Debian 10, CentOS 7/8 (webkit2gtk-4.0)"
+                  },
+                  "tarball": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-x64-legacy.tar.gz",
+                    "sha256": ""
+                  }
                 }
               },
               "arm64": {
-                "launcher": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
-                  "sha256": ""
+                "modern": {
+                  "launcher": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
+                    "sha256": "",
+                    "description": "For modern ARM64 Linux (webkit2gtk-4.1)"
+                  },
+                  "tarball": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
+                    "sha256": ""
+                  }
                 },
-                "tarball": {
-                  "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64.tar.gz",
-                  "sha256": ""
+                "legacy": {
+                  "launcher": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64-legacy.tar.gz",
+                    "sha256": "",
+                    "description": "For legacy ARM64 Linux (webkit2gtk-4.0)"
+                  },
+                  "tarball": {
+                    "url": "https://github.com/yyyumeniku/HyPrism/releases/download/$TAG_NAME/HyPrism-linux-arm64-legacy.tar.gz",
+                    "sha256": ""
+                  }
                 }
               }
             },
@@ -310,17 +446,31 @@ jobs:
             **macOS**
             - `HyPrism-macos-arm64.dmg` - macOS Apple Silicon
             
-            **Linux**
-            - `HyPrism-linux-x64.tar.gz` - Linux 64-bit portable
-            - `HyPrism-linux-arm64.tar.gz` - Linux ARM64 portable
-            - `HyPrism-linux-x64.deb` - Debian/Ubuntu package
-            - `HyPrism-linux-x64.rpm` - Fedora/RHEL package
-            - `HyPrism-linux-x64.AppImage` - Universal Linux AppImage
+            **Linux - Modern (Ubuntu 22.04+, Debian 11+, Fedora 36+)**
+            - `HyPrism-linux-x64.tar.gz` - Linux 64-bit portable (webkit2gtk-4.1)
+            - `HyPrism-linux-arm64.tar.gz` - Linux ARM64 portable (webkit2gtk-4.1)
+            - `HyPrism-linux-x64.deb` - Debian/Ubuntu package (webkit2gtk-4.1)
+            - `HyPrism-linux-x64.rpm` - Fedora/RHEL package (webkit2gtk-4.1)
+            - `HyPrism-linux-x64.AppImage` - Universal Linux AppImage (webkit2gtk-4.1)
+            
+            **Linux - Legacy (Ubuntu 18.04/20.04, Debian 10, CentOS 7/8)**
+            - `HyPrism-linux-x64-legacy.tar.gz` - Linux 64-bit portable (webkit2gtk-4.0)
+            - `HyPrism-linux-arm64-legacy.tar.gz` - Linux ARM64 portable (webkit2gtk-4.0)
+            - `HyPrism-linux-x64-legacy.deb` - Debian/Ubuntu package (webkit2gtk-4.0)
+            - `HyPrism-linux-x64-legacy.rpm` - Fedora/RHEL package (webkit2gtk-4.0)
+            - `HyPrism-linux-x64-legacy.AppImage` - Universal Linux AppImage (webkit2gtk-4.0)
+            
+            ### Important Notes
+            
+            **Linux Users**: Choose the appropriate version for your distribution:
+            - **Modern**: For newer distributions with webkit2gtk-4.1 (Ubuntu 22.04+, Debian 11+, Fedora 36+)
+            - **Legacy**: For older distributions with webkit2gtk-4.0 (Ubuntu 18.04/20.04, Debian 10, CentOS 7/8)
+            
+            If you're unsure which version to use, try the modern version first. If it fails to start, use the legacy version.
             
             ### Changes
-            - Complete rewrite using .NET 8 and Photino
-            - Improved performance and stability
-            - Ukrainian language support added
+            - Added legacy Linux builds for compatibility with older distributions
+            - Updated to support both webkit2gtk-4.0 and webkit2gtk-4.1
           draft: false
           prerelease: false
           files: |

@@ -29,8 +29,17 @@
 
   <ItemGroup>
     <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
-    <PackageReference Include="Photino.NET" Version="4.0.16" />
     <PackageReference Include="System.Text.Json" Version="10.0.2" />
+  </ItemGroup>
+
+  <!-- Modern build (webkit2gtk-4.1) - default -->
+  <ItemGroup Condition="'$(PhotinoVersion)' == '' OR '$(PhotinoVersion)' == 'modern'">
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+  </ItemGroup>
+
+  <!-- Legacy build (webkit2gtk-4.0) - for older Linux distributions -->
+  <ItemGroup Condition="'$(PhotinoVersion)' == 'legacy'">
+    <PackageReference Include="Photino.NET" Version="3.1.18" />
   </ItemGroup>
 
   <ItemGroup>
