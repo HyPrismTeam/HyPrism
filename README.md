@@ -21,3 +21,5 @@ Downloads are available in releases
 Backend : dotnet build (for building) and dotnet run (for running the launcher)
 Frontend : npm run build
 
+## Credits
+Sanasol for maintaining and creating the auth server (https://github.com/sanasol/hytale-auth-server)
