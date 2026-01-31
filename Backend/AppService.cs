@@ -1941,9 +1941,8 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
 
     public string GetLauncherVersion()
     {
-        // For testing: release = 2.0.2, pre-release/beta = 2.0.3
-        var branch = GetLauncherBranch();
-        return branch == "beta" ? "2.0.3" : "2.0.2";
+        // Unified launcher version for all branches
+        return "2.0.3";
     }
 
     /// <summary>
@@ -6921,7 +6920,7 @@ rm -f ""$0""
             using var request = new HttpRequestMessage(HttpMethod.Get, 
                 $"https://discord.com/api/v10/channels/{DiscordAnnouncementChannelId}/messages?limit=1");
             request.Headers.Add("Authorization", $"Bot {DiscordBotToken}");
-            request.Headers.Add("User-Agent", "HyPrism/2.0.1");
+            request.Headers.Add("User-Agent", "HyPrism/2.0.3");
 
             using var response = await HttpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
@@ -7019,7 +7018,7 @@ rm -f ""$0""
             
             using var request = new HttpRequestMessage(HttpMethod.Put, url);
             request.Headers.Add("Authorization", $"Bot {DiscordBotToken}");
-            request.Headers.Add("User-Agent", "HyPrism/2.0.1");
+            request.Headers.Add("User-Agent", "HyPrism/2.0.3");
 
             using var response = await HttpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
