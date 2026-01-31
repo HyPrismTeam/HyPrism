@@ -158,7 +158,9 @@ if [[ "$(uname -s)" == "Linux" ]]; then
       require_tool appimagetool "appimagetool" "appimagetool" "command -v appimagetool >/dev/null 2>&1 || { sudo apt-get update -y || true; sudo apt-get install -y libfuse2 || true; curl -fsSL -o /tmp/appimagetool \"https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage\"; chmod +x /tmp/appimagetool; sudo mv /tmp/appimagetool /usr/local/bin/appimagetool; }"
     fi
     if [[ "$DO_FLATPAK" == "1" ]]; then
-      require_tool flatpak-builder "flatpak flatpak-builder appstream appstream-util desktop-file-utils" "flatpak flatpak-builder appstream appstream-util desktop-file-utils" ""
+      require_tool flatpak-builder "flatpak flatpak-builder" "flatpak flatpak-builder" ""
+      # appstream-compose is required by flatpak-builder for AppStream metadata
+      require_tool appstream-compose "appstream-util appstream desktop-file-utils" "appstream desktop-file-utils" ""
     fi
   fi
 fi
