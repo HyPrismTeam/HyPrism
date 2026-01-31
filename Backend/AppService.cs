@@ -4096,20 +4096,21 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
         ProcessStartInfo startInfo;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            // Build the full argument string for Windows
+            string argsString = string.Join(" ", gameArgs);
+            
             startInfo = new ProcessStartInfo
             {
                 FileName = executable,
+                Arguments = argsString,
                 WorkingDirectory = workingDir,
-                UseShellExecute = true,
-                CreateNoWindow = false
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false
             };
-            // Add arguments for Windows
-            foreach (var arg in gameArgs)
-            {
-                var parts = arg.Split(' ', 2);
-                startInfo.ArgumentList.Add(parts[0]);
-                if (parts.Length > 1) startInfo.ArgumentList.Add(parts[1].Trim('"'));
-            }
+            
+            Logger.Info("Game", $"Windows launch args: {argsString}");
         }
         else
         {

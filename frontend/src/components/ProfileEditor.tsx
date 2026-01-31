@@ -91,10 +91,19 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
 
     useEffect(() => {
         if (isOpen) {
-            loadProfile();
-            loadAvatar();
-            loadProfiles();
-            setIsCreatingNewProfile(false);
+            const initializeEditor = async () => {
+                await loadProfile();
+                await loadAvatar();
+                // Ensure current profile is saved to the profiles list
+                try {
+                    await SaveCurrentAsProfile();
+                } catch (err) {
+                    console.error('Failed to save current profile:', err);
+                }
+                await loadProfiles();
+                setIsCreatingNewProfile(false);
+            };
+            initializeEditor();
         }
     }, [isOpen, loadAvatar, loadProfiles]);
 
