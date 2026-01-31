@@ -1758,8 +1758,13 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
             if (File.Exists(skinPath))
             {
                 var destPath = Path.Combine(profileDir, "skin.json");
+                var skinJson = File.ReadAllText(skinPath);
                 File.Copy(skinPath, destPath, true);
-                Logger.Info("Profile", $"Backed up skin for {profile.Name}");
+                Logger.Info("Profile", $"Backed up skin for {profile.Name} ({skinJson.Length} bytes)");
+            }
+            else
+            {
+                Logger.Warning("Profile", $"No skin file found to backup for {profile.Name} at {skinPath}");
             }
             
             // Backup avatar preview
@@ -1809,6 +1814,47 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
                 var destPath = Path.Combine(skinCacheDir, $"{profile.UUID}.json");
                 File.Copy(skinBackupPath, destPath, true);
                 Logger.Success("Profile", $"Restored skin for {profile.Name}");
+                
+                // Also push the complete skin data to the auth server to ensure it's in sync
+                // This is crucial because the auth server MERGES updates, so if it has stale data,
+                // it will corrupt the skin. By sending the full skin.json, we ensure a fresh start.
+                // Note: This happens in the background and doesn't block profile switching
+                if (_config.OnlineMode && !string.IsNullOrWhiteSpace(_config.AuthDomain))
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // Read the complete skin JSON from the backup
+                            var skinJson = await File.ReadAllTextAsync(skinBackupPath);
+                            
+                            using var httpClient = new HttpClient();
+                            httpClient.Timeout = TimeSpan.FromSeconds(10);
+                            
+                            var content = new StringContent(skinJson, System.Text.Encoding.UTF8, "application/json");
+                            
+                            // Use the account-data endpoint which accepts skin updates
+                            // The UUID in the path tells the server which profile to update
+                            var response = await httpClient.PutAsync(
+                                $"https://{_config.AuthDomain}/account-data/skin/{profile.UUID}",
+                                content
+                            );
+                            
+                            if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                            {
+                                Logger.Success("Profile", $"Synced complete skin to auth server for {profile.Name}");
+                            }
+                            else
+                            {
+                                Logger.Warning("Profile", $"Failed to sync skin to auth server: {response.StatusCode}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warning("Profile", $"Failed to sync skin to auth server: {ex.Message}");
+                        }
+                    });
+                }
             }
             
             // Restore avatar preview
@@ -4235,17 +4281,18 @@ exec env \
                 var tagName = release.GetProperty("tag_name").GetString();
                 if (string.IsNullOrWhiteSpace(tagName)) continue;
                 
+                // Check GitHub's native prerelease flag
                 var isPrerelease = release.TryGetProperty("prerelease", out var prereleaseVal) && prereleaseVal.GetBoolean();
-                var tagLower = tagName.ToLowerInvariant();
                 
-                // Determine if this is a beta release
-                // Beta releases: prerelease=true OR tag starts with "beta"
-                var isBetaRelease = isPrerelease || tagLower.StartsWith("beta");
-                
-                // Skip releases that don't match our channel preference
-                if (!isBetaChannel && isBetaRelease)
+                // Match channel: beta channel gets prereleases, stable gets stable releases
+                if (isBetaChannel && !isPrerelease)
                 {
-                    // User wants stable, skip beta releases
+                    // User wants beta, skip stable releases
+                    continue;
+                }
+                else if (!isBetaChannel && isPrerelease)
+                {
+                    // User wants stable, skip prereleases
                     continue;
                 }
                 

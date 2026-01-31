@@ -267,6 +267,9 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                 return;
             }
             
+            // Clear avatar immediately to prevent showing old avatar
+            setLocalAvatar('');
+            
             console.log('[ProfileEditor] Switching to profile at index:', actualIndex, 'with ID:', profileId);
             const success = await SwitchProfile(actualIndex);
             if (success) {
