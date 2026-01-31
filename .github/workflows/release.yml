@@ -152,6 +152,7 @@ jobs:
   publish-flatpak-remote:
     needs: package-flatpak
     runs-on: ubuntu-latest
+    continue-on-error: true
     permissions:
       contents: read
       pages: write
