@@ -513,7 +513,7 @@ jobs:
           fi
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: ncipollo/release-action@v1
         with:
           tag_name: v${{ steps.determine_version.outputs.version }}
           name: HyPrism v${{ steps.determine_version.outputs.version }}
@@ -545,5 +545,6 @@ jobs:
             - Updated to support webkit2gtk-4.1
           draft: false
           prerelease: ${{ github.event.inputs.prerelease }}
-          files: |
-            release-assets/*
+          artifacts: release-assets/*
+          allowUpdates: true
+          replacesArtifacts: true
