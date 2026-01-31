@@ -17,13 +17,23 @@ A multiplatform Hytale launcher with mod manager and more!
 ## Installation
 Downloads are available in [releases](https://github.com/yyyumeniku/HyPrism/releases)
 
-### Linux Users
-HyPrism is available in two variants for Linux:
+### Available builds
+HyPrism is availalbe for:
+- **Windows x86_64**
+- **macOS arm**
+- **Linux x86_64**: 4 options (AppImage, DEB, RPM, Flatpak)
 
-- **Modern** (webkit2gtk-4.1): For Ubuntu 22.04+, Debian 11+, Fedora 36+, and other modern distributions
-- **Legacy** (webkit2gtk-4.0): For Ubuntu 18.04/20.04, Debian 10, CentOS 7/8, and other older distributions
+For older Linux OSes the Flatpak will be the only feasable solution.
 
-If you're unsure which version to use, try the modern version first. If it fails to start with library errors, use the legacy version.
+### Flatpak Remote (Experimental)
+You can try the experimental Flatpak remote hosted on GitHub Pages. Updates may be unstable.
+
+1) Add the remote:
+  - `flatpak remote-add --if-not-exists hyprism https://yyyumeniku.github.io/HyPrism/flatpak-repo`
+2) Install:
+  - `flatpak install hyprism dev.hyprism.HyPrism`
+3) Update later:
+  - `flatpak update dev.hyprism.HyPrism`
 
 ## Build instructions
 **Backend**: 
