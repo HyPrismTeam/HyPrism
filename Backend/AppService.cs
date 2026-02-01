@@ -4780,7 +4780,7 @@ exec env \
                 result.Add(new NewsItemResponse
                 {
                     Title = item.Title ?? "",
-                    Excerpt = HttpUtility.HtmlDecode(item.BodyExcerpt ?? ""),
+                    Excerpt = CleanNewsExcerpt(item.BodyExcerpt, item.Title),
                     Url = url2,
                     Date = date,
                     PublishedAt = item.PublishedAt ?? "",
@@ -4798,6 +4798,32 @@ exec env \
             Logger.Error("News", $"Error fetching news: {ex.Message}");
             return new List<NewsItemResponse>();
         }
+    }
+
+    private static string CleanNewsExcerpt(string? rawExcerpt, string? title)
+    {
+        var excerpt = HttpUtility.HtmlDecode(rawExcerpt ?? "");
+        if (string.IsNullOrWhiteSpace(excerpt))
+        {
+            return "";
+        }
+
+        excerpt = Regex.Replace(excerpt, @"<[^>]+>", " ");
+        excerpt = Regex.Replace(excerpt, @"\s+", " ").Trim();
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            var normalizedTitle = Regex.Replace(title.Trim(), @"\s+", " ");
+            var escapedTitle = Regex.Escape(normalizedTitle);
+            excerpt = Regex.Replace(excerpt, $@"^\s*{escapedTitle}\s*[:\-–—]?\s*", "", RegexOptions.IgnoreCase);
+        }
+
+        excerpt = Regex.Replace(excerpt, @"^\s*\p{L}+\s+\d{1,2},\s*\d{4}\s*[–—\-:]?\s*", "", RegexOptions.IgnoreCase);
+        excerpt = Regex.Replace(excerpt, @"^\s*\d{1,2}\s+\p{L}+\s+\d{4}\s*[–—\-:]?\s*", "", RegexOptions.IgnoreCase);
+        excerpt = Regex.Replace(excerpt, @"^[\-–—:\s]+", "");
+        excerpt = Regex.Replace(excerpt, @"(\p{Ll})(\p{Lu})", "$1: $2");
+
+        return excerpt.Trim();
     }
 
     // Update - download latest launcher per platform instead of in-place update
