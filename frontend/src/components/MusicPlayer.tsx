@@ -20,24 +20,12 @@ const musicTracks = [
   menu06, menu07, menu08, menu09, menu10
 ];
 
-// Backend functions - import dynamically to handle both Wails and Photino
-let GetMusicEnabled: (() => Promise<boolean>) | null = null;
-let SetMusicEnabled: ((enabled: boolean) => Promise<boolean>) | null = null;
+// Backend functions
+import { GetMusicEnabled, SetMusicEnabled } from '@/api/backend';
 
-// Lazy load backend functions
+// Helper to keep compatibility with existing component logic if any
 const loadBackendFunctions = async () => {
-  if (GetMusicEnabled !== null) return;
-  
-  try {
-    // For Wails
-    const backend = await import('../../wailsjs/go/app/App');
-    GetMusicEnabled = backend.GetMusicEnabled;
-    SetMusicEnabled = backend.SetMusicEnabled as unknown as (enabled: boolean) => Promise<boolean>;
-  } catch {
-    // Fallback for Photino or when backend is not available
-    GetMusicEnabled = async () => true;
-    SetMusicEnabled = async () => true;
-  }
+    // No-op, imported statically
 };
 
 interface MusicPlayerProps {

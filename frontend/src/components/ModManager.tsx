@@ -6,7 +6,7 @@ import {
   Upload, Share
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '@/api/bridge';
 import {
   SearchMods, GetModFiles, GetModCategories,
   GetInstanceInstalledMods, InstallModFileToInstance,
@@ -14,7 +14,7 @@ import {
   OpenInstanceModsFolder, CheckInstanceModUpdates,
   InstallLocalModFile, ExportModsToFolder, GetLastExportPath, ImportModList, BrowseFolder, BrowseModFiles,
   InstallModFromBase64
-} from '../../wailsjs/go/app/App';
+} from '@/api/backend';
 import { GameBranch } from '@/constants/enums';
 import { useAccentColor } from '../contexts/AccentColorContext';
 

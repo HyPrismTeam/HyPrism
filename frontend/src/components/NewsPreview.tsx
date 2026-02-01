@@ -1,7 +1,7 @@
 import { Calendar, RefreshCw, User, ChevronDown, ChevronUp, Newspaper } from 'lucide-react';
 import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '@/api/bridge';
 import { useAccentColor } from '../contexts/AccentColorContext';
 
 interface NewsItem {

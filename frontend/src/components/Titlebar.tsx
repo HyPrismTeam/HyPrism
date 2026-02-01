@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Minus, Square, X } from 'lucide-react';
-import { Quit, WindowMinimise, WindowToggleMaximise } from '../../wailsjs/runtime/runtime';
-import { GetLauncherVersion } from '../../wailsjs/go/app/App';
+import { Quit, WindowMinimize, WindowToggleMaximize } from '@/api/bridge';
+import { GetLauncherVersion } from '@/api/backend';
 import appIcon from '../assets/appicon.svg';
 
 export const Titlebar: React.FC = () => {
@@ -30,14 +30,14 @@ export const Titlebar: React.FC = () => {
       {/* Window Controls */}
       <div className="flex items-center gap-1" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
         <button
-          onClick={() => WindowMinimise()}
+          onClick={() => WindowMinimize()}
           className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white/10 active:scale-95"
         >
           <Minus size={14} className="text-white/60" />
         </button>
         
         <button
-          onClick={() => WindowToggleMaximise()}
+          onClick={() => WindowToggleMaximize()}
           className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white/10 active:scale-95"
         >
           <Square size={12} className="text-white/60" />

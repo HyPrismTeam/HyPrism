@@ -4783,6 +4783,7 @@ exec env \
                     Excerpt = HttpUtility.HtmlDecode(item.BodyExcerpt ?? ""),
                     Url = url2,
                     Date = date,
+                    PublishedAt = item.PublishedAt ?? "",
                     Author = item.Author ?? "Hytale Team",
                     ImageUrl = !string.IsNullOrEmpty(item.CoverImage?.S3Key) 
                         ? cdnUrl + item.CoverImage.S3Key 
@@ -7823,6 +7824,9 @@ public class NewsItemResponse
     
     [JsonPropertyName("date")]
     public string Date { get; set; } = "";
+
+    [JsonPropertyName("publishedAt")]
+    public string PublishedAt { get; set; } = "";
     
     [JsonPropertyName("author")]
     public string Author { get; set; } = "";

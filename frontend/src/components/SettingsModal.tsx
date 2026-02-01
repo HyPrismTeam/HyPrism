@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, User, Edit3, Shuffle, Copy, CheckCircle, Download, Archive, Loader2, HardDrive, Languages } from 'lucide-react';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '@/api/bridge';
 import { 
     GetCloseAfterLaunch, 
     SetCloseAfterLaunch, 
@@ -29,8 +29,8 @@ import {
     GetAvatarPreview,
     SetGameLanguage,
     ResetOnboarding
-} from '../../wailsjs/go/app/App';
-import type { InstalledVersionInfo } from '../../wailsjs/go/app/App';
+} from '@/api/backend';
+import type { InstalledVersionInfo } from '@/api/backend';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import { DiscordIcon } from './DiscordIcon';
 import { Language } from '../constants/enums';

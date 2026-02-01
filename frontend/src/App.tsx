@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrowserOpenURL } from '../wailsjs/runtime/runtime';
+import { BrowserOpenURL, EventsOn } from '@/api/bridge';
 import { GameBranch } from './constants/enums';
 import { BackgroundImage } from './components/BackgroundImage';
 import { ProfileSection } from './components/ProfileSection';
@@ -57,8 +57,7 @@ import {
   GetDisableNews,
   GetAccentColor,
   GetHasCompletedOnboarding,
-} from '../wailsjs/go/app/App';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+} from '@/api/backend';
 import appIcon from './assets/appicon.png';
 
 // Modal loading fallback - minimal spinner
@@ -83,6 +82,14 @@ const parseDateMs = (dateValue: string | number | Date | undefined): number => {
   return Number.isNaN(ms) ? 0 : ms;
 };
 
+const formatDateConsistent = (dateMs: number) => {
+  return new Date(dateMs).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
 const fetchLauncherReleases = async () => {
   try {
     const res = await fetch('https://api.github.com/repos/yyyumeniku/HyPrism/releases?per_page=100');
@@ -97,7 +104,7 @@ const fetchLauncherReleases = async () => {
           title: `Hyprism ${cleaned || 'Release'} release`,
           excerpt: `Hyprism ${cleaned || 'Release'} release — click to see changelog.`,
           url: r?.html_url || 'https://github.com/yyyumeniku/HyPrism/releases',
-          date: new Date(dateMs || Date.now()).toLocaleDateString(),
+          date: formatDateConsistent(dateMs || Date.now()),
           author: 'HyPrism',
           imageUrl: appIcon,
           source: 'hyprism' as const,
@@ -110,28 +117,7 @@ const fetchLauncherReleases = async () => {
   }
 };
 
-// Helper to call CancelDownload via RPC
-const CancelDownload = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const id = `call_${Date.now()}_${Math.random()}`;
-    const message = JSON.stringify({
-      method: 'CancelDownload',
-      id: id
-    });
-    
-    const handler = (e: CustomEvent) => {
-      const data = e.detail;
-      if (data.Id === id) {
-        window.removeEventListener(id, handler as EventListener);
-        if (data.Error) reject(new Error(data.Error));
-        else resolve(data.Result);
-      }
-    };
-    
-    window.addEventListener(id, handler as EventListener);
-    (window as any).external?.sendMessage?.(message);
-  });
-};
+
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -865,10 +851,17 @@ const App: React.FC = () => {
                     const releases = await fetchLauncherReleases();
                     const hytale = await GetNews(Math.max(0, count));
 
-                    const hytaleItems = (hytale || []).map((item: any) => ({
-                      item: { ...item, source: 'hytale' as const },
-                      dateMs: parseDateMs(item?.date)
-                    }));
+                    const hytaleItems = (hytale || []).map((item: any) => {
+                      const dateMs = parseDateMs(item?.publishedAt || item?.date);
+                      return {
+                        item: { 
+                          ...item, 
+                          source: 'hytale' as const,
+                          date: formatDateConsistent(dateMs)
+                        },
+                        dateMs
+                      };
+                    });
 
                     const combined = [...releases, ...hytaleItems]
                       .sort((a, b) => b.dateMs - a.dateMs)

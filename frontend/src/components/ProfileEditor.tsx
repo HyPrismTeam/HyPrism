@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { X, RefreshCw, Check, User, Edit3, Copy, CheckCircle, Plus, Trash2, Dices } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { GetUUID, SetUUID, GetNick, SetNick, GetAvatarPreview, GetAvatarPreviewForUUID, GetProfiles, CreateProfile, DeleteProfile, SwitchProfile, SaveCurrentAsProfile } from '../../wailsjs/go/app/App';
-import type { Profile } from '../../wailsjs/go/app/App';
+import { GetUUID, SetUUID, GetNick, SetNick, GetAvatarPreview, GetAvatarPreviewForUUID, GetProfiles, CreateProfile, DeleteProfile, SwitchProfile, SaveCurrentAsProfile } from '@/api/backend';
+import type { Profile } from '@/api/backend';
 
 interface ProfileEditorProps {
     isOpen: boolean;
