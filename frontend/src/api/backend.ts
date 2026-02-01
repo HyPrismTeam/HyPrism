@@ -857,9 +857,9 @@ export const ResetOnboarding = () => callBackend<boolean>('ResetOnboarding');
  * @param count - Number of items to fetch
  */
 export const GetNews = (count: number) => callBackend<Array<news.NewsItem>>('GetNews', count);
+// #endregion
 
-// Discord
-
+// #region Discord Announcements
 /**
  * Checks if discord announcements should be shown
  */
