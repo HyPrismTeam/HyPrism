@@ -1,5 +1,4 @@
 export namespace app {
-	
 	export class ConnectivityInfo {
 	    hytalePatches: boolean;
 	    github: boolean;
@@ -18,6 +17,7 @@ export namespace app {
 	        this.error = source["error"];
 	    }
 	}
+
 	export class CrashReport {
 	    filename: string;
 	    timestamp: string;
@@ -34,6 +34,7 @@ export namespace app {
 	        this.preview = source["preview"];
 	    }
 	}
+
 	export class DependenciesInfo {
 	    javaInstalled: boolean;
 	    javaPath: string;
@@ -52,6 +53,7 @@ export namespace app {
 	        this.butlerPath = source["butlerPath"];
 	    }
 	}
+
 	export class GameStatusInfo {
 	    installed: boolean;
 	    version: string;
@@ -70,6 +72,7 @@ export namespace app {
 	        this.onlineFixApplied = source["onlineFixApplied"];
 	    }
 	}
+
 	export class PlatformInfo {
 	    os: string;
 	    arch: string;
@@ -86,6 +89,7 @@ export namespace app {
 	        this.version = source["version"];
 	    }
 	}
+
 	export class DiagnosticReport {
 	    platform: PlatformInfo;
 	    connectivity: ConnectivityInfo;
@@ -160,7 +164,6 @@ export namespace app {
 }
 
 export namespace config {
-	
 	export class Config {
 	    version: string;
 	    nick: string;
@@ -193,7 +196,6 @@ export namespace config {
 }
 
 export namespace mods {
-	
 	export class ModFile {
 	    id: number;
 	    modId: number;
@@ -220,6 +222,7 @@ export namespace mods {
 	        this.releaseType = source["releaseType"];
 	    }
 	}
+
 	export class ModAuthor {
 	    id: number;
 	    name: string;
@@ -236,6 +239,7 @@ export namespace mods {
 	        this.url = source["url"];
 	    }
 	}
+
 	export class ModCategory {
 	    id: number;
 	    name: string;
@@ -256,6 +260,7 @@ export namespace mods {
 	        this.iconUrl = source["iconUrl"];
 	    }
 	}
+
 	export class ModScreenshot {
 	    id: number;
 	    modId: number;
@@ -278,6 +283,7 @@ export namespace mods {
 	        this.url = source["url"];
 	    }
 	}
+
 	export class ModLogo {
 	    id: number;
 	    modId: number;
@@ -300,6 +306,7 @@ export namespace mods {
 	        this.url = source["url"];
 	    }
 	}
+
 	export class CurseForgeMod {
 	    id: number;
 	    gameId: number;
@@ -360,6 +367,7 @@ export namespace mods {
 		    return a;
 		}
 	}
+
 	export class Mod {
 	    id: string;
 	    name: string;
@@ -407,10 +415,6 @@ export namespace mods {
 	    }
 	}
 	
-	
-	
-	
-	
 	export class SearchResult {
 	    mods: CurseForgeMod[];
 	    totalCount: number;
@@ -451,7 +455,6 @@ export namespace mods {
 }
 
 export namespace news {
-	
 	export class coverImage {
 	    s3Key: string;
 	
@@ -516,7 +519,6 @@ export namespace news {
 }
 
 export namespace updater {
-	
 	export class Asset {
 	    url: string;
 	    sha256: string;

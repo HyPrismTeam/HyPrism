@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Edit3, Check, Download, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { GetAvatarPreview } from '../../wailsjs/go/app/App';
+import { GetAvatarPreview } from '@/api/backend';
 
 interface ProfileSectionProps {
   username: string;

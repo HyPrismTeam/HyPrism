@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, X, Copy, RefreshCw, Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '@/api/bridge';
 
 interface ErrorModalProps {
   error: {

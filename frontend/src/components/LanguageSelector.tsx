@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { GameBranch, Language } from '../constants/enums';
 import { LANGUAGE_CONFIG } from '../constants/languages';
-import { GetInstanceInstalledMods, SetGameLanguage } from '../../wailsjs/go/app/App';
+import { GetInstanceInstalledMods, SetGameLanguage } from '@/api/backend';
 import { useAccentColor } from '../contexts/AccentColorContext';
 
 interface LanguageSelectorProps {

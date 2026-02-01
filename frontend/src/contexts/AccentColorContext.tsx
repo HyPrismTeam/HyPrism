@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { GetAccentColor, SetAccentColor } from '../../wailsjs/go/app/App';
+import { GetAccentColor, SetAccentColor } from '@/api/backend';
 
 interface AccentColorContextType {
   accentColor: string;

@@ -26,8 +26,8 @@ import {
     GetRandomUsername,
     GetLauncherVersion,
     SetBackgroundMode as SetBackgroundModeBackend
-} from '../../wailsjs/go/app/App';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+} from '@/api/backend';
+import { BrowserOpenURL } from '@/api/bridge';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import { Language } from '../constants/enums';
 import { LANGUAGE_CONFIG } from '../constants/languages';

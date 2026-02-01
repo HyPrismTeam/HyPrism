@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FolderOpen, Play, Package, Square, Settings, Loader2, Download, ChevronDown, Check, X, GitBranch } from 'lucide-react';
 import { CoffeeIcon } from './CoffeeIcon';
 import { OnlineToggle } from './OnlineToggle';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '@/api/bridge';
 import { GameBranch } from '../constants/enums';
 import { useAccentColor } from '../contexts/AccentColorContext';
 

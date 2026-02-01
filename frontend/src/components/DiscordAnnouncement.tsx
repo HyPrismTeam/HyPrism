@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle, Check, Bug, Coffee } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+import { BrowserOpenURL } from '@/api/bridge';
 import { 
   GetDiscordAnnouncement, 
   DismissAnnouncement,
   SetShowDiscordAnnouncements,
   GetShowDiscordAnnouncements,
-  DiscordAnnouncement as DiscordAnnouncementType
-} from '../../wailsjs/go/app/App';
+  type DiscordAnnouncement as DiscordAnnouncementType
+} from '@/api/backend';
 
 interface DiscordAnnouncementProps {
   onDismiss?: () => void;

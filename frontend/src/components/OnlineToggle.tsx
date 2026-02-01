@@ -1,7 +1,7 @@
 import { useState, useEffect, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wifi, WifiOff } from 'lucide-react';
-import { GetOnlineMode, SetOnlineMode } from '../../wailsjs/go/app/App';
+import { GetOnlineMode, SetOnlineMode } from '@/api/backend';
 
 interface OnlineToggleProps {
     className?: string;
