@@ -1,0 +1,311 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+
+namespace HyPrism.Backend.Services.Core;
+
+/// <summary>
+/// Provides common utility methods for file operations, platform detection, and string manipulation.
+/// </summary>
+public class UtilityService
+{
+    /// <summary>
+    /// Normalizes version type strings to canonical forms.
+    /// "prerelease" or "pre-release" -> "pre-release"
+    /// "latest" -> "release"
+    /// </summary>
+    public static string NormalizeVersionType(string versionType)
+    {
+        if (string.IsNullOrWhiteSpace(versionType))
+            return "release";
+        if (versionType == "prerelease" || versionType == "pre-release")
+            return "pre-release";
+        if (versionType == "latest")
+            return "release";
+        return versionType;
+    }
+
+    /// <summary>
+    /// Sanitizes a filename by removing invalid characters.
+    /// </summary>
+    public static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
+        return sanitized;
+    }
+
+    /// <summary>
+    /// Gets the effective application data directory.
+    /// Checks environment variable first, then config file, then defaults to platform-specific location.
+    /// </summary>
+    public static string GetEffectiveAppDir()
+    {
+        // First check environment variable
+        var envDir = Environment.GetEnvironmentVariable("HYPRISM_DATA");
+        if (!string.IsNullOrWhiteSpace(envDir) && Directory.Exists(envDir))
+        {
+            return envDir;
+        }
+
+        // Then check if there's a config file in default location with custom path
+        var defaultDir = GetDefaultAppDir();
+        var defaultConfigPath = Path.Combine(defaultDir, "config.json");
+        if (File.Exists(defaultConfigPath))
+        {
+            try
+            {
+                var configJson = File.ReadAllText(defaultConfigPath);
+                var config = System.Text.Json.JsonSerializer.Deserialize<HyPrism.Backend.Models.Config>(configJson, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true
+                });
+                if (config != null && !string.IsNullOrWhiteSpace(config.LauncherDataDirectory) && Directory.Exists(config.LauncherDataDirectory))
+                {
+                    return config.LauncherDataDirectory;
+                }
+            }
+            catch { /* Ignore parsing errors, use default */ }
+        }
+
+        return defaultDir;
+    }
+
+    /// <summary>
+    /// Gets the default platform-specific application data directory.
+    /// </summary>
+    public static string GetDefaultAppDir()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HyPrism");
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "HyPrism");
+        }
+        else
+        {
+            var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+            if (!string.IsNullOrWhiteSpace(xdgDataHome))
+            {
+                return Path.Combine(xdgDataHome, "HyPrism");
+            }
+
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "HyPrism");
+        }
+    }
+
+    /// <summary>
+    /// Gets the current operating system identifier.
+    /// </summary>
+    public static string GetOS()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "windows";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "darwin";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "linux";
+        return "unknown";
+    }
+
+    /// <summary>
+    /// Gets the current CPU architecture identifier.
+    /// </summary>
+    public static string GetArch()
+    {
+        return RuntimeInformation.OSArchitecture switch
+        {
+            Architecture.X64 => "amd64",
+            Architecture.Arm64 => "arm64",
+            _ => "amd64"
+        };
+    }
+
+    /// <summary>
+    /// Runs a process silently without showing a console window.
+    /// </summary>
+    public static void RunSilentProcess(string fileName, string arguments)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo(fileName, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            var proc = Process.Start(psi);
+            proc?.WaitForExit();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Process", $"Failed to run {fileName} {arguments}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Clears macOS quarantine attributes from a file or directory (macOS only).
+    /// </summary>
+    public static void ClearMacQuarantine(string path)
+    {
+        try
+        {
+            RunSilentProcess("xattr", $"-cr \"{path}\"");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Game", $"Failed to clear quarantine on {path}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Recursively copies a directory and all its contents.
+    /// </summary>
+    public static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        var dir = new DirectoryInfo(sourceDir);
+        if (!dir.Exists) return;
+
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (var file in dir.GetFiles())
+        {
+            string targetFilePath = Path.Combine(destinationDir, file.Name);
+            file.CopyTo(targetFilePath, true);
+        }
+
+        foreach (var subDir in dir.GetDirectories())
+        {
+            string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+            CopyDirectory(subDir.FullName, newDestinationDir);
+        }
+    }
+
+    /// <summary>
+    /// Overload of CopyDirectory with overwrite parameter.
+    /// </summary>
+    public static void CopyDirectory(string sourceDir, string destDir, bool overwrite)
+    {
+        var dir = new DirectoryInfo(sourceDir);
+        if (!dir.Exists)
+        {
+            Logger.Warning("Files", $"Source directory does not exist: {sourceDir}");
+            return;
+        }
+
+        Directory.CreateDirectory(destDir);
+
+        foreach (var file in dir.GetFiles())
+        {
+            var targetPath = Path.Combine(destDir, file.Name);
+            file.CopyTo(targetPath, overwrite);
+        }
+
+        foreach (var subDir in dir.GetDirectories())
+        {
+            var newDestDir = Path.Combine(destDir, subDir.Name);
+            CopyDirectory(subDir.FullName, newDestDir, overwrite);
+        }
+    }
+
+    /// <summary>
+    /// Cleans up a corrupted game installation by preserving UserData and Client assets.
+    /// </summary>
+    public static void CleanupCorruptedInstall(string versionPath)
+    {
+        string backupRoot = Path.Combine(Path.GetTempPath(), "HyPrismBackup", Guid.NewGuid().ToString());
+        // Preserve UserData and Client/Assets to avoid re-downloading game
+        string[] preserve = { "UserData", "Client" };
+
+        try
+        {
+            Directory.CreateDirectory(backupRoot);
+            foreach (var dirName in preserve)
+            {
+                var src = Path.Combine(versionPath, dirName);
+                if (Directory.Exists(src))
+                {
+                    var dest = Path.Combine(backupRoot, dirName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+                    CopyDirectory(src, dest);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Download", $"Failed to backup user data before cleanup: {ex.Message}");
+        }
+
+        try
+        {
+            if (Directory.Exists(versionPath))
+            {
+                Directory.Delete(versionPath, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Download", $"Failed to clean corrupted install at {versionPath}: {ex.Message}");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(versionPath);
+            foreach (var dirName in preserve)
+            {
+                var backup = Path.Combine(backupRoot, dirName);
+                var dest = Path.Combine(versionPath, dirName);
+                if (Directory.Exists(backup))
+                {
+                    CopyDirectory(backup, dest);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Download", $"Failed to recreate install directory {versionPath}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Checks if the macOS app signature timestamp matches the executable's last write time.
+    /// </summary>
+    public static bool IsMacAppSignatureCurrent(string executablePath, string stampPath)
+    {
+        try
+        {
+            if (!File.Exists(executablePath) || !File.Exists(stampPath))
+            {
+                return false;
+            }
+
+            var stamp = File.ReadAllText(stampPath).Trim();
+            var currentTicks = File.GetLastWriteTimeUtc(executablePath).Ticks.ToString();
+            return string.Equals(stamp, currentTicks, StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Marks a macOS app as signed by recording the executable's timestamp.
+    /// </summary>
+    public static void MarkMacAppSigned(string executablePath, string stampPath)
+    {
+        try
+        {
+            var ticks = File.GetLastWriteTimeUtc(executablePath).Ticks.ToString();
+            File.WriteAllText(stampPath, ticks);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Game", $"Failed to record app sign stamp: {ex.Message}");
+        }
+    }
+}

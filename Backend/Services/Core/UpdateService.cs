@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
-using HyPrism.Backend;
+using HyPrism.Backend.Models;
 using HyPrism.Backend.Services.Game;
 
 namespace HyPrism.Backend.Services.Core;

@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using HyPrism.Backend;
+using HyPrism.Backend.Models;
 
 namespace HyPrism.Backend.Services.Game;
 

@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using HyPrism.Backend;
+using HyPrism.Backend.Models;
 using HyPrism.Backend.Models;
 
 namespace HyPrism.Backend.Services.Game;

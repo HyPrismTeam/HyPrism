@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using HyPrism.Backend.Models;
 
-namespace HyPrism.Backend;
+namespace HyPrism.Backend.Models;
 
 public class Config
 {

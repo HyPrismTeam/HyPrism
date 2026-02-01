@@ -44,6 +44,9 @@ public class AppService : IDisposable
     private readonly InstanceService _instanceService;
     private readonly UserIdentityService _userIdentityService;
     private readonly ProfileManagementService _profileManagementService;
+    private readonly SettingsService _settingsService;
+    private readonly FileDialogService _fileDialogService;
+    private readonly LanguageService _languageService;
     
     // Exposed for ViewModel access
     public Config Configuration => _config;
@@ -113,7 +116,7 @@ public class AppService : IDisposable
 
     public AppService()
     {
-        _appDir = GetEffectiveAppDir();
+        _appDir = UtilityService.GetEffectiveAppDir();
         Directory.CreateDirectory(_appDir);
         _configPath = Path.Combine(_appDir, "config.json");
         _config = LoadConfig();
@@ -130,12 +133,12 @@ public class AppService : IDisposable
         _gameUtilityService = new GameUtilityService(
             _appDir,
             _config,
-            NormalizeVersionType,
+            UtilityService.NormalizeVersionType,
             ResolveInstancePath,
             branch => _instanceService.GetLatestInfoPath(branch),
             GetInstancePath,
             GetProfilesFolder,
-            SanitizeFileName,
+            UtilityService.SanitizeFileName,
             () => _gameProcess,
             p => _gameProcess = p);
         _instanceService = new InstanceService(
@@ -153,22 +156,22 @@ public class AppService : IDisposable
             _versionService,
             obj => LauncherUpdateAvailable?.Invoke(obj),
             BrowserOpenURL,
-            NormalizeVersionType,
+            UtilityService.NormalizeVersionType,
             branch => _instanceService.LoadLatestInfo(branch),
             (branch, version) => _instanceService.SaveLatestInfo(branch, version));
         _skinService = new SkinService(
-            NormalizeVersionType,
+            UtilityService.NormalizeVersionType,
             ResolveInstancePath,
             path => _instanceService.GetInstanceUserDataPath(path),
             () => _config,
             SaveConfig,
             GetProfilesFolder,
-            SanitizeFileName);
+            UtilityService.SanitizeFileName);
         _userIdentityService = new UserIdentityService(
             () => _config,
             SaveConfig,
             _skinService,
-            NormalizeVersionType,
+            UtilityService.NormalizeVersionType,
             ResolveInstancePath,
             path => _instanceService.GetInstanceUserDataPath(path));
         _profileManagementService = new ProfileManagementService(
@@ -176,10 +179,19 @@ public class AppService : IDisposable
             () => _config,
             SaveConfig,
             _skinService,
-            NormalizeVersionType,
+            UtilityService.NormalizeVersionType,
             ResolveInstancePath,
             path => _instanceService.GetInstanceUserDataPath(path),
             GetCurrentUuid);
+        _settingsService = new SettingsService(
+            () => _config,
+            SaveConfig);
+        _fileDialogService = new FileDialogService();
+        _languageService = new LanguageService(
+            async () => await GetVersionListAsync("release"),
+            async () => await GetVersionListAsync("pre-release"),
+            GetInstancePath,
+            GetLatestInstancePath);
         
         // Update placeholder names to random ones immediately
         if (_config.Nick == "Hyprism" || _config.Nick == "HyPrism" || _config.Nick == "Player")
@@ -205,35 +217,6 @@ public class AppService : IDisposable
     /// <summary>
     /// Gets the effective app directory, checking for environment variable override first.
     /// </summary>
-    private string GetEffectiveAppDir()
-    {
-        // First check environment variable
-        var envDir = Environment.GetEnvironmentVariable("HYPRISM_DATA");
-        if (!string.IsNullOrWhiteSpace(envDir) && Directory.Exists(envDir))
-        {
-            return envDir;
-        }
-
-        // Then check if there's a config file in default location with custom path
-        var defaultDir = GetDefaultAppDir();
-        var defaultConfigPath = Path.Combine(defaultDir, "config.json");
-        if (File.Exists(defaultConfigPath))
-        {
-            try
-            {
-                var configJson = File.ReadAllText(defaultConfigPath);
-                var config = JsonSerializer.Deserialize<Config>(configJson, JsonOptions);
-                if (config != null && !string.IsNullOrWhiteSpace(config.LauncherDataDirectory) && Directory.Exists(config.LauncherDataDirectory))
-                {
-                    return config.LauncherDataDirectory;
-                }
-            }
-            catch { /* Ignore parsing errors, use default */ }
-        }
-
-        return defaultDir;
-    }
-    
     public void Dispose()
     {
         if (_disposed) return;
@@ -242,49 +225,9 @@ public class AppService : IDisposable
         _discordService?.Dispose();
     }
     
-    private string GetDefaultAppDir()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HyPrism");
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "HyPrism");
-        }
-        else
-        {
-            var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
-            if (!string.IsNullOrWhiteSpace(xdgDataHome))
-            {
-                return Path.Combine(xdgDataHome, "HyPrism");
-            }
-
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "HyPrism");
-        }
-    }
-
     /// <summary>
     /// Gets the UserData path for an instance. The game stores skins, settings, etc. here.
     /// </summary>
-    private static string GetOS()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "windows";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "darwin";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "linux";
-        return "unknown";
-    }
-
-    private static string GetArch()
-    {
-        return RuntimeInformation.OSArchitecture switch
-        {
-            Architecture.X64 => "amd64",
-            Architecture.Arm64 => "arm64",
-            _ => "amd64"
-        };
-    }
-
     private int ResolveVersionOrLatest(string branch, int version)
     {
         if (version > 0) return version;
@@ -307,18 +250,6 @@ public class AppService : IDisposable
         }
 
         return 0;
-    }
-
-    // Normalize version type: "prerelease" or "pre-release" -> "pre-release"
-    private static string NormalizeVersionType(string versionType)
-    {
-        if (string.IsNullOrWhiteSpace(versionType))
-            return "release";
-        if (versionType == "prerelease" || versionType == "pre-release")
-            return "pre-release";
-        if (versionType == "latest")
-            return "release";
-        return versionType;
     }
 
     private Config? LoadConfigFromPath(string path)
@@ -392,7 +323,7 @@ public class AppService : IDisposable
                         break;
                     case "versiontype":
                     case "branch":
-                        cfg.VersionType = NormalizeVersionType(val);
+                        cfg.VersionType = UtilityService.NormalizeVersionType(val);
                         break;
                     case "selectedversion":
                         if (int.TryParse(val, out var sel)) cfg.SelectedVersion = sel;
@@ -471,7 +402,7 @@ public class AppService : IDisposable
         {
             return GetLatestInstancePath(branch);
         }
-        string normalizedBranch = NormalizeVersionType(branch);
+        string normalizedBranch = UtilityService.NormalizeVersionType(branch);
         return Path.Combine(_instanceService.GetInstanceRoot(), normalizedBranch, version.ToString());
     }
 
@@ -836,16 +767,6 @@ public class AppService : IDisposable
     private string GetProfilesFolder() => _profileManagementService.GetProfilesFolder();
     
     /// <summary>
-    /// Sanitizes a string to be safe for use as a filename.
-    /// </summary>
-    private string SanitizeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
-        return string.IsNullOrWhiteSpace(sanitized) ? "profile" : sanitized;
-    }
-    
-    /// <summary>
     /// Saves the current UUID/Nick as a new profile.
     /// Returns the created profile.
     /// </summary>
@@ -963,7 +884,7 @@ public class AppService : IDisposable
     
     public bool SetVersionType(string versionType)
     {
-        _config.VersionType = NormalizeVersionType(versionType);
+        _config.VersionType = UtilityService.NormalizeVersionType(versionType);
         SaveConfig();
         return true;
     }
@@ -981,7 +902,7 @@ public class AppService : IDisposable
 
     public bool IsVersionInstalled(string branch, int versionNumber)
     {
-        var normalizedBranch = NormalizeVersionType(branch);
+        var normalizedBranch = UtilityService.NormalizeVersionType(branch);
 
         // Version 0 means "latest" - check if any version is installed
         if (versionNumber == 0)
@@ -1066,7 +987,7 @@ public class AppService : IDisposable
     /// </summary>
     public bool HasAssetsZip(string branch, int version)
     {
-        var normalizedBranch = NormalizeVersionType(branch);
+        var normalizedBranch = UtilityService.NormalizeVersionType(branch);
         var versionPath = ResolveInstancePath(normalizedBranch, version, preferExisting: true);
         return HasAssetsZipInternal(versionPath);
     }
@@ -1076,7 +997,7 @@ public class AppService : IDisposable
     /// </summary>
     public string? GetAssetsZipPath(string branch, int version)
     {
-        var normalizedBranch = NormalizeVersionType(branch);
+        var normalizedBranch = UtilityService.NormalizeVersionType(branch);
         var versionPath = ResolveInstancePath(normalizedBranch, version, preferExisting: true);
         var assetsZipPath = GetAssetsZipPathInternal(versionPath);
         return File.Exists(assetsZipPath) ? assetsZipPath : null;
@@ -1135,7 +1056,7 @@ public class AppService : IDisposable
     {
         try
         {
-            var normalizedBranch = NormalizeVersionType(branch);
+            var normalizedBranch = UtilityService.NormalizeVersionType(branch);
             var versionPath = ResolveInstancePath(normalizedBranch, version, preferExisting: true);
             var assetsZipPath = GetAssetsZipPathInternal(versionPath);
             
@@ -1192,7 +1113,7 @@ public class AppService : IDisposable
 
     public List<int> GetInstalledVersionsForBranch(string branch)
     {
-        var normalizedBranch = NormalizeVersionType(branch);
+        var normalizedBranch = UtilityService.NormalizeVersionType(branch);
         var result = new HashSet<int>();
 
         foreach (var root in _instanceService.GetInstanceRootsIncludingLegacy())
@@ -1267,7 +1188,7 @@ public class AppService : IDisposable
 
     public async Task<bool> CheckLatestNeedsUpdateAsync(string branch)
     {
-        var normalizedBranch = NormalizeVersionType(branch);
+        var normalizedBranch = UtilityService.NormalizeVersionType(branch);
         var versions = await GetVersionListAsync(normalizedBranch);
         if (versions.Count == 0) return false;
 
@@ -1301,7 +1222,7 @@ public class AppService : IDisposable
     {
         try
         {
-            var normalizedBranch = NormalizeVersionType(branch);
+            var normalizedBranch = UtilityService.NormalizeVersionType(branch);
             var versions = await GetVersionListAsync(normalizedBranch);
             if (versions.Count == 0) return null;
 
@@ -1339,7 +1260,7 @@ public class AppService : IDisposable
     {
         try
         {
-            var normalizedBranch = NormalizeVersionType(branch);
+            var normalizedBranch = UtilityService.NormalizeVersionType(branch);
             
             // Get source path (if fromVersion is 0, use latest)
             string fromPath;
@@ -1376,7 +1297,7 @@ public class AppService : IDisposable
             Directory.CreateDirectory(toUserData);
             
             // Copy all contents
-            await Task.Run(() => CopyDirectory(fromUserData, toUserData, true));
+            await Task.Run(() => UtilityService.CopyDirectory(fromUserData, toUserData, true));
             
             Logger.Success("UserData", $"Copied UserData from v{fromVersion} to v{toVersion}");
             return true;
@@ -1388,26 +1309,6 @@ public class AppService : IDisposable
         }
     }
 
-    private void CopyDirectory(string sourceDir, string destDir, bool overwrite)
-    {
-        // Create destination directory
-        Directory.CreateDirectory(destDir);
-        
-        // Copy files
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var destFile = Path.Combine(destDir, Path.GetFileName(file));
-            File.Copy(file, destFile, overwrite);
-        }
-        
-        // Copy subdirectories
-        foreach (var dir in Directory.GetDirectories(sourceDir))
-        {
-            var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
-            CopyDirectory(dir, destSubDir, overwrite);
-        }
-    }
-
     // Game
     public async Task<DownloadProgress> DownloadAndLaunchAsync()
     {
@@ -1415,7 +1316,7 @@ public class AppService : IDisposable
         {
             _downloadCts = new CancellationTokenSource();
             
-            string branch = NormalizeVersionType(_config.VersionType);
+            string branch = UtilityService.NormalizeVersionType(_config.VersionType);
             var versions = await GetVersionListAsync(branch);
             if (versions.Count == 0)
             {
@@ -1546,9 +1447,9 @@ public class AppService : IDisposable
                                 await _butlerService.EnsureButlerInstalledAsync((p, m) => { });
                                 
                                 // Download the PWR patch
-                                var patchOs = GetOS();
-                                var patchArch = GetArch();
-                                var patchBranchType = NormalizeVersionType(branch);
+                                var patchOs = UtilityService.GetOS();
+                                var patchArch = UtilityService.GetArch();
+                                var patchBranchType = UtilityService.NormalizeVersionType(branch);
                                 string patchUrl = $"https://game-patches.hytale.com/patches/{patchOs}/{patchArch}/{patchBranchType}/0/{patchVersion}.pwr";
                                 string patchPwrPath = Path.Combine(_appDir, "cache", $"{branch}_patch_{patchVersion}.pwr");
                                 
@@ -1713,9 +1614,9 @@ public class AppService : IDisposable
             ThrowIfCancelled();
             
             // Download PWR file (5-70% progress)
-            string osName = GetOS();
-            string arch = GetArch();
-            string apiVersionType = NormalizeVersionType(branch);
+            string osName = UtilityService.GetOS();
+            string arch = UtilityService.GetArch();
+            string apiVersionType = UtilityService.NormalizeVersionType(branch);
             string downloadUrl = $"https://game-patches.hytale.com/patches/{osName}/{arch}/{apiVersionType}/0/{targetVersion}.pwr";
             string pwrPath = Path.Combine(_appDir, "cache", $"{branch}_{(isLatestInstance ? "latest" : "version")}_{targetVersion}.pwr");
             
@@ -2112,7 +2013,7 @@ public class AppService : IDisposable
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             string appBundle = Path.Combine(versionPath, "Client", "Hytale.app");
-            ClearMacQuarantine(appBundle);
+            UtilityService.ClearMacQuarantine(appBundle);
             Logger.Info("Game", "Cleared macOS quarantine attributes before patching");
         }
 
@@ -2746,209 +2647,50 @@ exec env \
         }
     }
 
-    // Music
-    public bool GetMusicEnabled() => _config.MusicEnabled;
+    // ========== Settings (delegated to SettingsService) ==========
     
-    public bool SetMusicEnabled(bool enabled)
-    {
-        _config.MusicEnabled = enabled;
-        SaveConfig();
-        return true;
-    }
-
-    // Launcher Branch (release/beta update channel)
-    public string GetLauncherBranch() => _updateService.GetLauncherBranch();
+    public bool GetMusicEnabled() => _settingsService.GetMusicEnabled();
+    public bool SetMusicEnabled(bool enabled) => _settingsService.SetMusicEnabled(enabled);
     
-    public bool SetLauncherBranch(string branch)
-    {
-        var normalizedBranch = branch?.ToLowerInvariant() ?? "release";
-        if (normalizedBranch != "release" && normalizedBranch != "beta")
-        {
-            normalizedBranch = "release";
-        }
-        _config.LauncherBranch = normalizedBranch;
-        SaveConfig();
-        Logger.Info("Config", $"Launcher branch set to: {normalizedBranch}");
-        return true;
-    }
-
-    // Close After Launch setting
-    public bool GetCloseAfterLaunch() => _config.CloseAfterLaunch;
+    public string GetLauncherBranch() => _settingsService.GetLauncherBranch();
+    public bool SetLauncherBranch(string branch) => _settingsService.SetLauncherBranch(branch);
     
-    public bool SetCloseAfterLaunch(bool enabled)
-    {
-        _config.CloseAfterLaunch = enabled;
-        SaveConfig();
-        Logger.Info("Config", $"Close after launch set to: {enabled}");
-        return true;
-    }
-
-    // Discord Announcements settings
-    public bool GetShowDiscordAnnouncements() => _config.ShowDiscordAnnouncements;
+    public bool GetCloseAfterLaunch() => _settingsService.GetCloseAfterLaunch();
+    public bool SetCloseAfterLaunch(bool enabled) => _settingsService.SetCloseAfterLaunch(enabled);
     
-    public bool SetShowDiscordAnnouncements(bool enabled)
-    {
-        _config.ShowDiscordAnnouncements = enabled;
-        SaveConfig();
-        Logger.Info("Config", $"Show Discord announcements set to: {enabled}");
-        return true;
-    }
-
-    public bool IsAnnouncementDismissed(string announcementId)
-    {
-        return _config.DismissedAnnouncementIds.Contains(announcementId);
-    }
-
-    public bool DismissAnnouncement(string announcementId)
-    {
-        if (!_config.DismissedAnnouncementIds.Contains(announcementId))
-        {
-            _config.DismissedAnnouncementIds.Add(announcementId);
-            SaveConfig();
-            Logger.Info("Discord", $"Announcement {announcementId} dismissed");
-        }
-        return true;
-    }
-
-    // News settings
-    public bool GetDisableNews() => _config.DisableNews;
+    public bool GetShowDiscordAnnouncements() => _settingsService.GetShowDiscordAnnouncements();
+    public bool SetShowDiscordAnnouncements(bool enabled) => _settingsService.SetShowDiscordAnnouncements(enabled);
+    public bool IsAnnouncementDismissed(string announcementId) => _settingsService.IsAnnouncementDismissed(announcementId);
+    public bool DismissAnnouncement(string announcementId) => _settingsService.DismissAnnouncement(announcementId);
     
-    public bool SetDisableNews(bool disabled)
-    {
-        _config.DisableNews = disabled;
-        SaveConfig();
-        Logger.Info("Config", $"News disabled set to: {disabled}");
-        return true;
-    }
-
-    // Background settings
-    public string GetBackgroundMode() => _config.BackgroundMode;
+    public bool GetDisableNews() => _settingsService.GetDisableNews();
+    public bool SetDisableNews(bool disabled) => _settingsService.SetDisableNews(disabled);
     
-    public bool SetBackgroundMode(string mode)
-    {
-        _config.BackgroundMode = mode;
-        SaveConfig();
-        Logger.Info("Config", $"Background mode set to: {mode}");
-        return true;
-    }
-
-    // Accent color settings
-    public string GetAccentColor() => _config.AccentColor;
+    public string GetBackgroundMode() => _settingsService.GetBackgroundMode();
+    public bool SetBackgroundMode(string mode) => _settingsService.SetBackgroundMode(mode);
+    public List<string> GetAvailableBackgrounds() => _settingsService.GetAvailableBackgrounds();
     
-    public bool SetAccentColor(string color)
-    {
-        _config.AccentColor = color;
-        SaveConfig();
-        Logger.Info("Config", $"Accent color set to: {color}");
-        return true;
-    }
-
-    // Onboarding state
-    public bool GetHasCompletedOnboarding() => _config.HasCompletedOnboarding;
+    public string GetAccentColor() => _settingsService.GetAccentColor();
+    public bool SetAccentColor(string color) => _settingsService.SetAccentColor(color);
     
-    public bool SetHasCompletedOnboarding(bool completed)
-    {
-        _config.HasCompletedOnboarding = completed;
-        SaveConfig();
-        Logger.Info("Config", $"Onboarding completed: {completed}");
-        return true;
-    }
-
+    public bool GetHasCompletedOnboarding() => _settingsService.GetHasCompletedOnboarding();
+    public bool SetHasCompletedOnboarding(bool completed) => _settingsService.SetHasCompletedOnboarding(completed);
+    
     /// <summary>
     /// Generates a random username for the onboarding flow.
     /// </summary>
-    public string GetRandomUsername()
-    {
-        return GenerateRandomUsername();
-    }
-
-    /// <summary>
-    /// Resets the onboarding so it will show again on next launch.
-    /// </summary>
-    public bool ResetOnboarding()
-    {
-        _config.HasCompletedOnboarding = false;
-        SaveConfig();
-        Logger.Info("Config", "Onboarding reset - will show on next launch");
-        return true;
-    }
-
-    // Online mode settings
-    public bool GetOnlineMode() => _config.OnlineMode;
+    public string GetRandomUsername() => GenerateRandomUsername();
     
-    public bool SetOnlineMode(bool online)
-    {
-        _config.OnlineMode = online;
-        SaveConfig();
-        Logger.Info("Config", $"Online mode set to: {online}");
-        return true;
-    }
+    public bool ResetOnboarding() => _settingsService.ResetOnboarding();
     
-    // Auth domain settings
-    public string GetAuthDomain() => _config.AuthDomain;
+    public bool GetOnlineMode() => _settingsService.GetOnlineMode();
+    public bool SetOnlineMode(bool online) => _settingsService.SetOnlineMode(online);
     
-    public bool SetAuthDomain(string domain)
-    {
-        if (string.IsNullOrWhiteSpace(domain))
-        {
-            domain = "sessions.sanasol.ws";
-        }
-        _config.AuthDomain = domain;
-        SaveConfig();
-        Logger.Info("Config", $"Auth domain set to: {domain}");
-        return true;
-    }
-
-    /// <summary>
-    /// Gets the list of available background filenames
-    /// </summary>
-    public List<string> GetAvailableBackgrounds()
-    {
-        var backgrounds = new List<string>();
-        // These match the backgrounds in the frontend assets
-        for (int i = 1; i <= 30; i++)
-        {
-            backgrounds.Add($"bg_{i}");
-        }
-        return backgrounds;
-    }
-
-    // Launcher Data Directory settings
-    public string GetLauncherDataDirectory() => _config.LauncherDataDirectory;
+    public string GetAuthDomain() => _settingsService.GetAuthDomain();
+    public bool SetAuthDomain(string domain) => _settingsService.SetAuthDomain(domain);
     
-    public Task<string?> SetLauncherDataDirectoryAsync(string path)
-    {
-        try
-        {
-            // If path is empty or whitespace, clear the custom launcher data directory
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                _config.LauncherDataDirectory = "";
-                SaveConfig();
-                Logger.Success("Config", "Launcher data directory cleared, will use default on next restart");
-                return Task.FromResult<string?>(null);
-            }
-
-            var expanded = Environment.ExpandEnvironmentVariables(path.Trim());
-
-            if (!Path.IsPathRooted(expanded))
-            {
-                expanded = Path.GetFullPath(expanded);
-            }
-
-            // Just save the path, the change takes effect on next restart
-            _config.LauncherDataDirectory = expanded;
-            SaveConfig();
-
-            Logger.Success("Config", $"Launcher data directory set to {expanded} (takes effect on restart)");
-            return Task.FromResult<string?>(expanded);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Config", $"Failed to set launcher data directory: {ex.Message}");
-            return Task.FromResult<string?>(null);
-        }
-    }
+    public string GetLauncherDataDirectory() => _settingsService.GetLauncherDataDirectory();
+    public Task<string?> SetLauncherDataDirectoryAsync(string path) => _settingsService.SetLauncherDataDirectoryAsync(path);
 
     // Delegate to ModService
     public List<InstalledMod> GetInstanceInstalledMods(string instancePath) => 
@@ -2987,113 +2729,7 @@ exec env \
     /// Browse for mod files using native OS dialog.
     /// Returns array of selected file paths or empty array if cancelled.
     /// </summary>
-    public async Task<string[]> BrowseModFilesAsync()
-    {
-        try
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                // Use osascript for macOS file picker
-                var script = @"tell application ""Finder""
-                    activate
-                    set theFiles to choose file with prompt ""Select Mod Files"" of type {""jar"", ""zip"", ""hmod"", ""litemod"", ""json""} with multiple selections allowed
-                    set filePaths to """"
-                    repeat with aFile in theFiles
-                        set filePaths to filePaths & POSIX path of aFile & ""\n""
-                    end repeat
-                    return filePaths
-                end tell";
-                
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "osascript",
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                
-                using var process = Process.Start(psi);
-                if (process == null) return Array.Empty<string>();
-                
-                await process.StandardInput.WriteAsync(script);
-                process.StandardInput.Close();
-                
-                var output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                {
-                    return output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(p => p.Trim())
-                        .Where(p => !string.IsNullOrEmpty(p))
-                        .ToArray();
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // Use PowerShell to show file picker on Windows with multiselect
-                var script = @"Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.OpenFileDialog; $dialog.Filter = 'Mod Files (*.jar;*.zip;*.hmod;*.litemod;*.json)|*.jar;*.zip;*.hmod;*.litemod;*.json|All Files (*.*)|*.*'; $dialog.Multiselect = $true; $dialog.Title = 'Select Mod Files'; if ($dialog.ShowDialog() -eq 'OK') { $dialog.FileNames -join ""`n"" }";
-                
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell",
-                    Arguments = $"-NoProfile -Command \"{script}\"",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                
-                using var process = Process.Start(psi);
-                if (process == null) return Array.Empty<string>();
-                
-                var output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                if (!string.IsNullOrWhiteSpace(output))
-                {
-                    return output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(p => p.Trim())
-                        .Where(p => !string.IsNullOrEmpty(p))
-                        .ToArray();
-                }
-            }
-            else
-            {
-                // Linux - use zenity
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "zenity",
-                    Arguments = "--file-selection --multiple --title=\"Select Mod Files\" --file-filter=\"Mod Files | *.jar *.zip *.hmod *.litemod *.json\" --separator=\"\\n\"",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                
-                using var process = Process.Start(psi);
-                if (process == null) return Array.Empty<string>();
-                
-                var output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                
-                if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
-                {
-                    return output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(p => p.Trim())
-                        .Where(p => !string.IsNullOrEmpty(p))
-                        .ToArray();
-                }
-            }
-            
-            return Array.Empty<string>();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Files", $"Failed to browse files: {ex.Message}");
-            return Array.Empty<string>();
-        }
-    }
+    public async Task<string[]> BrowseModFilesAsync() => await _fileDialogService.BrowseModFilesAsync();
 
     /// <summary>
     /// Triggers a test Discord announcement popup for developer testing.
@@ -3119,343 +2755,10 @@ exec env \
     /// </summary>
     /// <param name="languageCode">The launcher language code (e.g., "en", "es", "de", "fr")</param>
     /// <returns>True if language files were successfully copied, false otherwise</returns>
-    public async Task<bool> SetGameLanguageAsync(string languageCode)
-    {
-        try
-        {
-            // Map launcher language codes to game language folder names
-            var languageMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "en", "en-US" },
-                { "es", "es-ES" },
-                { "de", "de-DE" },
-                { "fr", "fr-FR" },
-                { "ja", "ja-JP" },
-                { "ko", "ko-KR" },
-                { "pt", "pt-BR" },
-                { "ru", "ru-RU" },
-                { "tr", "tr-TR" },
-                { "uk", "uk-UA" },
-                { "zh", "zh-CN" },
-                { "be", "be-BY" }
-            };
-
-            // Get the game language code
-            if (!languageMapping.TryGetValue(languageCode, out var gameLanguageCode))
-            {
-                Logger.Warning("Language", $"Unknown language code: {languageCode}, defaulting to en-US");
-                gameLanguageCode = "en-US";
-            }
-
-            Logger.Info("Language", $"Setting game language to: {gameLanguageCode}");
-
-            // Find the game language source directory
-            // First check if running from published app (game-lang folder next to executable)
-            var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-            var exeDir = !string.IsNullOrEmpty(exePath) ? Path.GetDirectoryName(exePath) : null;
-            
-            string? sourceLangDir = null;
-            
-            // Check various possible locations
-            var possibleLocations = new List<string>();
-            
-            if (!string.IsNullOrEmpty(exeDir))
-            {
-                possibleLocations.Add(Path.Combine(exeDir, "game-lang", gameLanguageCode));
-                possibleLocations.Add(Path.Combine(exeDir, "..", "Resources", "game-lang", gameLanguageCode)); // macOS bundle
-            }
-            
-            // Development location
-            possibleLocations.Add(Path.Combine(AppContext.BaseDirectory, "game-lang", gameLanguageCode));
-            possibleLocations.Add(Path.Combine(AppContext.BaseDirectory, "assets", "game-lang", gameLanguageCode));
-            
-            foreach (var loc in possibleLocations)
-            {
-                if (Directory.Exists(loc))
-                {
-                    sourceLangDir = loc;
-                    break;
-                }
-            }
-
-            if (sourceLangDir == null)
-            {
-                Logger.Warning("Language", $"Language files not found for {gameLanguageCode}. Checked: {string.Join(", ", possibleLocations)}");
-                return false;
-            }
-
-            Logger.Info("Language", $"Found language files at: {sourceLangDir}");
-
-            // Get all installed game versions and update their language files
-            var branches = new[] { "release", "pre-release" };
-            int copiedCount = 0;
-
-            foreach (var branch in branches)
-            {
-                try
-                {
-                    var versions = await GetVersionListAsync(branch);
-                    foreach (var version in versions)
-                    {
-                        var instancePath = GetInstancePath(branch, version);
-                        var targetLangDir = Path.Combine(instancePath, "Client", "Data", "Shared", "language", gameLanguageCode);
-
-                        if (!Directory.Exists(instancePath))
-                            continue;
-
-                        // Create target language directory
-                        Directory.CreateDirectory(targetLangDir);
-
-                        // Copy all language files
-                        await CopyDirectoryRecursiveAsync(sourceLangDir, targetLangDir);
-                        copiedCount++;
-                        Logger.Info("Language", $"Copied language files to: {targetLangDir}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning("Language", $"Failed to update language for branch {branch}: {ex.Message}");
-                }
-            }
-
-            // Also update "latest" instance if it exists
-            foreach (var branch in branches)
-            {
-                try
-                {
-                    var latestPath = GetLatestInstancePath(branch);
-                    if (Directory.Exists(latestPath))
-                    {
-                        var targetLangDir = Path.Combine(latestPath, "Client", "Data", "Shared", "language", gameLanguageCode);
-                        Directory.CreateDirectory(targetLangDir);
-                        await CopyDirectoryRecursiveAsync(sourceLangDir, targetLangDir);
-                        copiedCount++;
-                        Logger.Info("Language", $"Copied language files to latest: {targetLangDir}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning("Language", $"Failed to update latest language for branch {branch}: {ex.Message}");
-                }
-            }
-
-            Logger.Info("Language", $"Successfully updated language files for {copiedCount} game instance(s)");
-            return copiedCount > 0;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Language", $"Failed to set game language: {ex.Message}");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Recursively copies all files from source directory to target directory.
-    /// </summary>
-    private async Task CopyDirectoryRecursiveAsync(string sourceDir, string targetDir)
-    {
-        Directory.CreateDirectory(targetDir);
-
-        // Copy files
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var fileName = Path.GetFileName(file);
-            var targetPath = Path.Combine(targetDir, fileName);
-            await Task.Run(() => File.Copy(file, targetPath, overwrite: true));
-        }
-
-        // Copy subdirectories
-        foreach (var dir in Directory.GetDirectories(sourceDir))
-        {
-            var dirName = Path.GetFileName(dir);
-            var targetSubDir = Path.Combine(targetDir, dirName);
-            await CopyDirectoryRecursiveAsync(dir, targetSubDir);
-        }
-    }
+    public async Task<bool> SetGameLanguageAsync(string languageCode) => await _languageService.SetGameLanguageAsync(languageCode);
 
     /// <summary>
     /// Gets the list of available game languages that have translation files.
     /// </summary>
-    public List<string> GetAvailableGameLanguages()
-    {
-        var languages = new List<string>();
-        
-        // Check for game-lang folders
-        var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-        var exeDir = !string.IsNullOrEmpty(exePath) ? Path.GetDirectoryName(exePath) : null;
-        
-        var possibleBaseDirs = new List<string>();
-        
-        if (!string.IsNullOrEmpty(exeDir))
-        {
-            possibleBaseDirs.Add(Path.Combine(exeDir, "game-lang"));
-            possibleBaseDirs.Add(Path.Combine(exeDir, "..", "Resources", "game-lang"));
-        }
-        
-        possibleBaseDirs.Add(Path.Combine(AppContext.BaseDirectory, "game-lang"));
-        possibleBaseDirs.Add(Path.Combine(AppContext.BaseDirectory, "assets", "game-lang"));
-        
-        foreach (var baseDir in possibleBaseDirs)
-        {
-            if (Directory.Exists(baseDir))
-            {
-                foreach (var dir in Directory.GetDirectories(baseDir))
-                {
-                    var langCode = Path.GetFileName(dir);
-                    if (!languages.Contains(langCode))
-                    {
-                        languages.Add(langCode);
-                    }
-                }
-                break; // Use first found location
-            }
-        }
-        
-        return languages;
-    }
-
-    #region Utility Methods
-
-    private void RunSilentProcess(string fileName, string arguments)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo(fileName, arguments)
-            {
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            var proc = Process.Start(psi);
-            proc?.WaitForExit();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Process", $"Failed to run {fileName} {arguments}: {ex.Message}");
-        }
-    }
-
-    private void ClearMacQuarantine(string path)
-    {
-        try
-        {
-            RunSilentProcess("xattr", $"-cr \"{path}\"");
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Game", $"Failed to clear quarantine on {path}: {ex.Message}");
-        }
-    }
-
-    private void CopyDirectory(string sourceDir, string destinationDir)
-    {
-        var dir = new DirectoryInfo(sourceDir);
-        if (!dir.Exists) return;
-
-        Directory.CreateDirectory(destinationDir);
-
-        foreach (var file in dir.GetFiles())
-        {
-            string targetFilePath = Path.Combine(destinationDir, file.Name);
-            file.CopyTo(targetFilePath, true);
-        }
-
-        foreach (var subDir in dir.GetDirectories())
-        {
-            string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-            CopyDirectory(subDir.FullName, newDestinationDir);
-        }
-    }
-
-    private void CleanupCorruptedInstall(string versionPath)
-    {
-        string backupRoot = Path.Combine(Path.GetTempPath(), "HyPrismBackup", Guid.NewGuid().ToString());
-        // Preserve UserData and Client/Assets to avoid re-downloading game
-        string[] preserve = { "UserData", "Client" };
-
-        try
-        {
-            Directory.CreateDirectory(backupRoot);
-            foreach (var dirName in preserve)
-            {
-                var src = Path.Combine(versionPath, dirName);
-                if (Directory.Exists(src))
-                {
-                    var dest = Path.Combine(backupRoot, dirName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                    CopyDirectory(src, dest);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Download", $"Failed to backup user data before cleanup: {ex.Message}");
-        }
-
-        try
-        {
-            if (Directory.Exists(versionPath))
-            {
-                Directory.Delete(versionPath, true);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Download", $"Failed to clean corrupted install at {versionPath}: {ex.Message}");
-        }
-
-        try
-        {
-            Directory.CreateDirectory(versionPath);
-            foreach (var dirName in preserve)
-            {
-                var backup = Path.Combine(backupRoot, dirName);
-                var dest = Path.Combine(versionPath, dirName);
-                if (Directory.Exists(backup))
-                {
-                    CopyDirectory(backup, dest);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Download", $"Failed to recreate install directory {versionPath}: {ex.Message}");
-        }
-    }
-
-    private bool IsMacAppSignatureCurrent(string executablePath, string stampPath)
-    {
-        try
-        {
-            if (!File.Exists(executablePath) || !File.Exists(stampPath))
-            {
-                return false;
-            }
-
-            var stamp = File.ReadAllText(stampPath).Trim();
-            var currentTicks = File.GetLastWriteTimeUtc(executablePath).Ticks.ToString();
-            return string.Equals(stamp, currentTicks, StringComparison.Ordinal);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private void MarkMacAppSigned(string executablePath, string stampPath)
-    {
-        try
-        {
-            var ticks = File.GetLastWriteTimeUtc(executablePath).Ticks.ToString();
-            File.WriteAllText(stampPath, ticks);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Game", $"Failed to record app sign stamp: {ex.Message}");
-        }
-    }
-
-    #endregion
+    public List<string> GetAvailableGameLanguages() => _languageService.GetAvailableGameLanguages();
 }

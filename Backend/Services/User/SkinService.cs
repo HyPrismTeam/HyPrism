@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using HyPrism.Backend;
 using HyPrism.Backend.Models;
 
 namespace HyPrism.Backend.Services.User;

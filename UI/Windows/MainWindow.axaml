@@ -112,7 +112,7 @@
                 <!-- TOP RIGHT: Logo + Icons -->
                 <StackPanel VerticalAlignment="Top" HorizontalAlignment="Right" Spacing="16">
                     <!-- Hytale Logo -->
-                    <Image Source="/Assets/logo.png" 
+                    <Image Source="/Assets/logo-wide.png" 
                            Width="180" 
                            Height="70" 
                            Stretch="Uniform"
