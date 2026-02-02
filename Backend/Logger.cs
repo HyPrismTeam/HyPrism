@@ -17,6 +17,7 @@ public static class Logger
 {
     private static readonly object _lock = new();
     private static readonly Queue<string> _logBuffer = new();
+    public static string? LogFile { get; set; } = null;
     private const int MaxLogEntries = 100;
     
     // Default: only show Success, Warning, and Error messages
@@ -71,11 +72,14 @@ public static class Logger
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss");
             var logEntry = $"{timestamp} | {level} | {category} | {message}";
+            
             _logBuffer.Enqueue(logEntry);
             while (_logBuffer.Count > MaxLogEntries)
             {
                 _logBuffer.Dequeue();
             }
+            
+            WriteToFile(logEntry);
         }
     }
     
@@ -128,6 +132,8 @@ public static class Logger
                 _logBuffer.Dequeue();
             }
             
+            WriteToFile(logEntry);
+            
             var originalColor = Console.ForegroundColor;
             
             Console.Write($"{timestamp}  ");
@@ -137,6 +143,27 @@ public static class Logger
             Console.WriteLine($"  {category}: {message}");
         }
     }
+    
+    private static void WriteToFile(string logEntry)
+    {
+        if (string.IsNullOrWhiteSpace(LogFile))
+            return;
+
+        try
+        {
+            var directory = Path.GetDirectoryName(LogFile);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            File.AppendAllText(LogFile, logEntry + Environment.NewLine);
+        }
+        catch
+        {
+            // Intentionally swallow exceptions to avoid logger crashes
+            // You may want to surface this in DEBUG builds
+        }
+    }
+
     
     private static string ProgressBar(int percent, int width)
     {
