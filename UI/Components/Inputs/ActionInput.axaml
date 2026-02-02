@@ -27,6 +27,7 @@
                          Text="{Binding ElementName=Root, Path=Text, Mode=TwoWay}"
                          Watermark="{Binding ElementName=Root, Path=Watermark}"
                          IsReadOnly="{Binding ElementName=Root, Path=IsReadOnly}"
+                         MaxLength="{Binding ElementName=Root, Path=MaxLength}"
                          Background="Transparent"
                          BorderThickness="0"
                          FontSize="14"

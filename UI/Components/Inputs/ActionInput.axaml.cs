@@ -50,6 +50,15 @@ public partial class ActionInput : UserControl
         get => GetValue(RightContentProperty);
         set => SetValue(RightContentProperty, value);
     }
+    
+    public static readonly StyledProperty<int> MaxLengthProperty =
+        AvaloniaProperty.Register<ActionInput, int>(nameof(MaxLength), defaultValue: 0);
+
+    public int MaxLength
+    {
+        get => GetValue(MaxLengthProperty);
+        set => SetValue(MaxLengthProperty, value);
+    }
 
     public ActionInput()
     {

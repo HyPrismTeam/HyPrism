@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:HyPrism.UI.ViewModels"
              xmlns:nav="using:HyPrism.UI.Components.Navigation"
+             xmlns:inputs="using:HyPrism.UI.Components.Inputs"
              xmlns:cv="using:HyPrism.UI.Converters"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
@@ -156,23 +157,34 @@
 
                             <!-- Nickname -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Display Name" FontWeight="Medium" Foreground="#CCCCCC"/>
-                                <TextBox Text="{Binding Nick}" Background="#252525" Foreground="White" BorderThickness="0" Padding="15" CornerRadius="8" FontSize="16" MaxLength="16"/>
+                                <inputs:ActionInput Label="Display Name" Text="{Binding Nick}" MaxLength="16"/>
                                 <TextBlock Text="This name will be shown in game (1-16 characters)." FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                             
                             <!-- UUID -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="UUID" FontWeight="Medium" Foreground="#CCCCCC"/>
-                                <Grid ColumnDefinitions="*,Auto,Auto">
-                                    <TextBox Grid.Column="0" Text="{Binding UUID}" Background="#252525" Foreground="White" BorderThickness="0" Padding="15" CornerRadius="8" FontSize="14" FontFamily="Consolas,Courier New"/>
-                                    <Button Grid.Column="1" Command="{Binding CopyUuidCommand}" Background="#404040" Foreground="White" CornerRadius="6" Padding="10,8" Margin="10,0,0,0" ToolTip.Tip="Copy UUID">
-                                        <svg:Svg Path="/Assets/Icons/copy.svg" Width="16" Height="16"/>
-                                    </Button>
-                                    <Button Grid.Column="2" Command="{Binding RandomizeUuidCommand}" Background="#404040" Foreground="White" CornerRadius="6" Padding="10,8" Margin="10,0,0,0" ToolTip.Tip="Generate Random UUID">
-                                        <svg:Svg Path="/Assets/Icons/refresh-cw.svg" Width="16" Height="16"/>
-                                    </Button>
-                                </Grid>
+                                <inputs:ActionInput Label="UUID" Text="{Binding UUID}">
+                                    <inputs:ActionInput.RightContent>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Command="{Binding CopyUuidCommand}" 
+                                                    Background="Transparent" 
+                                                    Foreground="White" 
+                                                    CornerRadius="6" 
+                                                    Padding="8" 
+                                                    ToolTip.Tip="Copy UUID">
+                                                <svg:Svg Path="/Assets/Icons/copy.svg" Width="16" Height="16"/>
+                                            </Button>
+                                            <Button Command="{Binding RandomizeUuidCommand}" 
+                                                    Background="Transparent" 
+                                                    Foreground="White" 
+                                                    CornerRadius="6" 
+                                                    Padding="8" 
+                                                    ToolTip.Tip="Generate Random UUID">
+                                                <svg:Svg Path="/Assets/Icons/refresh-cw.svg" Width="16" Height="16"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </inputs:ActionInput.RightContent>
+                                </inputs:ActionInput>
                                 <TextBlock Text="Your unique identifier for multiplayer. Changing this will reset your skin!" FontSize="12" Foreground="Orange"/>
                             </StackPanel>
                         </StackPanel>
@@ -183,16 +195,20 @@
                             
                             <!-- Launcher Storage -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Launcher Storage" FontWeight="Medium" Foreground="#CCCCCC"/>
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBox Grid.Column="0" Text="{Binding LauncherDataDirectory}" Background="#252525" Foreground="White" BorderThickness="0" Padding="15" CornerRadius="8" FontSize="14" IsReadOnly="True"/>
-                                    <Button Grid.Column="1" Command="{Binding BrowseLauncherDataCommand}" Background="#404040" Foreground="White" CornerRadius="6" Padding="15,8" Margin="10,0,0,0">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <svg:Svg Path="/Assets/Icons/hard-drive.svg" Width="16" Height="16"/>
-                                            <TextBlock Text="Browse" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
+                                <inputs:ActionInput Label="Launcher Storage" Text="{Binding LauncherDataDirectory}" IsReadOnly="True">
+                                    <inputs:ActionInput.RightContent>
+                                        <Button Command="{Binding BrowseLauncherDataCommand}" 
+                                                Background="#404040" 
+                                                Foreground="White" 
+                                                CornerRadius="6" 
+                                                Padding="12,8">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <svg:Svg Path="/Assets/Icons/hard-drive.svg" Width="16" Height="16"/>
+                                                <TextBlock Text="Browse" VerticalAlignment="Center" FontSize="13"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </inputs:ActionInput.RightContent>
+                                </inputs:ActionInput>
                                 <TextBlock Text="Location where launcher data and game files are stored." FontSize="12" Foreground="Gray"/>
                             </StackPanel>
                             
