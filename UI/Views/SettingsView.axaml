@@ -42,7 +42,7 @@
             <!-- Sidebar -->
             <Border Grid.Column="0" Background="#111111">
                 <Grid RowDefinitions="Auto, *">
-                    <TextBlock Text="Settings" Grid.Row="0" Margin="25,30,0,30" FontSize="20" FontWeight="Bold" Foreground="White" FontFamily="{StaticResource Poppins}"/>
+                    <TextBlock Text="{Binding Localization[settings.title]}" Grid.Row="0" Margin="25,30,0,30" FontSize="20" FontWeight="Bold" Foreground="White" FontFamily="{StaticResource Poppins}"/>
                     
                     <ScrollViewer Grid.Row="1">
                         <StackPanel Spacing="4" Margin="10,0">
@@ -50,43 +50,43 @@
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="profile">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/user.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="My Profile" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.myProfile]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="general">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/settings.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="General" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.general]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="visual">
                                  <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/image.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="Visuals" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.visuals]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="language">
                                  <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/globe.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="Language" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.language]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="data" IsEnabled="False">
                                  <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/database.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="Data" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.data]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="instances" IsEnabled="False">
                                  <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/hard-drive.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="Instances" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.instances]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="TabButton" Command="{Binding SwitchTabCommand}" CommandParameter="about">
                                  <StackPanel Orientation="Horizontal" Spacing="12">
                                      <svg:Svg Path="/Assets/Icons/info.svg" Width="18" Height="18"/>
-                                     <TextBlock Text="About" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Localization[settings.about]}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -240,7 +240,27 @@
                             
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Interface Language" FontWeight="Medium" Foreground="#CCCCCC"/>
-                                <TextBlock Text="Localization will be available soon." FontSize="13" Foreground="Gray"/>
+                                <TextBlock Text="Select your preferred language for the launcher interface" FontSize="13" Foreground="Gray"/>
+                                
+                                <ComboBox ItemsSource="{Binding LanguageItems}"
+                                          SelectedItem="{Binding SelectedLanguageItem}"
+                                          Width="250"
+                                          HorizontalAlignment="Left"
+                                          Margin="0,8,0,0">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding DisplayName}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                
+                                <TextBlock Text="Note: Some text may remain in English until full localization is complete." 
+                                           FontSize="12" 
+                                           Foreground="#888" 
+                                           Margin="0,12,0,0"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="500"
+                                           HorizontalAlignment="Left"/>
                             </StackPanel>
                         </StackPanel>
                         

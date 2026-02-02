@@ -14,6 +14,7 @@ namespace HyPrism.UI.ViewModels;
 public class MainViewModel : ReactiveObject
 {
     public AppService AppService { get; }
+    public LocalizationService Localization => AppService.Localization;
 
     // User Profile
     private string _nick;
@@ -116,6 +117,13 @@ public class MainViewModel : ReactiveObject
         get => _isLoading;
         set => this.RaiseAndSetIfChanged(ref _isLoading, value);
     }
+    
+    private double _mainContentOpacity = 0;
+    public double MainContentOpacity
+    {
+        get => _mainContentOpacity;
+        set => this.RaiseAndSetIfChanged(ref _mainContentOpacity, value);
+    }
 
     private readonly ObservableAsPropertyHelper<bool> _isOverlayOpen;
     public bool IsOverlayOpen => _isOverlayOpen.Value;
@@ -147,6 +155,13 @@ public class MainViewModel : ReactiveObject
     {
         get => _profileEditorViewModel;
         set => this.RaiseAndSetIfChanged(ref _profileEditorViewModel, value);
+    }
+    
+    private NewsViewModel? _newsViewModel;
+    public NewsViewModel? NewsViewModel
+    {
+        get => _newsViewModel;
+        set => this.RaiseAndSetIfChanged(ref _newsViewModel, value);
     }
     
     // Error Modal
@@ -222,6 +237,8 @@ public class MainViewModel : ReactiveObject
         // Initialize child VMs
         SettingsViewModel = new SettingsViewModel(AppService);
         SettingsViewModel.CloseCommand.Subscribe(_ => IsSettingsOpen = false);
+        
+        NewsViewModel = new NewsViewModel(AppService);
 
         // Commands
         LaunchCommand = ReactiveCommand.CreateFromTask(LaunchAsync);
@@ -337,12 +354,11 @@ public class MainViewModel : ReactiveObject
             if (LoadingViewModel != null)
             {
                 await LoadingViewModel.CompleteLoadingAsync();
-                // Wait for curtain animation to finish
-                await Task.Delay(1200);
             }
             
-            // Hide loading screen
+            // Hide loading screen and fade in main content simultaneously
             IsLoading = false;
+            MainContentOpacity = 1;
         }
         catch (Exception ex)
         {

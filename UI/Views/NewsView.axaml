@@ -2,21 +2,107 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HyPrism.UI.ViewModels"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              mc:Ignorable="d" d:DesignWidth="380" d:DesignHeight="700"
-             x:Class="HyPrism.UI.Views.NewsView">
+             x:Class="HyPrism.UI.Views.NewsView"
+             x:DataType="vm:NewsViewModel">
+    
+    <UserControl.Styles>
+        <!-- Animated Tab Indicator -->
+        <Style Selector="Border.tab-indicator">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="(Canvas.Left)" Duration="0:0:0.5" Easing="0.16,1,0.3,1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        
+        <!-- Tab Button Style -->
+        <Style Selector="Button.tab-btn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#999"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn:pointerover">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn.active">
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="IsEnabled" Value="False"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="TextElement.Foreground" Value="Black"/>
+        </Style>
+        
+        <Style Selector="Button.tab-btn:disabled">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        
+        <!-- News Card Style -->
+        <Style Selector="Button.news-card">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        
+        <Style Selector="Border.news-card-content">
+            <Setter Property="Background" Value="#CC252525"/>
+            <Setter Property="BorderBrush" Value="#333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        
+        <Style Selector="Button.news-card:pointerover Border.news-card-content">
+            <Setter Property="Background" Value="#CC2D2D2D"/>
+            <Setter Property="BorderBrush" Value="#444"/>
+        </Style>
+    </UserControl.Styles>
     
     <Grid Width="380" 
           VerticalAlignment="Stretch"
-          RowDefinitions="Auto, *">
+          RowDefinitions="Auto, Auto, *">
         
-        <!-- News Header -->
-        <Grid Grid.Row="0" 
-              Margin="0,0,0,16"
-              ColumnDefinitions="Auto, *, Auto">
-            <StackPanel Grid.Column="0" 
-                        Orientation="Horizontal" 
-                        Spacing="10">
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" Spacing="10">
                 <svg:Svg Path="/Assets/Icons/newspaper.svg" 
                          Width="20" 
                          Height="20"
@@ -27,85 +113,191 @@
                            Foreground="White" 
                            VerticalAlignment="Center"/>
             </StackPanel>
-            
-            <!-- News Filter Tabs -->
-            <StackPanel Grid.Column="2" 
-                            Orientation="Horizontal" 
-                            Spacing="8">
-                    <ToggleButton Content="All" 
-                                  IsChecked="True"
-                                  Background="{DynamicResource HytaleOrangeBrush}"
-                                  Foreground="#111"
-                                  Padding="12,6"
-                                  CornerRadius="8"
-                                  FontSize="11"
-                                  FontWeight="Bold"/>
-                    <ToggleButton Content="Hytale" 
-                                  Background="#2A2A2A"
-                                  Foreground="#999"
-                                  Padding="12,6"
-                                  CornerRadius="8"
-                                  FontSize="11"/>
-                    <ToggleButton Content="HyPrism" 
-                                  Background="#2A2A2A"
-                                  Foreground="#999"
-                                  Padding="12,6"
-                                  CornerRadius="8"
-                                  FontSize="11"/>
-            </StackPanel>
         </Grid>
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden">
-                <ItemsControl ItemsSource="{Binding News}" 
+        
+        <!-- Animated Tab Switcher -->
+        <Border Grid.Row="1" 
+                Margin="0,0,0,16"
+                Background="#1A1A1A"
+                CornerRadius="10"
+                Width="380"
+                Height="44"
+                HorizontalAlignment="Left"
+                Padding="4">
+            <Grid>
+                <!-- Background Indicator -->
+                <Canvas>
+                    <Border Classes="tab-indicator"
+                            Canvas.Left="{Binding ActiveTabPosition}"
+                            Width="{Binding TabWidth}"
+                            Height="{Binding TabHeight}"
+                            Background="{StaticResource HytaleOrangeBrush}"
+                            CornerRadius="8"/>
+                </Canvas>
+                
+                <!-- Tab Buttons -->
+                <Grid ColumnDefinitions="*, *, *" Height="{Binding TabHeight}">
+                    <Button Grid.Column="0" 
+                            Classes="tab-btn"
+                            Classes.active="{Binding ActiveFilter, Converter={StaticResource StringEqualityConverter}, ConverterParameter='all'}"
+                            Command="{Binding SetFilterCommand}"
+                            CommandParameter="all">
+                        <TextBlock Text="All" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                    
+                    <Button Grid.Column="1" 
+                            Classes="tab-btn"
+                            Classes.active="{Binding ActiveFilter, Converter={StaticResource StringEqualityConverter}, ConverterParameter='hytale'}"
+                            Command="{Binding SetFilterCommand}"
+                            CommandParameter="hytale">
+                        <TextBlock Text="Hytale" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                    
+                    <Button Grid.Column="2" 
+                            Classes="tab-btn"
+                            Classes.active="{Binding ActiveFilter, Converter={StaticResource StringEqualityConverter}, ConverterParameter='hyprism'}"
+                            Command="{Binding SetFilterCommand}"
+                            CommandParameter="hyprism">
+                        <TextBlock Text="HyPrism" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+        
+        <!-- News List -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Hidden">
+            <Panel>
+                <!-- Loading Indicator -->
+                <Border IsVisible="{Binding IsLoading}"
+                        Background="#11FFFFFF"
+                        CornerRadius="12"
+                        Padding="32"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Spacing="12" HorizontalAlignment="Center">
+                        <Border Width="32" 
+                                Height="32"
+                                BorderBrush="{StaticResource HytaleOrangeBrush}"
+                                BorderThickness="3"
+                                CornerRadius="16"
+                                HorizontalAlignment="Center">
+                            <Border.Styles>
+                                <Style Selector="Border">
+                                    <Style.Animations>
+                                        <Animation Duration="0:0:1" IterationCount="INFINITE">
+                                            <KeyFrame Cue="0%">
+                                                <Setter Property="Opacity" Value="1"/>
+                                            </KeyFrame>
+                                            <KeyFrame Cue="50%">
+                                                <Setter Property="Opacity" Value="0.3"/>
+                                            </KeyFrame>
+                                            <KeyFrame Cue="100%">
+                                                <Setter Property="Opacity" Value="1"/>
+                                            </KeyFrame>
+                                        </Animation>
+                                    </Style.Animations>
+                                </Style>
+                            </Border.Styles>
+                        </Border>
+                        <TextBlock Text="Loading news..."
+                                   Foreground="#999"
+                                   FontSize="12"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Error Message -->
+                <Border IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        Background="#33FF0000"
+                        BorderBrush="#FF0000"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="16"
+                        Margin="0,0,0,16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding ErrorMessage}"
+                                   Foreground="#FF4444"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"/>
+                        <Button Content="Retry"
+                                Command="{Binding RefreshCommand}"
+                                Background="#444"
+                                Foreground="White"
+                                Padding="12,6"
+                                CornerRadius="6"
+                                HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- News Items -->
+                <ItemsControl ItemsSource="{Binding News}"
+                              IsVisible="{Binding !IsLoading}"
                               Margin="0,0,0,20">
+                    <ItemsControl.Styles>
+                        <Style Selector="ItemsControl > ContentPresenter">
+                            <Setter Property="Opacity" Value="0"/>
+                            <Style.Animations>
+                                <Animation Duration="0:0:0.6" Easing="0.16,1,0.3,1" FillMode="Forward">
+                                    <KeyFrame Cue="0%">
+                                        <Setter Property="Opacity" Value="0"/>
+                                        <Setter Property="TranslateTransform.Y" Value="30"/>
+                                    </KeyFrame>
+                                    <KeyFrame Cue="100%">
+                                        <Setter Property="Opacity" Value="1"/>
+                                        <Setter Property="TranslateTransform.Y" Value="0"/>
+                                    </KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </ItemsControl.Styles>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Command="{Binding $parent[Window].DataContext.OpenNewsLinkCommand}"
+                            <Button Classes="news-card"
+                                    Command="{Binding $parent[UserControl].DataContext.OpenLinkCommand}"
                                     CommandParameter="{Binding Url}"
-                                    Background="Transparent"
-                                    Padding="0"
-                                    Margin="0,0,0,16"
-                                    HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Stretch"
-                                    CornerRadius="16">
-                                <Border Background="#CC252525" 
-                                        CornerRadius="12" 
-                                        Padding="16"
-                                        BorderBrush="#333333"
-                                        BorderThickness="1">
-                                    <Border.Transitions>
-                                        <Transitions>
-                                            <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                                            <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
-                                        </Transitions>
-                                    </Border.Transitions>
-                                    <Border.Styles>
-                                        <Style Selector="Border:pointerover">
-                                            <Setter Property="Background" Value="#CC2D2D2D"/>
-                                            <Setter Property="BorderBrush" Value="#444444"/>
-                                        </Style>
-                                    </Border.Styles>
-                                    
-                                    <StackPanel Spacing="8">
-                                        <!-- Title -->
-                                        <TextBlock Text="{Binding Title}" 
-                                                   FontWeight="Bold" 
-                                                   Foreground="White" 
-                                                   FontSize="14"
-                                                   TextWrapping="Wrap"
+                                    Margin="0,0,0,12">
+                                <Border Classes="news-card-content">
+                                    <Grid ColumnDefinitions="Auto, *">
+                                        <!-- News Image (Thumbnail) -->
+                                        <Border Grid.Column="0"
+                                                Width="80"
+                                                Height="80"
+                                                CornerRadius="8"
+                                                ClipToBounds="True"
+                                                Margin="0,0,12,0"
+                                                Background="Transparent">
+                                            <Image asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"
+                                                   Stretch="UniformToFill"
+                                                   RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                        </Border>
+                                        
+                                        <!-- Content -->
+                                        <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                                            <!-- Title -->
+                                            <TextBlock Text="{Binding Title}" 
+                                                       FontWeight="Bold" 
+                                                       Foreground="White" 
+                                                       FontSize="13"
+                                                       TextWrapping="Wrap"
                                                        MaxLines="2"
-                                                       LineHeight="20"/>
+                                                       LineHeight="18"/>
                                             
                                             <!-- Excerpt -->
                                             <TextBlock Text="{Binding Excerpt}" 
-                                                       FontSize="12" 
+                                                       FontSize="11" 
                                                        Foreground="#AAAAAA"
                                                        TextWrapping="Wrap"
                                                        MaxLines="2"
-                                                       LineHeight="17"
+                                                       LineHeight="15"
                                                        TextTrimming="CharacterEllipsis"/>
                                             
                                             <!-- Meta Info -->
-                                            <Grid ColumnDefinitions="Auto, *" Margin="0,4,0,0">
+                                            <Grid ColumnDefinitions="Auto, *" Margin="0,2,0,0">
                                                 <StackPanel Grid.Column="0" 
                                                             Orientation="Horizontal" 
                                                             Spacing="6">
@@ -114,23 +306,25 @@
                                                                Foreground="#888"
                                                                VerticalAlignment="Center"/>
                                                     <TextBlock Text="{Binding Author}" 
-                                                               FontSize="11" 
+                                                               FontSize="10" 
                                                                Foreground="#999"
                                                                FontWeight="Medium"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" 
                                                            Text="{Binding Date}" 
-                                                           FontSize="11" 
+                                                           FontSize="10" 
                                                            Foreground="#777"
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Center"/>
                                             </Grid>
                                         </StackPanel>
-                                    </Border>
-                                </Button>
+                                    </Grid>
+                                </Border>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+            </Panel>
         </ScrollViewer>
     </Grid>
 </UserControl>

@@ -52,6 +52,7 @@ public class AppService : IDisposable
     private readonly RosettaService _rosettaService;
     private readonly BrowserService _browserService;
     private readonly ProgressNotificationService _progressNotificationService;
+    private readonly LocalizationService _localizationService;
     
     // Exposed for ViewModel access
     public Config Configuration => _config;
@@ -59,6 +60,7 @@ public class AppService : IDisposable
     public NewsService NewsService => _newsService;
     public VersionService VersionService => _versionService;
     public ModService ModService => _modService;
+    public LocalizationService Localization => _localizationService;
 
     // UI Events (forwarded from ProgressNotificationService)
     public event Action<string, double, string, long, long>? DownloadProgressChanged
@@ -182,6 +184,10 @@ public class AppService : IDisposable
         _avatarService = new AvatarService(_instanceService, _appDir);
         _rosettaService = new RosettaService();
         _browserService = new BrowserService();
+        
+        // Initialize LocalizationService (reads from embedded resources)
+        _localizationService = new LocalizationService();
+        _localizationService.CurrentLanguage = _config.Language;
         
         // Initialize after DiscordService (needed below)
         _butlerService = new ButlerService(_appDir);
@@ -359,6 +365,17 @@ public class AppService : IDisposable
     public void SaveConfig()
     {
         SaveConfigInternal(_config);
+    }
+    
+    public void SetLanguage(string languageCode)
+    {
+        if (LocalizationService.AvailableLanguages.ContainsKey(languageCode))
+        {
+            _config.Language = languageCode;
+            _localizationService.CurrentLanguage = languageCode;
+            SaveConfig();
+            Logger.Info("Localization", $"Language changed to: {languageCode}");
+        }
     }
     
     /// <summary>

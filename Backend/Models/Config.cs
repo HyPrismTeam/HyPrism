@@ -50,6 +50,11 @@ public class Config
     public string LauncherDataDirectory { get; set; } = "";
     
     /// <summary>
+    /// Current interface language code (e.g., "en", "ru", "de")
+    /// </summary>
+    public string Language { get; set; } = "en";
+    
+    /// <summary>
     /// Accent color for the UI (hex format, e.g., "#FFA845").
     /// </summary>
     public string AccentColor { get; set; } = "#FFA845";

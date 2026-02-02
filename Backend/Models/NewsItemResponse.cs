@@ -24,4 +24,7 @@ public class NewsItemResponse
     
     [JsonPropertyName("imageUrl")]
     public string? ImageUrl { get; set; }
+    
+    [JsonPropertyName("source")]
+    public string Source { get; set; } = "hytale"; // "hytale" or "hyprism"
 }

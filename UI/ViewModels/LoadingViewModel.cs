@@ -11,7 +11,6 @@ public class LoadingViewModel : ReactiveObject
     private double _logoOpacity = 0;
     private double _contentOpacity = 0;
     private double _spinnerOpacity = 0;
-    private bool _isExiting;
     
     // Animation durations for XAML binding
     public string LogoFadeDuration => LoadingAnimationConstants.GetDurationString(LoadingAnimationConstants.LogoFadeDuration);
@@ -49,12 +48,6 @@ public class LoadingViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _spinnerOpacity, value);
     }
     
-    public bool IsExiting
-    {
-        get => _isExiting;
-        set => this.RaiseAndSetIfChanged(ref _isExiting, value);
-    }
-    
     public LoadingViewModel()
     {
         _ = StartEntranceAnimationAsync();
@@ -64,34 +57,31 @@ public class LoadingViewModel : ReactiveObject
     {
         await Task.Delay(LoadingAnimationConstants.InitialDelay);
         
-        // Fade in logo
         LogoOpacity = 1;
         await Task.Delay(LoadingAnimationConstants.LogoFadeDelay);
         
-        // Fade in content and spinner
         ContentOpacity = 1;
         SpinnerOpacity = 1;
         
-        // Keep visible for minimum time
         await Task.Delay(LoadingAnimationConstants.MinimumVisibleTime);
     }
     
     public async Task CompleteLoadingAsync()
     {
-        // Hide spinner (uses SpinnerFadeDuration from constants)
         SpinnerOpacity = 0;
         await Task.Delay(LoadingAnimationConstants.SpinnerFadeWaitTime);
         
-        // Delay before exit animation
         await Task.Delay(LoadingAnimationConstants.PreExitDelay);
         
-        // Trigger exit animation
-        IsExiting = true;
+        SpinnerOpacity = 0;
+        await Task.Delay(LoadingAnimationConstants.SpinnerFadeWaitTime);
         
-        // Wait for exit animation to complete
-        await Task.Delay(LoadingAnimationConstants.ExitAnimationWaitTime);
+        LogoOpacity = 0;
+        ContentOpacity = 0;
+        await Task.Delay(LoadingAnimationConstants.LogoFadeDelay);
         
-        // Hide loading screen
+        await Task.Delay(LoadingAnimationConstants.PreExitDelay);
+        
         IsLoading = false;
     }
 }

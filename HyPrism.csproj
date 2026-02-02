@@ -36,6 +36,7 @@
     <PackageReference Include="Avalonia.Svg.Skia" Version="11.3.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
     <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.0" />
+    <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.6.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
@@ -48,7 +49,12 @@
 
   <!-- Avalonia XAML files -->
   <ItemGroup>
-    <AvaloniaResource Include="Assets/**" />
+    <AvaloniaResource Include="Assets/**" Exclude="Assets/Locales/**" />
+  </ItemGroup>
+
+  <!-- Localization files as embedded resources -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/Locales/*.json" />
   </ItemGroup>
 
   <ItemGroup>

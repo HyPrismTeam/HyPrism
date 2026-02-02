@@ -12,7 +12,7 @@
         Width="1280" Height="800"
         MinWidth="1024" MinHeight="700"
         WindowStartupLocation="CenterScreen"
-        Background="#1E1E1E">
+        Background="#000000">
 
     <Window.Styles>
         <!-- Overlay Layer Animation -->
@@ -54,13 +54,18 @@
     </Design.DataContext>
     
     <Grid>
-        <!-- Content Root with Blur Effect -->
-        <Grid Tag="{Binding IsOverlayOpen}">
+        <!-- Content Root with Blur Effect and Fade In -->
+        <Grid Tag="{Binding IsOverlayOpen}" Opacity="{Binding MainContentOpacity}">
             <Grid.Styles>
                 <Style Selector="Grid[Tag=True]">
                     <Setter Property="Effect" Value="blur(16)"/>
                 </Style>
             </Grid.Styles>
+            <Grid.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.8" Easing="CubicEaseInOut"/>
+                </Transitions>
+            </Grid.Transitions>
 
             <!-- Background -->
             <Image Source="/Assets/bg_1.jpg" Stretch="UniformToFill"/>
@@ -103,7 +108,7 @@
                     </StackPanel>
                     
                     <!-- Version -->
-                    <TextBlock Text="HyPrism 2.0.2" 
+                    <TextBlock Text="{Binding Localization[app.version], StringFormat='{}{0}'}" 
                                FontSize="11" 
                                Foreground="#999"
                                Margin="4,0,0,0"/>
@@ -153,6 +158,7 @@
                 <views:NewsView VerticalAlignment="Stretch" 
                                 HorizontalAlignment="Right"
                                 Margin="0,140,0,80"
+                                DataContext="{Binding NewsViewModel}"
                                 IsVisible="{Binding !AppService.Configuration.DisableNews}"/>                
                 <!-- BOTTOM LEFT: Music Player (Temporarily disabled) -->
                 <!-- <views:MusicPlayerView VerticalAlignment="Bottom"
@@ -203,8 +209,9 @@
                 <TextBlock VerticalAlignment="Bottom" 
                            HorizontalAlignment="Center"
                            Margin="0,0,0,8">
-                    <Run Text="For educational purposes only. Like it? " Foreground="#999" FontSize="12"/>
-                    <Run Text="BUY IT" Foreground="{StaticResource HytaleOrangeBrush}" FontSize="12" FontWeight="Bold"/>
+                    <Run Text="{Binding Localization[main.educational]}" Foreground="#999" FontSize="12"/>
+                    <Run Text=" "/>
+                    <Run Text="{Binding Localization[main.buyIt]}" Foreground="{StaticResource HytaleOrangeBrush}" FontSize="12" FontWeight="Bold"/>
                 </TextBlock>
                 
                 <!-- BOTTOM RIGHT: Version Selector + Play Button -->
@@ -246,7 +253,7 @@
                             <svg:Svg Path="/Assets/Icons/play.svg" Width="20" Height="20">
                                 <svg:Svg.Css>* { stroke: #111 !important; fill: #111 !important; }</svg:Svg.Css>
                             </svg:Svg>
-                            <TextBlock Text="PLAY" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Localization[main.play]}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

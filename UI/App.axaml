@@ -18,6 +18,8 @@
             
             <!-- Converters -->
             <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
+            <converters:TabPositionConverter x:Key="TabPositionConverter"/>
+            <converters:StringEqualityConverter x:Key="StringEqualityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
     <Application.Styles>

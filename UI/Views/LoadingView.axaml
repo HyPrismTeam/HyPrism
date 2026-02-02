@@ -26,22 +26,6 @@
             </Setter>
         </Style>
         
-        <!-- Exit animation: slide up and fade out -->
-        <Style Selector="Grid.loading-container.exiting">
-            <Style.Animations>
-                <Animation Duration="{Binding ExitAnimationDuration}" FillMode="Forward" Easing="CubicEaseOut">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="Opacity" Value="1"/>
-                        <Setter Property="(TranslateTransform.Y)" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="Opacity" Value="0"/>
-                        <Setter Property="(TranslateTransform.Y)" Value="-100"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
-        
         <!-- Spinner rotation -->
         <Style Selector="Ellipse.spinner">
             <Style.Animations>
@@ -58,11 +42,7 @@
     </UserControl.Styles>
     
     <Grid Background="#000000"
-          Classes.exiting="{Binding IsExiting}"
           Classes="loading-container">
-        <Grid.RenderTransform>
-            <TranslateTransform/>
-        </Grid.RenderTransform>
         
         <!-- Logo - centered -->
         <Image Classes="logo"

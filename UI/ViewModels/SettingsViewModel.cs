@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using System.Linq;
+using HyPrism.Backend.Services.Core;
 
 namespace HyPrism.UI.ViewModels;
 
@@ -14,9 +15,16 @@ public class BranchItem
     public string Value { get; set; } = "";
 }
 
+public class LanguageItem
+{
+    public string Code { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+}
+
 public class SettingsViewModel : ReactiveObject
 {
     private readonly AppService _appService;
+    public LocalizationService Localization => _appService.Localization;
 
     // Tabs
     private string _activeTab = "profile";
@@ -109,6 +117,23 @@ public class SettingsViewModel : ReactiveObject
         }
     }
     
+    // Language
+    public List<LanguageItem> LanguageItems { get; }
+    
+    private LanguageItem? _selectedLanguageItem;
+    public LanguageItem? SelectedLanguageItem
+    {
+        get => _selectedLanguageItem;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedLanguageItem, value);
+            if (value != null)
+            {
+                _appService.SetLanguage(value.Code);
+            }
+        }
+    }
+    
     // Commands
     public ReactiveCommand<string, Unit> SwitchTabCommand { get; }
     public ReactiveCommand<Unit, Unit> CloseCommand { get; } // Handled by View
@@ -120,6 +145,12 @@ public class SettingsViewModel : ReactiveObject
     {
         _appService = appService;
         
+        // Initialize language items
+        LanguageItems = LocalizationService.AvailableLanguages
+            .Select(kvp => new LanguageItem { Code = kvp.Key, DisplayName = kvp.Value })
+            .OrderBy(l => l.DisplayName)
+            .ToList();
+        
         // Initialize properties
         _nick = _appService.GetNick();
         _uuid = _appService.GetUUID();
@@ -128,6 +159,10 @@ public class SettingsViewModel : ReactiveObject
         // Initialize branch selection
         var currentBranch = _appService.GetLauncherBranch();
         _selectedBranchItem = BranchItems.FirstOrDefault(b => b.Value == currentBranch) ?? BranchItems[0];
+        
+        // Initialize language selection
+        var currentLanguage = _appService.Configuration.Language;
+        _selectedLanguageItem = LanguageItems.FirstOrDefault(l => l.Code == currentLanguage) ?? LanguageItems.First(l => l.Code == "en");
         
         SwitchTabCommand = ReactiveCommand.Create<string>(tab => ActiveTab = tab);
         CloseCommand = ReactiveCommand.Create(() => { });

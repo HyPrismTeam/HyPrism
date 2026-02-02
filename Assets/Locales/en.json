@@ -1,0 +1,127 @@
+{
+  "app": {
+    "title": "HyPrism",
+    "version": "HyPrism {0}"
+  },
+  "main": {
+    "play": "PLAY",
+    "release": "Release",
+    "preRelease": "Pre-Release",
+    "latest": "latest",
+    "educational": "For educational purposes only. Like it?",
+    "buyIt": "BUY IT"
+  },
+  "settings": {
+    "title": "Settings",
+    "myProfile": "My Profile",
+    "general": "General",
+    "visuals": "Visuals",
+    "language": "Language",
+    "data": "Data",
+    "instances": "Instances",
+    "about": "About",
+    "close": "Close",
+    "browse": "Browse",
+    "profile": {
+      "title": "My Profile",
+      "avatar": "Avatar",
+      "displayName": "Display Name",
+      "displayNameHint": "This name will be shown in game (1-16 characters).",
+      "uuid": "UUID",
+      "uuidWarning": "Your unique identifier for multiplayer. Changing this will reset your skin!",
+      "randomize": "Randomize",
+      "copy": "Copy"
+    },
+    "generalSettings": {
+      "title": "General Settings",
+      "launcherStorage": "Launcher Storage",
+      "launcherStorageHint": "Location where launcher data and game files are stored.",
+      "updateChannel": "Update Channel",
+      "updateChannelStable": "Stable (Recommended)",
+      "updateChannelBeta": "Beta (Experimental)",
+      "updateChannelHint": "You will receive stable releases only.",
+      "closeLauncher": "Close Launcher",
+      "closeLauncherHint": "Close the launcher automatically when the game starts.",
+      "disableNews": "Disable News",
+      "disableNewsHint": "Hide the news feed from the main menu."
+    },
+    "visualSettings": {
+      "title": "Visual Settings",
+      "accentColor": "Accent Color",
+      "accentColorHint": "Theme customization will be available soon.",
+      "background": "Background",
+      "backgroundHint": "Background customization will be available soon."
+    },
+    "languageSettings": {
+      "title": "Language Settings",
+      "interfaceLanguage": "Interface Language",
+      "interfaceLanguageHint": "Select your preferred language for the launcher interface",
+      "note": "Note: Some text may remain in English until full localization is complete."
+    }
+  },
+  "profileEditor": {
+    "title": "Profile Editor",
+    "avatar": "Avatar",
+    "dropSkin": "Drop your skin file here or use the buttons below",
+    "openAvatarFolder": "Open Avatar Folder",
+    "refreshPreview": "Refresh Preview",
+    "username": "Username",
+    "usernameHint": "Must be 1-16 characters",
+    "uuid": "UUID",
+    "uuidHint": "Unique identifier for your profile",
+    "randomize": "Randomize",
+    "copy": "Copy",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "deleteProfile": {
+    "title": "Delete Profile?",
+    "message": "Are you sure you want to delete",
+    "warning": "This will permanently delete all profile data, including:",
+    "avatarData": "Avatar and skin data",
+    "gameData": "Game progress",
+    "settings": "Profile settings",
+    "cannotUndo": "This action cannot be undone.",
+    "cancel": "Cancel",
+    "delete": "Delete Profile"
+  },
+  "error": {
+    "title": "Error Occurred",
+    "technicalDetails": "Technical Details",
+    "copyError": "Copy Error",
+    "ok": "OK",
+    "dismiss": "Dismiss"
+  },
+  "news": {
+    "title": "News",
+    "loading": "Loading news...",
+    "readMore": "Read more on hytale.com",
+    "tryAgain": "Try Again"
+  },
+  "update": {
+    "downloading": "Downloading...",
+    "extracting": "Extracting...",
+    "launching": "Launching...",
+    "pleaseWait": "Please wait while we download and install the game files.",
+    "autoLaunch": "The game will launch automatically when ready."
+  },
+  "modManager": {
+    "title": "Mod Manager",
+    "installed": "Installed Mods",
+    "browse": "Browse Mods",
+    "search": "Search mods...",
+    "searchInstalled": "Search installed mods...",
+    "allCategories": "All Categories",
+    "noModsFound": "No mods found",
+    "noModsInstalled": "No mods installed",
+    "noMatch": "No mods match your search",
+    "download": "Download",
+    "update": "Update",
+    "delete": "Delete",
+    "checkForUpdates": "Check for Updates",
+    "allUpToDate": "All mods are up to date!",
+    "updatesAvailable": "{0} mod(s) have updates available:",
+    "openModsFolder": "Open Mods Folder",
+    "close": "Close"
+  }
+}
