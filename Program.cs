@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -67,6 +68,9 @@ class Program
     [STAThread]
     static void Main(string[] args)
     {
+        Logger.LogFile = Path.Combine(AppService.GetDefaultAppDir(), "logs", "hyprism.log");
+        Logger.MinimumLevel = AppLogLevel.Info; // show Info-level logs in wrapper mode
+        
         // Initialize backend services
         var app = new AppService();
         
@@ -126,7 +130,18 @@ class Program
         app.SetMainWindow(window);
         
         // Load from local HTTP server (bypasses file:// security restrictions)
-        window.Load($"http://localhost:{_port}/index.html");
+        
+        var isWrapper = args?.Any(a => a == "--wrapper") == true;
+        if (isWrapper)
+        {
+            Logger.Info("Program", "Starting in wrapper mode");
+        }
+
+        // Inform backend that we are running in wrapper mode (affects auto-update behavior)
+        app.SetWrapperMode(isWrapper);
+
+        var url = isWrapper ? $"http://localhost:{_port}/index.html?wrapper=1" : $"http://localhost:{_port}/index.html";
+        window.Load(url);
         
                 // Suppress noisy Photino debug output on stdout/stderr while keeping our own logs
                 // Photino writes lines like: Photino.NET: "HyPrism".Load(...)
@@ -272,6 +287,7 @@ class Program
                         "GetActiveProfileIndex" => app.GetActiveProfileIndex(),
                         "CreateProfile" => app.CreateProfile(GetArg<string>(request.Args, 0), GetArg<string>(request.Args, 1)),
                         "DuplicateProfile" => app.DuplicateProfile(GetArg<string>(request.Args, 0)),
+                        "DuplicateProfileWithoutData" => app.DuplicateProfileWithoutData(GetArg<string>(request.Args, 0)),
                         "DeleteProfile" => app.DeleteProfile(GetArg<string>(request.Args, 0)),
                         "SwitchProfile" => app.SwitchProfile(GetArg<int>(request.Args, 0)),
                         "UpdateProfile" => app.UpdateProfile(GetArg<string>(request.Args, 0), GetArg<string>(request.Args, 1), GetArg<string>(request.Args, 2)),
@@ -279,6 +295,7 @@ class Program
                         "OpenCurrentProfileFolder" => app.OpenCurrentProfileFolder(),
                         
                         "GetCustomInstanceDir" => app.GetCustomInstanceDir(),
+                        "GetDefaultInstanceDir" => app.GetDefaultInstanceDir(),
                         "SetInstanceDirectory" => await app.SetInstanceDirectoryAsync(GetArg<string>(request.Args, 0)),
                         
                         // Version Management
@@ -317,7 +334,12 @@ class Program
                         
                         // News
                         "GetNews" => await app.GetNewsAsync(GetArg<int>(request.Args, 0)),
-                        
+
+                        // Wrapper (installed-by-packaging containers like Flatpak/AppImage)
+                        "WrapperGetStatus" => await app.GetWrapperStatusAsync(),
+                        "WrapperInstallLatest" => await app.WrapperInstallLatestAsync(),
+                        "WrapperLaunch" => app.WrapperLaunch(),
+
                         // Update
                         "Update" => await app.UpdateAsync(request.Args),
                         
@@ -351,6 +373,7 @@ class Program
                             GetArg<string>(request.Args, 1),
                             GetArg<string>(request.Args, 2),
                             GetArg<int>(request.Args, 3)),
+                        "InstallOptimizationMods" => await app.InstallOptimizationModsAsync(),
                         "UninstallInstanceMod" => app.UninstallInstanceMod(
                             GetArg<string>(request.Args, 0),
                             GetArg<string>(request.Args, 1),
@@ -408,6 +431,10 @@ class Program
                         // News settings
                         "GetDisableNews" => app.GetDisableNews(),
                         "SetDisableNews" => app.SetDisableNews(GetArg<bool>(request.Args, 0)),
+                        
+                        // Mod settings
+                        "GetShowAlphaMods" => app.GetShowAlphaMods(),
+                        "SetShowAlphaMods" => app.SetShowAlphaMods(GetArg<bool>(request.Args, 0)),
                         
                         // Background settings
                         "GetBackgroundMode" => app.GetBackgroundMode(),
