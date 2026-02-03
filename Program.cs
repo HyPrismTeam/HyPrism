@@ -1,12 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Runtime.InteropServices;
-using Avalonia;
-using HyPrism.Services;
+﻿using Avalonia;
+using HyPrism.Services.Core;
 using HyPrism.UI;
 
 using Avalonia.ReactiveUI;
-using Avalonia.Svg.Skia;
+using Serilog;
 
 namespace HyPrism;
 
@@ -15,10 +12,32 @@ class Program
     [STAThread]
     static void Main(string[] args)
     {
-        // Print ASCII Logo
+        // Initialize Logger
+        var appDir = UtilityService.GetEffectiveAppDir();
+        var logsDir = Path.Combine(appDir, "logs");
+        Directory.CreateDirectory(logsDir);
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .Enrich.FromLogContext()
+            .Enrich.WithThreadId()
+            .WriteTo.File(
+                path: Path.Combine(logsDir, "app-.log"),
+                rollingInterval: RollingInterval.Day,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}",
+                retainedFileCountLimit: 7
+            )
+            .CreateLogger();
+
         try
         {
-            Console.WriteLine("""
+            Logger.Info("Boot", "Starting HyPrism...");
+            Logger.Info("Boot", $"App Directory: {appDir}");
+
+            // Print ASCII Logo
+            try
+            {
+                Console.WriteLine("""
 
  .-..-.      .---.       _                
  : :; :      : .; :     :_;               
@@ -37,13 +56,23 @@ class Program
         {
             // In wrapper mode, launch the wrapper UI
             // This is used by Flatpak/AppImage to manage the installation of the actual HyPrism binary
-            Console.WriteLine("Running in wrapper mode");
+            Logger.Info("Wrapper", "Running in wrapper mode");
             // The wrapper UI will use WrapperGetStatus, WrapperInstallLatest, WrapperLaunch methods
         }
         
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
-            
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Application crashed unexpectedly");
+            Logger.Error("Crash", $"Application crashed: {ex.Message}");
+            Console.WriteLine(ex.ToString());
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
 
     public static AppBuilder BuildAvaloniaApp()

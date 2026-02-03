@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+using Serilog;
 
 namespace HyPrism.Services.Core;
 
@@ -11,28 +10,38 @@ public static class Logger
     
     public static void Info(string category, string message)
     {
-        WriteLog("INFO", category, message, ConsoleColor.White);
+        Log.ForContext("SourceContext", category).Information(message);
+        WriteToConsole("INF", category, message, ConsoleColor.Gray);
+        AddToBuffer("INF", category, message);
     }
     
     public static void Success(string category, string message)
     {
-        WriteLog("OK", category, message, ConsoleColor.Green);
+        Log.ForContext("SourceContext", category).Information($"SUCCESS: {message}");
+        WriteToConsole("SUC", category, message, ConsoleColor.Green);
+        AddToBuffer("SUC", category, message);
     }
     
     public static void Warning(string category, string message)
     {
-        WriteLog("WARN", category, message, ConsoleColor.Yellow);
+        Log.ForContext("SourceContext", category).Warning(message);
+        WriteToConsole("WRN", category, message, ConsoleColor.Yellow);
+        AddToBuffer("WRN", category, message);
     }
     
     public static void Error(string category, string message)
     {
-        WriteLog("ERR", category, message, ConsoleColor.Red);
+        Log.ForContext("SourceContext", category).Error(message);
+        WriteToConsole("ERR", category, message, ConsoleColor.Red);
+        AddToBuffer("ERR", category, message);
     }
     
     public static void Debug(string category, string message)
     {
 #if DEBUG
-        WriteLog("DBG", category, message, ConsoleColor.Gray);
+        Log.ForContext("SourceContext", category).Debug(message);
+        WriteToConsole("DBG", category, message, ConsoleColor.DarkGray);
+        AddToBuffer("DBG", category, message);
 #endif
     }
     
@@ -51,53 +60,66 @@ public static class Logger
         }
     }
     
-    public static void Progress(string category, int percent, string message)
+    private static void WriteToConsole(string level, string category, string message, ConsoleColor color)
     {
         lock (_lock)
         {
-            Console.Write($"\r[{category}] {message.PadRight(40)} [{ProgressBar(percent, 20)}] {percent,3}%");
-            if (percent >= 100)
+            try 
             {
-                Console.WriteLine();
+                if (Console.IsOutputRedirected) return;
+
+                var timestamp = DateTime.Now.ToString("HH:mm:ss");
+                
+                Console.Write($"{timestamp} ");
+                
+                var originalColor = Console.ForegroundColor;
+                Console.ForegroundColor = color;
+                Console.Write(level);
+                Console.ForegroundColor = originalColor;
+                
+                Console.WriteLine($" {category}: {message}");
             }
+            catch { /* Ignore */ }
         }
     }
-    
-    private static void WriteLog(string level, string category, string message, ConsoleColor color)
+
+    private static void AddToBuffer(string level, string category, string message)
     {
         lock (_lock)
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss");
-            var icon = level switch
-            {
-                "OK" => "✔",
-                "WARN" => "⚠",
-                "ERR" => "✖",
-                _ => "•"
-            };
-
             var logEntry = $"{timestamp} | {level} | {category} | {message}";
             
-            // Add to buffer
             _logBuffer.Enqueue(logEntry);
             while (_logBuffer.Count > MaxLogEntries)
             {
                 _logBuffer.Dequeue();
             }
-            
-            var originalColor = Console.ForegroundColor;
-            
-            Console.Write($"{timestamp}  ");
-            Console.ForegroundColor = color;
-            Console.Write($"{icon} {level}");
-            Console.ForegroundColor = originalColor;
-            Console.WriteLine($"  {category}: {message}");
         }
     }
+
+    public static void Progress(string category, int percent, string message)
+    {
+        lock (_lock)
+        {
+            try {
+                if (!Console.IsOutputRedirected)
+                {
+                    Console.Write($"\r[{category}] {message,-40} [{ProgressBar(percent, 20)}] {percent,3}%");
+                    if (percent >= 100)
+                    {
+                        Console.WriteLine();
+                    }
+                }
+            }
+            catch { /* Ignore */ }
+        }
+    }
+
     
     private static string ProgressBar(int percent, int width)
     {
-        int filled = (int)((percent / 100.0) * width);
+        int filled = (int)(percent / 100.0 * width);
         int empty = width - filled;
         return new string('=', filled) + new string('-', empty);
     }

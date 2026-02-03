@@ -1,7 +1,5 @@
-using System;
 using Avalonia;
 using Avalonia.Media;
-using HyPrism.Services;
 using ReactiveUI;
 
 namespace HyPrism.Services.Core;

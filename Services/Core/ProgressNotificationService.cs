@@ -1,5 +1,3 @@
-using System;
-
 namespace HyPrism.Services.Core;
 
 /// <summary>
