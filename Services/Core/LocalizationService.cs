@@ -141,14 +141,6 @@ public class LocalizationService : ReactiveObject
     }
 
     /// <summary>
-    /// Gets the current translation for a key directly
-    /// </summary>
-    public string GetString(string key)
-    {
-        return Translate(key);
-    }
-
-    /// <summary>
     /// Creates an observable that tracks a specific translation key.
     /// This is the key method for reactive bindings!
     /// </summary>

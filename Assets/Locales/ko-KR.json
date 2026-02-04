@@ -80,7 +80,13 @@
     "aboutSettings": {
       "title": "HyPrism 런처",
       "version": "버전 {0}",
-      "description": "Hytale을 위한 현대적인 런처"
+      "description": "Hytale을 위한 현대적인 런처",
+      "maintainerRole": "관리자 & 개발자",
+      "authRole": "인증 서버 제작자 & 관리자",
+      "contributorRole": "기여자",
+      "others": "그 외",
+      "contributorsDescription": "이 런처 제작에 도움을 준 훌륭한 분들",
+      "disclaimer": "HyPrism은 공식 Hytale 런처가 아니며 Hypixel Studios에서 개발한 제품이 아닙니다"
     }
   },
   "profileEditor": {

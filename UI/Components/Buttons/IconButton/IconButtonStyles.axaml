@@ -46,12 +46,15 @@
                            RenderTransformOrigin="50%,50%">
                         
                          <!-- Base Icon (White) -->
-                         <svg:Svg Name="PART_BaseIcon"
-                                  Path="{TemplateBinding IconPath}"
-                                  Width="{TemplateBinding IconSize}"
-                                  Height="{TemplateBinding IconSize}"
-                                  Css="* { stroke: #FFFFFF; fill: none; }"
-                                  IsHitTestVisible="False"/>
+                         <!-- Wrapped in a Panel to ensure smooth opacity transitions and avoid rendering glitches -->
+                         <Panel Name="PART_BaseIconWrapper" IsHitTestVisible="False">
+                             <svg:Svg Name="PART_BaseIcon"
+                                      Path="{TemplateBinding IconPath}"
+                                      Width="{TemplateBinding IconSize}"
+                                      Height="{TemplateBinding IconSize}"
+                                      Css="* { stroke: #FFFFFF; fill: none; }"
+                                      IsHitTestVisible="False"/>
+                         </Panel>
 
                          <!-- Hover Overlay (Accent Color) -->
                          <svg:Svg Name="PART_HoverOverlay"
@@ -61,11 +64,6 @@
                                   Css="{TemplateBinding HoverCss}"
                                   Opacity="0"
                                   IsHitTestVisible="False">
-                             <svg:Svg.Transitions>
-                                 <Transitions>
-                                     <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="LinearEasing"/>
-                                 </Transitions>
-                             </svg:Svg.Transitions>
                          </svg:Svg>
                          
                         <Panel.Transitions>
@@ -78,13 +76,6 @@
             </ControlTemplate>
         </Setter>
     </Style>
-    
-    <!-- Hover State: Fade in Orange Overlay -->
-    <Style Selector="btn|IconButton:pointerover /template/ svg|Svg#PART_HoverOverlay">
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    
-    <!-- Hover State: Scale Up Container -->
     
     <!-- Hover State: Scale Up Container -->
     <Style Selector="btn|IconButton:pointerover /template/ Panel#PART_IconContainer">

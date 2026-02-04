@@ -82,7 +82,13 @@
     "aboutSettings": {
       "title": "HyPrism 启动器",
       "version": "版本 {0}",
-      "description": "现代化的 Hytale 启动器"
+      "description": "现代化的 Hytale 启动器",
+      "maintainerRole": "维护者 & 开发者",
+      "authRole": "验证服务器创建者 & 维护者",
+      "contributorRole": "贡献者",
+      "others": "以及其他",
+      "contributorsDescription": "协助创建此启动器的出色人员",
+      "disclaimer": "HyPrism 不是官方 Hytale 启动器，也不是 Hypixel Studios 开发的产品"
     }
   },
   "profileEditor": {

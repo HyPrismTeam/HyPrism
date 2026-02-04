@@ -6,6 +6,7 @@
              xmlns:nav="using:HyPrism.UI.Components.Navigation"
              xmlns:inputs="using:HyPrism.UI.Components.Inputs"
              xmlns:buttons="using:HyPrism.UI.Components.Buttons"
+             xmlns:cards="using:HyPrism.UI.Components.Cards"
              xmlns:cv="using:HyPrism.UI.Converters"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
@@ -206,7 +207,7 @@
             <!-- Sidebar -->
             <Border Grid.Column="0" Background="#111111">
                 <Grid RowDefinitions="Auto, *">
-                    <TextBlock Text="{Binding SettingsTitle^}" Grid.Row="0" Margin="30,30,30,30" FontSize="28" FontWeight="Bold" Foreground="White" FontFamily="{StaticResource Poppins}"/>
+                    <TextBlock Text="{Binding SettingsTitle^}" Grid.Row="0" Margin="30,30,30,30" FontSize="28" FontWeight="SemiBold" Foreground="White" FontFamily="{StaticResource Poppins}"/>
                     
                     <ScrollViewer Grid.Row="1">
                         <StackPanel Spacing="4" Margin="10,0">
@@ -282,7 +283,7 @@
             <Grid Grid.Column="1" Background="#1E1E1E">
                 
                 <!-- Tab Contents -->
-                <ScrollViewer Padding="30,30,30,30">
+                <ScrollViewer Padding="30,30,30,30" HorizontalScrollBarVisibility="Disabled">
                     <Panel>
                         
                         <!-- Profile Tab -->
@@ -306,6 +307,11 @@
                             <StackPanel Spacing="8">
                                 <inputs:ActionInput Label="{Binding ProfileDisplayName^}" Text="{Binding Nick}" MaxLength="16"/>
                                 <TextBlock Text="{Binding ProfileDisplayNameHint^}" FontSize="12" Foreground="Gray"/>
+                                <Border MaxWidth="600" HorizontalAlignment="Left" Margin="0,5,0,0">
+                                    <cards:NoticeCard Text="{Binding ProfileNameWarning^}" 
+                                                      IconPath="/Assets/Icons/alert-triangle.svg" 
+                                                      ThemeColor="#EAB308"/>
+                                </Border>
                             </StackPanel>
                             
                             <!-- UUID -->
@@ -482,13 +488,11 @@
                                 </inputs:SelectionInput>
                                 <TextBlock Text="{Binding LanguageInterfaceHint^}" FontSize="13" Foreground="Gray"/>
                                 
-                                <TextBlock Text="{Binding LanguageNote^}" 
-                                           FontSize="12" 
-                                           Foreground="#888" 
-                                           Margin="0,12,0,0"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="500"
-                                           HorizontalAlignment="Left"/>
+                                <Border MaxWidth="500" HorizontalAlignment="Left" Margin="0,15,0,0">
+                                    <cards:NoticeCard Text="{Binding LanguageNote^}" 
+                                                      IconPath="/Assets/Icons/info.svg" 
+                                                      ThemeColor="#3B82F6"/>
+                                </Border>
                             </StackPanel>
                         </StackPanel>
                         
@@ -624,25 +628,36 @@
                         </StackPanel>
                         
                         <!-- About Tab -->
-                        <StackPanel IsVisible="{Binding ActiveTab, Converter={StaticResource StringEqualityConverter}, ConverterParameter=about}" Spacing="25">
+                        <StackPanel IsVisible="{Binding ActiveTab, Converter={StaticResource StringEqualityConverter}, ConverterParameter=about}" Spacing="5">
                             <!-- Header / Logo -->
-                            <StackPanel HorizontalAlignment="Center" Spacing="8">
+                            <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,15">
                                 <Image Source="/Assets/logo.png" Width="80" Height="80" HorizontalAlignment="Center" Margin="0,0,0,10"/>
                                 
                                 <TextBlock Text="{Binding AboutTitle^}" FontWeight="Bold" FontSize="22" HorizontalAlignment="Center" Foreground="White"/>
                                 <TextBlock Text="{Binding AboutDescription^}" Foreground="Gray" FontSize="13" HorizontalAlignment="Center"/>
                                 
                                 <!-- Social Icons -->
-                                <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" Margin="0,15">
-                                    <Button Command="{Binding OpenGithubCommand}" Background="Transparent" Padding="5" CornerRadius="4" Cursor="Hand">
-                                        <svg:Svg Path="/Assets/Icons/github.svg" Width="22" Height="22"/>
-                                    </Button>
-                                    <Button Command="{Binding OpenDiscordCommand}" Background="Transparent" Padding="5" CornerRadius="4" Cursor="Hand">
-                                        <svg:Svg Path="/Assets/Icons/discord.svg" Width="22" Height="22"/>
-                                    </Button>
-                                    <Button Command="{Binding ReportBugCommand}" Background="Transparent" Padding="5" CornerRadius="4" Cursor="Hand">
-                                        <svg:Svg Path="/Assets/Icons/alert-triangle.svg" Width="22" Height="22"/>
-                                    </Button>
+                                <StackPanel Orientation="Horizontal" Spacing="15" HorizontalAlignment="Center" Margin="0,15">
+                                    <buttons:IconButton Command="{Binding OpenGithubCommand}" 
+                                                        IconPath="/Assets/Icons/github.svg" 
+                                                        IconSize="22"
+                                                        Width="44" Height="44"
+                                                        ButtonBackground="#252525"
+                                                        ToolTip.Tip="GitHub"/>
+                                                        
+                                    <buttons:IconButton Command="{Binding OpenDiscordCommand}" 
+                                                        IconPath="/Assets/Icons/discord.svg" 
+                                                        IconSize="22"
+                                                        Width="44" Height="44"
+                                                        ButtonBackground="#252525"
+                                                        ToolTip.Tip="Discord"/>
+
+                                    <buttons:IconButton Command="{Binding ReportBugCommand}" 
+                                                        IconPath="/Assets/Icons/bug.svg" 
+                                                        IconSize="22"
+                                                        Width="44" Height="44"
+                                                        ButtonBackground="#252525"
+                                                        ToolTip.Tip="Report Bug"/>
                                 </StackPanel>
                             </StackPanel>
 
@@ -681,7 +696,7 @@
                                        HorizontalAlignment="Center" 
                                        Foreground="#555" 
                                        FontSize="12" 
-                                       Margin="0,5,0,2"/>
+                                       Margin="0,5,0,15"/>
 
                             <!-- Contributors -->
                             <ItemsControl ItemsSource="{Binding Contributors}" HorizontalAlignment="Center">
@@ -727,8 +742,8 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             
-                            <!-- Version Footer -->
-                            <TextBlock Text="{Binding AboutVersion^}" HorizontalAlignment="Center" FontSize="12" Foreground="#333" Margin="0,20,0,0"/>
+                            <!-- Disclaimer Footer -->
+                            <TextBlock Text="{Binding AboutDisclaimer^}" HorizontalAlignment="Center" FontSize="12" Foreground="#373737" Margin="0,20,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
 
                         </StackPanel>
 

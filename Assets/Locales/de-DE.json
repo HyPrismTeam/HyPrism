@@ -80,7 +80,13 @@
     "aboutSettings": {
       "title": "HyPrism Launcher",
       "version": "Version {0}",
-      "description": "Ein moderner Launcher für Hytale"
+      "description": "Ein moderner Launcher für Hytale",
+      "maintainerRole": "Maintainer & Entwickler",
+      "authRole": "Ersteller und Maintainer des Auth-Servers",
+      "contributorRole": "Mitwirkender",
+      "others": "Und andere",
+      "contributorsDescription": "Großartige Leute, die bei der Erstellung dieses Launchers geholfen haben",
+      "disclaimer": "HyPrism ist kein offizieller Hytale-Launcher und kein Produkt von Hypixel Studios"
     }
   },
   "profileEditor": {

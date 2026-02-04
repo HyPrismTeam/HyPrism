@@ -80,14 +80,15 @@
       "delete": "Delete Instance"
     },
     "aboutSettings": {
-      "title": "HyPrism Launcher",
-      "version": "Version {0}",
-      "description": "A modern launcher for Hytale",
+      "title": "Лаунчар HyPrism",
+      "version": "Версія {0}",
+      "description": "Сучасны лаунчар для Hytale",
       "maintainerRole": "Мэйнтейнер і Распрацоўшчык",
       "authRole": "Стваральнік і Мэйнтейнер Auth Server",
       "contributorRole": "Кантрыб'ютар",
-      "others": "Іншыя",
-      "contributorsDescription": "Выдатныя людзі, якія дапамаглі ў стварэнні гэтага лаунчера"
+      "others": "І іншыя",
+      "contributorsDescription": "Выдатныя людзі, якія дапамаглі ў стварэнні гэтага лаунчера",
+      "disclaimer": "HyPrism — не афіцыйны лаунчар Hytale і не прадукт, распрацаваны Hypixel Studios"
     }
   },
   "profileEditor": {

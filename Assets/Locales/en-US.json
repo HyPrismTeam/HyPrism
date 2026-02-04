@@ -29,6 +29,7 @@
       "uploadSkin": "Upload Skin",
       "displayName": "Display Name",
       "displayNameHint": "This name will be shown in game (1-16 characters).",
+      "nameWarning": "Hytale has specific nicknames pattern. Use English characters and numbers (0-9) only, avoiding special symbols and spaces (exceptions: '-', '_')",
       "uuid": "UUID",
       "uuidWarning": "Your unique identifier for multiplayer. Changing this will reset your skin!",
       "randomize": "Randomize",
@@ -58,7 +59,7 @@
       "title": "Language Settings",
       "interfaceLanguage": "Interface Language",
       "interfaceLanguageHint": "Select your preferred language for the launcher interface",
-      "note": "Note: Some text may remain in English until full localization is complete."
+      "note": "Note: Some text may remain in English until full localization is complete. The developers are actively localizing the launcher so that everyone can enjoy using it."
     },
     "dataSettings": {
       "title": "Data Management",
@@ -84,8 +85,9 @@
       "maintainerRole": "Maintainer & Developer",
       "authRole": "Creator and Maintainer of the Auth Server",
       "contributorRole": "Contributor",
-      "others": "Others",
-      "contributorsDescription": "Awesome people that helped in the creation of this launcher"
+      "others": "And others",
+      "contributorsDescription": "Awesome people that helped in the creation of this launcher",
+      "disclaimer": "HyPrism is not an official Hytale launcher or a product developed by Hypixel Studios"
     }
   },
   "profileEditor": {

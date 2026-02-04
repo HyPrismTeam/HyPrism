@@ -1,6 +1,10 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Controls.Primitives;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Media;
 using Avalonia.Threading;
 using HyPrism.Services.Core;
@@ -12,7 +16,11 @@ public class IconButton : Button
     protected override Type StyleKeyOverride => typeof(IconButton);
     private IDisposable? _resourceSubscription;
     private IDisposable? _brushSubscription;
-
+    
+    private Control? _baseIconWrapper;
+    private Control? _hoverOverlay;
+    private DoubleTransition? _baseOpacityTransition;
+    
     public static readonly StyledProperty<IBrush?> ButtonBackgroundProperty =
         AvaloniaProperty.Register<IconButton, IBrush?>(nameof(ButtonBackground));
 
@@ -62,6 +70,75 @@ public class IconButton : Button
         if (change.Property == ForegroundProperty)
         {
             UpdateHoverCss();
+        }
+    }
+
+    protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
+    {
+        base.OnApplyTemplate(e);
+        
+        _baseIconWrapper = e.NameScope.Find<Control>("PART_BaseIconWrapper");
+        _hoverOverlay = e.NameScope.Find<Control>("PART_HoverOverlay");
+        
+        // Setup Overlay Transitions (Always 0.2s)
+        if (_hoverOverlay != null)
+        {
+            _hoverOverlay.Transitions = new Transitions
+            {
+                new DoubleTransition 
+                { 
+                    Property = Visual.OpacityProperty, 
+                    Duration = TimeSpan.FromSeconds(0.2),
+                    Easing = new LinearEasing()
+                }
+            };
+        }
+        
+        // Setup Base Icon Transitions (Default/Exit is Fast 0.05s)
+        if (_baseIconWrapper != null)
+        {
+            _baseOpacityTransition = new DoubleTransition 
+            { 
+                Property = Visual.OpacityProperty, 
+                Duration = TimeSpan.FromSeconds(0.05),
+                Easing = new LinearEasing()
+            };
+            
+            _baseIconWrapper.Transitions = new Transitions { _baseOpacityTransition };
+        }
+    }
+
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        
+        // Enter: Slow Fade Out for Base (0.2s), Show Overlay
+        if (_baseIconWrapper != null && _baseOpacityTransition != null)
+        {
+            _baseOpacityTransition.Duration = TimeSpan.FromSeconds(0.2);
+            _baseIconWrapper.Opacity = 0;
+        }
+        
+        if (_hoverOverlay != null)
+        {
+            _hoverOverlay.Opacity = 1;
+        }
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        
+        // Exit: Fast recovery for Base (0.05s), Hide Overlay
+        if (_baseIconWrapper != null && _baseOpacityTransition != null)
+        {
+            _baseOpacityTransition.Duration = TimeSpan.FromSeconds(0.05);
+            _baseIconWrapper.Opacity = 1;
+        }
+        
+        if (_hoverOverlay != null)
+        {
+            _hoverOverlay.Opacity = 0;
         }
     }
 

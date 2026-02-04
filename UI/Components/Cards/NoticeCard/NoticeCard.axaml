@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="80"
+             x:Class="HyPrism.UI.Components.Cards.NoticeCard"
+             x:Name="Root">
+
+    <Grid>
+        <!-- Background Layer with Opacity -->
+        <Border CornerRadius="8" 
+                Background="{Binding ThemeColor, ElementName=Root}" 
+                Opacity="0.1"
+                IsHitTestVisible="False"/>
+        
+        <!-- Border Layer with distinct opacity -->
+        <Border CornerRadius="8" 
+                BorderBrush="{Binding ThemeColor, ElementName=Root}" 
+                BorderThickness="1" 
+                Opacity="0.3"
+                IsHitTestVisible="False"/>
+
+        <!-- Content -->
+        <Grid ColumnDefinitions="Auto, *" Margin="15" VerticalAlignment="Center">
+            
+            <svg:Svg Grid.Column="0"
+                     Path="{Binding IconPath, ElementName=Root}" 
+                     Width="24" Height="24" 
+                     VerticalAlignment="Top"
+                     Margin="0,2,15,0"
+                     Css="{Binding SvgCss, ElementName=Root}"/>
+            
+            <TextBlock Grid.Column="1"
+                       Text="{Binding Text, ElementName=Root}" 
+                       Foreground="{Binding ThemeColor, ElementName=Root}"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"/>
+        </Grid>
+    </Grid>
+</UserControl>

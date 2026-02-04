@@ -80,7 +80,13 @@
     "aboutSettings": {
       "title": "Лаунчер HyPrism",
       "version": "Версія {0}",
-      "description": "Сучасний лаунчер для Hytale"
+      "description": "Сучасний лаунчер для Hytale",
+      "maintainerRole": "Мейнтейнер та Розробник",
+      "authRole": "Творець та Мейнтейнер Auth сервера",
+      "contributorRole": "Учасник",
+      "others": "Та інші",
+      "contributorsDescription": "Чудові люди, які допомогли у створенні цього лаунчера",
+      "disclaimer": "HyPrism — не офіційний лаунчер Hytale і не продукт, розроблений Hypixel Studios"
     }
   },
   "profileEditor": {

@@ -80,7 +80,13 @@
     "aboutSettings": {
       "title": "HyPrism ランチャー",
       "version": "バージョン {0}",
-      "description": "Hytaleのためのモダンなランチャー"
+      "description": "Hytaleのためのモダンなランチャー",
+      "maintainerRole": "メンテナ & 開発者",
+      "authRole": "認証サーバーの作成者 & メンテナ",
+      "contributorRole": "コントリビューター",
+      "others": "その他",
+      "contributorsDescription": "このランチャーの作成を支援した素晴らしい人々",
+      "disclaimer": "HyPrismは公式のHytaleランチャーではなく、Hypixel Studiosによって開発された製品ではありません"
     }
   },
   "profileEditor": {

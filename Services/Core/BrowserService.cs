@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace HyPrism.Services.Core;
 
@@ -51,11 +52,22 @@ public class BrowserService
                 {
                     FileName = "xdg-open",
                     Arguments = url,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 };
             }
 
-            Process.Start(psi);
+            var process = Process.Start(psi);
+            
+            // On Linux, xdg-open might spawn a browser that emits noise to stderr (e.g. sandbox warnings).
+            // We redirect and discard these streams to keep the application logs clean.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && process != null)
+            {
+                _ = Task.Run(() => process.StandardOutput.ReadToEndAsync());
+                _ = Task.Run(() => process.StandardError.ReadToEndAsync());
+            }
+
             Logger.Success("Browser", $"Opened URL: {url}");
             return true;
         }

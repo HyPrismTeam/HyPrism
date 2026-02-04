@@ -80,7 +80,13 @@
     "aboutSettings": {
       "title": "HyPrism Başlatıcısı",
       "version": "Sürüm {0}",
-      "description": "Hytale için modern bir başlatıcı"
+      "description": "Hytale için modern bir başlatıcı",
+      "maintainerRole": "Sürdürücü & Geliştirici",
+      "authRole": "Auth Sunucusu Oluşturucusu & Sürdürücüsü",
+      "contributorRole": "Katılımcı",
+      "others": "Ve diğerleri",
+      "contributorsDescription": "Bu başlatıcının oluşturulmasına yardım eden harika insanlar",
+      "disclaimer": "HyPrism resmi bir Hytale başlatıcısı değildir ve Hypixel Studios tarafından geliştirilmemiştir"
     }
   },
   "profileEditor": {

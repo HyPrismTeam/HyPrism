@@ -64,7 +64,14 @@ public class AccentColorItem : ReactiveObject
 public class CreditProfile : ReactiveObject
 {
     public string Name { get; set; } = "";
-    public string Role { get; set; } = "";
+    private string _role = "";
+    public string Role 
+    {
+        get => _role;
+        set => this.RaiseAndSetIfChanged(ref _role, value);
+    }
+    public string RoleType { get; set; } = "contributor"; // maintainer, auth, contributor
+    
     public string ProfileUrl { get; set; } = "";
     public string AvatarUrl { get; set; } = "";
 
@@ -111,6 +118,7 @@ public class SettingsViewModel : ReactiveObject
     public IObservable<string> ProfileUploadSkin { get; }
     public IObservable<string> ProfileDisplayName { get; }
     public IObservable<string> ProfileDisplayNameHint { get; }
+    public IObservable<string> ProfileNameWarning { get; }
     public IObservable<string> ProfileUuid { get; }
     public IObservable<string> ProfileUuidWarning { get; }
 
@@ -158,7 +166,7 @@ public class SettingsViewModel : ReactiveObject
     
     // About
     public IObservable<string> AboutTitle { get; }
-    public IObservable<string> AboutVersion { get; }
+    public IObservable<string> AboutDisclaimer { get; }
     public IObservable<string> AboutDescription { get; }
     public IObservable<string> AboutContributorsDescription { get; }
 
@@ -318,6 +326,9 @@ public class SettingsViewModel : ReactiveObject
     public ReactiveCommand<Unit, Unit> BrowseLauncherDataCommand { get; }
     public ReactiveCommand<Unit, Unit> RandomizeUuidCommand { get; }
     public ReactiveCommand<Unit, Unit> CopyUuidCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenGithubCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenDiscordCommand { get; }
+    public ReactiveCommand<Unit, Unit> ReportBugCommand { get; }
 
     public SettingsViewModel(
         SettingsService settingsService,
@@ -355,6 +366,7 @@ public class SettingsViewModel : ReactiveObject
         ProfileUploadSkin = loc.GetObservable("settings.profile.uploadSkin");
         ProfileDisplayName = loc.GetObservable("settings.profile.displayName");
         ProfileDisplayNameHint = loc.GetObservable("settings.profile.displayNameHint");
+        ProfileNameWarning = loc.GetObservable("settings.profile.nameWarning");
         ProfileUuid = loc.GetObservable("settings.profile.uuid");
         ProfileUuidWarning = loc.GetObservable("settings.profile.uuidWarning");
 
@@ -402,10 +414,18 @@ public class SettingsViewModel : ReactiveObject
         
         // About
         AboutTitle = loc.GetObservable("settings.aboutSettings.title");
-        AboutVersion = loc.GetObservable("settings.aboutSettings.version")
-            .Select(fmt => string.Format(fmt, _configService.Configuration.Version));
+        AboutDisclaimer = loc.GetObservable("settings.aboutSettings.disclaimer");
         AboutDescription = loc.GetObservable("settings.aboutSettings.description");
         AboutContributorsDescription = loc.GetObservable("settings.aboutSettings.contributorsDescription");
+
+        // Dynamic Role Localization
+        Observable.CombineLatest(
+            loc.GetObservable("settings.aboutSettings.maintainerRole"),
+            loc.GetObservable("settings.aboutSettings.authRole"),
+            loc.GetObservable("settings.aboutSettings.contributorRole"),
+            loc.GetObservable("settings.aboutSettings.others"),
+            (m, a, c, o) => (m, a, c, o)
+        ).Subscribe(t => UpdateCreditRoles(t.m, t.a, t.c, t.o));
 
         InitializeCredits();
 
@@ -464,6 +484,10 @@ public class SettingsViewModel : ReactiveObject
         BrowseLauncherDataCommand = ReactiveCommand.CreateFromTask(BrowseLauncherDataAsync);
         RandomizeUuidCommand = ReactiveCommand.Create(RandomizeUuid);
         CopyUuidCommand = ReactiveCommand.CreateFromTask(CopyUuidAsync);
+        
+        OpenGithubCommand = ReactiveCommand.Create(() => { browserService.OpenURL("https://github.com/yyyumeniku/HyPrism"); });
+        OpenDiscordCommand = ReactiveCommand.Create(() => { browserService.OpenURL("https://discord.com/invite/ekZqTtynjp"); });
+        ReportBugCommand = ReactiveCommand.Create(() => { browserService.OpenURL("https://github.com/yyyumeniku/HyPrism/issues/new"); });
         
         // New Commands
         SetAccentColorCommand = ReactiveCommand.Create<AccentColorItem>(SetAccentColor);
@@ -585,6 +609,28 @@ public class SettingsViewModel : ReactiveObject
         _settingsService.SetAccentColor(item.Color.ToString());
     }
     
+    private string _txtMaintainer = "", _txtAuth = "", _txtContributor = "", _txtOthers = "";
+
+    private void UpdateCreditRoles(string m, string a, string c, string o)
+    {
+        _txtMaintainer = m;
+        _txtAuth = a;
+        _txtContributor = c;
+        _txtOthers = o;
+
+        foreach (var p in Maintainers)
+        {
+            if (p.RoleType == "maintainer") p.Role = m;
+            else if (p.RoleType == "auth") p.Role = a;
+        }
+
+        foreach (var p in Contributors)
+        {
+            if (p.IsOverflow) p.Name = o;
+            else if (p.RoleType == "contributor") p.Role = c;
+        }
+    }
+
     private async void InitializeCredits()
     {
         try 
@@ -595,19 +641,11 @@ public class SettingsViewModel : ReactiveObject
             var yyu = await _gitHubService.GetUserAsync("yyyumeniku");
             var sana = await _gitHubService.GetUserAsync("sanasol");
             
-            // Localized Strings
-            // Since this method is async void and run once, strings might be stale if language changes.
-            // But we can fetch current value.
-            // Ideally we'd rebuild on language change but for now fetch current.
-            var maintainerRole = Localization.GetString("settings.aboutSettings.maintainerRole");
-            var authRole = Localization.GetString("settings.aboutSettings.authRole");
-            var contributorRole = Localization.GetString("settings.aboutSettings.contributorRole");
-            var othersText = Localization.GetString("settings.aboutSettings.others");
-
-            CreditProfile CreateProfile(GitHubUser? user, string name, string role) {
+            CreditProfile CreateProfile(GitHubUser? user, string name, string roleType, string initialRole) {
                  var p = new CreditProfile {
                      Name = name,
-                     Role = role,
+                     Role = initialRole,
+                     RoleType = roleType,
                      ProfileUrl = user?.HtmlUrl ?? "",
                      AvatarUrl = user?.AvatarUrl ?? "",
                      OpenCommand = ReactiveCommand.Create(() => {
@@ -624,8 +662,8 @@ public class SettingsViewModel : ReactiveObject
                  return p;
             }
     
-            Maintainers.Add(CreateProfile(yyu, "yyyumeniku", maintainerRole));
-            Maintainers.Add(CreateProfile(sana, "sanasol", authRole));
+            Maintainers.Add(CreateProfile(yyu, "yyyumeniku", "maintainer", _txtMaintainer));
+            Maintainers.Add(CreateProfile(sana, "sanasol", "auth", _txtAuth));
             
             // --- Contributors ---
             var allContributors = await _gitHubService.GetContributorsAsync();
@@ -651,13 +689,13 @@ public class SettingsViewModel : ReactiveObject
             }
             
             foreach(var c in usersToShow) {
-                 Contributors.Add(CreateProfile(c, c.Login, contributorRole));
+                 Contributors.Add(CreateProfile(c, c.Login, "contributor", _txtContributor));
             }
             
             if (overflow > 0)
             {
                  Contributors.Add(new CreditProfile {
-                     Name = othersText,
+                     Name = _txtOthers,
                      Role = "",
                      IsOverflow = true,
                      OverflowCount = overflow,
