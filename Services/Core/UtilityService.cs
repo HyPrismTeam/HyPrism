@@ -26,12 +26,13 @@ public class UtilityService
 
     /// <summary>
     /// Sanitizes a filename by removing invalid characters.
+    /// Returns "default" if the resulting name is empty.
     /// </summary>
     public static string SanitizeFileName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
-        return sanitized;
+        return string.IsNullOrWhiteSpace(sanitized) ? "default" : sanitized;
     }
 
     /// <summary>
@@ -161,11 +162,20 @@ public class UtilityService
 
     /// <summary>
     /// Recursively copies a directory and all its contents.
+    /// Prevents infinite loops by checking source/dest paths.
     /// </summary>
     public static void CopyDirectory(string sourceDir, string destinationDir)
     {
         var dir = new DirectoryInfo(sourceDir);
         if (!dir.Exists) return;
+
+        // Prevent copying into itself
+        var normalizedSource = Path.GetFullPath(sourceDir).TrimEnd(Path.DirectorySeparatorChar);
+        var normalizedDest = Path.GetFullPath(destinationDir).TrimEnd(Path.DirectorySeparatorChar);
+        
+        if (normalizedSource.Equals(normalizedDest, StringComparison.OrdinalIgnoreCase)) return;
+        if (normalizedDest.StartsWith(normalizedSource + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return;
+        if (normalizedSource.StartsWith(normalizedDest + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return;
 
         Directory.CreateDirectory(destinationDir);
 

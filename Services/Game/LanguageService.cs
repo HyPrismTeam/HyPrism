@@ -247,27 +247,8 @@ public class LanguageService
         return copiedCount;
     }
 
-    /// <summary>
-    /// Recursively copies all files from source directory to target directory.
-    /// </summary>
     private static async Task CopyDirectoryRecursiveAsync(string sourceDir, string targetDir)
     {
-        Directory.CreateDirectory(targetDir);
-
-        // Copy files
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var fileName = Path.GetFileName(file);
-            var targetPath = Path.Combine(targetDir, fileName);
-            await Task.Run(() => File.Copy(file, targetPath, overwrite: true));
-        }
-
-        // Copy subdirectories
-        foreach (var dir in Directory.GetDirectories(sourceDir))
-        {
-            var dirName = Path.GetFileName(dir);
-            var targetSubDir = Path.Combine(targetDir, dirName);
-            await CopyDirectoryRecursiveAsync(dir, targetSubDir);
-        }
+        await Task.Run(() => UtilityService.CopyDirectory(sourceDir, targetDir));
     }
 }

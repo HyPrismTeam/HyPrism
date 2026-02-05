@@ -268,8 +268,10 @@ public class DashboardViewModel : ReactiveObject
         {
             Logger.Error("Dashboard", $"Error loading backgrounds: {ex.Message}");
         }
-            
-        UpdateBackground(_settingsService.GetBackgroundMode());
+        
+        var bgMode = _settingsService.GetBackgroundMode();
+        if (bgMode == "slideshow") bgMode = "auto"; // Legacy compatibility
+        UpdateBackground(bgMode);
         _settingsService.OnBackgroundChanged += UpdateBackground;
 
         // --- Setup Overlay State ---
@@ -365,7 +367,21 @@ public class DashboardViewModel : ReactiveObject
         
         try
         {
-            await _gameSessionService.DownloadAndLaunchAsync();
+            var result = await _gameSessionService.DownloadAndLaunchAsync();
+            
+            if (result.Error != null)
+            {
+                IsLaunchOverlayVisible = false;
+                OnErrorOccurred("launch", "Launch failed", result.Error);
+                return;
+            }
+            
+            if (result.Cancelled)
+            {
+                IsLaunchOverlayVisible = false;
+                return;
+            }
+
             // Wait 2 seconds to let user see the "Done" state before fading out
             await Task.Delay(2000);
         }
@@ -466,7 +482,7 @@ public class DashboardViewModel : ReactiveObject
         // Stop any existing timer
         _backgroundTimer?.Stop();
         
-        if (string.IsNullOrEmpty(mode) || mode == "auto")
+        if (string.IsNullOrEmpty(mode) || mode == "auto" || mode == "slideshow") // Handle legacy slideshow value here too
         {
             // Start slideshow
             if (_slideshowImages.Count > 0)

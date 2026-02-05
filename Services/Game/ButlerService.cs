@@ -16,8 +16,8 @@ public class ButlerService
 
     public ButlerService(string appDir)
     {
-        _butlerDir = Path.Combine(appDir, "butler");
-        _cacheDir = Path.Combine(appDir, "cache");
+        _butlerDir = Path.Combine(appDir, "Butler");
+        _cacheDir = Path.Combine(appDir, "Cache");
         Directory.CreateDirectory(_butlerDir);
         Directory.CreateDirectory(_cacheDir);
     }
@@ -75,8 +75,8 @@ public class ButlerService
         progressCallback?.Invoke(0, "Downloading Butler...");
 
         // Determine OS and architecture
-        string osName = GetOSName();
-        string arch = GetArchitecture();
+        string osName = UtilityService.GetOS();
+        string arch = UtilityService.GetArch();
 
         // Butler only provides darwin-amd64 (no arm64), so on macOS always use amd64
         // which runs through Rosetta 2 on Apple Silicon
@@ -460,23 +460,5 @@ public class ButlerService
                 }
             }
         }
-    }
-
-    private static string GetOSName()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "windows";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "darwin";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "linux";
-        return "unknown";
-    }
-
-    private static string GetArchitecture()
-    {
-        return RuntimeInformation.OSArchitecture switch
-        {
-            Architecture.X64 => "amd64",
-            Architecture.Arm64 => "arm64",
-            _ => "amd64"
-        };
     }
 }

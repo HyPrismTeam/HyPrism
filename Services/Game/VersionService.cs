@@ -29,8 +29,8 @@ public class VersionService
     {
         var normalizedBranch = NormalizeBranch(branch);
         var result = new List<int>();
-        string osName = GetOS();
-        string arch = GetArch();
+        string osName = UtilityService.GetOS();
+        string arch = UtilityService.GetArch();
 
         // Load version cache
         var cache = LoadVersionCache();
@@ -45,8 +45,11 @@ public class VersionService
 
         // Check for new versions starting from startVersion
         int currentVersion = startVersion;
+        // If we have no cache, start checking from 0 just in case
+        if (cache.KnownVersions.Count == 0) currentVersion = 0;
+
         int consecutiveFailures = 0;
-        const int maxConsecutiveFailures = 3;
+        const int maxConsecutiveFailures = 20; // Increased to skip potential gaps or missing early versions
 
         while (consecutiveFailures < maxConsecutiveFailures)
         {
@@ -305,22 +308,5 @@ public class VersionService
             _ => "release"
         };
     }
-
-    private string GetOS()
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "windows";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "macos";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "linux";
-        return "windows";
-    }
-
-    private string GetArch()
-    {
-        return RuntimeInformation.OSArchitecture switch
-        {
-            Architecture.X64 => "x64",
-            Architecture.Arm64 => "arm64",
-            _ => "x64"
-        };
-    }
 }
+

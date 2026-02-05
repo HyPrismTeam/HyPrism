@@ -45,9 +45,10 @@ public class Config
     public string AccentColor { get; set; } = "#FFA845"; 
     
     /// <summary>
-    /// Background mode: "slideshow" for rotating backgrounds, or a specific background filename.
+    /// Background mode: "auto" for rotating backgrounds, or a specific background filename.
+    /// Changed from "slideshow" to "auto" in v2.0.4.
     /// </summary>
-    public string BackgroundMode { get; set; } = "slideshow";
+    public string BackgroundMode { get; set; } = "auto";
     
     /// <summary>
     /// Custom launcher data directory. If set, overrides the default app data location.

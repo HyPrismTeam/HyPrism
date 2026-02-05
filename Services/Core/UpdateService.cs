@@ -392,7 +392,7 @@ public class UpdateService
             
             // Copy the entire latest instance folder to versioned folder
             Logger.Info("Update", $"Duplicating latest (v{currentVersion}) to versioned instance...");
-            CopyDirectory(latestPath, versionedPath);
+            UtilityService.CopyDirectory(latestPath, versionedPath);
             
             // Save version info for the duplicated instance
             var versionInfoPath = Path.Combine(versionedPath, "version.json");
@@ -406,30 +406,6 @@ public class UpdateService
         {
             Logger.Error("Update", $"Failed to duplicate latest: {ex.Message}");
             return false;
-        }
-    }
-    
-    /// <summary>
-    /// Recursively copies a directory and all its contents.
-    /// </summary>
-    private void CopyDirectory(string sourceDir, string destDir)
-    {
-        Directory.CreateDirectory(destDir);
-        
-        // Copy files
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var fileName = Path.GetFileName(file);
-            var destFile = Path.Combine(destDir, fileName);
-            File.Copy(file, destFile, true);
-        }
-        
-        // Copy subdirectories recursively
-        foreach (var subDir in Directory.GetDirectories(sourceDir))
-        {
-            var dirName = Path.GetFileName(subDir);
-            var destSubDir = Path.Combine(destDir, dirName);
-            CopyDirectory(subDir, destSubDir);
         }
     }
 

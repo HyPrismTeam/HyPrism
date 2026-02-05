@@ -17,6 +17,7 @@ public class DownloadProgress
     public bool Success { get; set; }
     public int Progress { get; set; }
     public string? Error { get; set; }
+    public bool Cancelled { get; set; }
 }
 
 public class ProgressUpdateMessage

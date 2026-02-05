@@ -89,6 +89,11 @@
                              CornerRadius="6"
                              Background="#333"
                              Foreground="#CCC">
+                    <ProgressBar.Transitions>
+                        <Transitions>
+                            <DoubleTransition Property="Value" Duration="0:0:0.4" Easing="CubicEaseOut"/>
+                        </Transitions>
+                    </ProgressBar.Transitions>
                 </ProgressBar>
                 
                 <!-- Detail Text (Left Aligned, Grey) -->

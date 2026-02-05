@@ -42,7 +42,7 @@ public class InstanceService
     {
         var config = GetConfig();
         var root = string.IsNullOrWhiteSpace(config.InstanceDirectory)
-            ? Path.Combine(_appDir, "instances")
+            ? Path.Combine(_appDir, "Instances")
             : config.InstanceDirectory;
 
         root = Environment.ExpandEnvironmentVariables(root);
@@ -717,33 +717,8 @@ public class InstanceService
     /// </summary>
     public static void SafeCopyDirectory(string sourceDir, string destDir)
     {
-        // CRITICAL: Prevent copying into itself (causes infinite loop)
-        var normalizedSource = Path.GetFullPath(sourceDir).TrimEnd(Path.DirectorySeparatorChar);
-        var normalizedDest = Path.GetFullPath(destDir).TrimEnd(Path.DirectorySeparatorChar);
-        
-        if (normalizedSource.Equals(normalizedDest, StringComparison.OrdinalIgnoreCase))
-            return;
-        if (normalizedDest.StartsWith(normalizedSource + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            return;
-        if (normalizedSource.StartsWith(normalizedDest + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            return;
-            
-        Directory.CreateDirectory(destDir);
-
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var destFile = Path.Combine(destDir, Path.GetFileName(file));
-            if (!File.Exists(destFile))
-            {
-                File.Copy(file, destFile, overwrite: false);
-            }
-        }
-
-        foreach (var dir in Directory.GetDirectories(sourceDir))
-        {
-            var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
-            SafeCopyDirectory(dir, destSubDir);
-        }
+        // Use UtilityService implementation which now has infinite loop protection
+        UtilityService.CopyDirectory(sourceDir, destDir, false);
     }
 
     /// <summary>
@@ -751,13 +726,7 @@ public class InstanceService
     /// </summary>
     public static string NormalizeVersionType(string versionType)
     {
-        if (string.IsNullOrWhiteSpace(versionType))
-            return "release";
-        if (versionType == "prerelease" || versionType == "pre-release")
-            return "pre-release";
-        if (versionType == "latest")
-            return "release";
-        return versionType;
+        return UtilityService.NormalizeVersionType(versionType);
     }
     
     /// <summary>

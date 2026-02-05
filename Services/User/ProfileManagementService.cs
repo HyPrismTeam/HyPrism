@@ -929,9 +929,7 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
     /// </summary>
     private string SanitizeFileName(string name)
     {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
-        return string.IsNullOrWhiteSpace(sanitized) ? "profile" : sanitized;
+        return UtilityService.SanitizeFileName(name);
     }
     
     /// <summary>
@@ -939,20 +937,6 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
     /// </summary>
     private void CopyDirectory(string sourceDir, string destDir)
     {
-        Directory.CreateDirectory(destDir);
-        
-        // Copy files
-        foreach (var file in Directory.GetFiles(sourceDir))
-        {
-            var destFile = Path.Combine(destDir, Path.GetFileName(file));
-            File.Copy(file, destFile, true);
-        }
-        
-        // Copy subdirectories recursively
-        foreach (var subDir in Directory.GetDirectories(sourceDir))
-        {
-            var destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
-            CopyDirectory(subDir, destSubDir);
-        }
+        UtilityService.CopyDirectory(sourceDir, destDir);
     }
 }

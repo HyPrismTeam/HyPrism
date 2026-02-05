@@ -32,7 +32,7 @@ public class LaunchService
     /// </summary>
     public async Task EnsureJREInstalledAsync(Action<int, string> progressCallback)
     {
-        string jreDir = Path.Combine(_appDir, "jre");
+        string jreDir = Path.Combine(_appDir, "Jre");
         string javaBin;
         
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -165,7 +165,7 @@ public class LaunchService
             Logger.Info("JRE", $"Using hardcoded Hytale JRE URL: {url}");
         }
         
-        string cacheDir = Path.Combine(_appDir, "cache");
+        string cacheDir = Path.Combine(_appDir, "Cache");
         Directory.CreateDirectory(cacheDir);
         string archivePath = Path.Combine(cacheDir, $"jre.{archiveType}");
         
@@ -591,7 +591,7 @@ public class LaunchService
         progressCallback(0, "Downloading Visual C++ Redistributable...");
         Logger.Info("VCRedist", "Downloading VC++ Redistributable...");
         
-        string cacheDir = Path.Combine(_appDir, "cache");
+        string cacheDir = Path.Combine(_appDir, "Cache");
         Directory.CreateDirectory(cacheDir);
         string installerPath = Path.Combine(cacheDir, "vc_redist.x64.exe");
         

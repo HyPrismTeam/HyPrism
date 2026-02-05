@@ -119,7 +119,7 @@ public class GameSessionService
                         
                         if (hasButlerReceipt)
                         {
-                            var cacheDir = Path.Combine(_appDir, "cache");
+                            var cacheDir = Path.Combine(_appDir, "Cache");
                             if (Directory.Exists(cacheDir))
                             {
                                 var pwrFiles = Directory.GetFiles(cacheDir, $"{branch}_patch_*.pwr")
@@ -190,7 +190,7 @@ public class GameSessionService
                                 var patchArch = UtilityService.GetArch();
                                 var patchBranchType = UtilityService.NormalizeVersionType(branch);
                                 string patchUrl = $"https://game-patches.hytale.com/patches/{patchOs}/{patchArch}/{patchBranchType}/0/{patchVersion}.pwr";
-                                string patchPwrPath = Path.Combine(_appDir, "cache", $"{branch}_patch_{patchVersion}.pwr");
+                                string patchPwrPath = Path.Combine(_appDir, "Cache", $"{branch}_patch_{patchVersion}.pwr");
                                 
                                 Directory.CreateDirectory(Path.GetDirectoryName(patchPwrPath)!);
                                 Logger.Info("Download", $"Downloading patch: {patchUrl}");
@@ -341,7 +341,7 @@ public class GameSessionService
             string arch = UtilityService.GetArch();
             string apiVersionType = UtilityService.NormalizeVersionType(branch);
             string downloadUrl = $"https://game-patches.hytale.com/patches/{osName}/{arch}/{apiVersionType}/0/{targetVersion}.pwr";
-            string pwrPath = Path.Combine(_appDir, "cache", $"{branch}_{(isLatestInstance ? "latest" : "version")}_{targetVersion}.pwr");
+            string pwrPath = Path.Combine(_appDir, "Cache", $"{branch}_{(isLatestInstance ? "latest" : "version")}_{targetVersion}.pwr");
             
             Directory.CreateDirectory(Path.GetDirectoryName(pwrPath)!);
             
