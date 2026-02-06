@@ -5,10 +5,11 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using System.Collections;
 using System;
 
-namespace HyPrism.UI.Components.Inputs;
+namespace HyPrism.UI.Components.Inputs.SelectionInput;
 
 public enum SelectionInputDirection
 {
@@ -18,6 +19,8 @@ public enum SelectionInputDirection
 
 public partial class SelectionInput : UserControl
 {
+    #region Existing Properties
+    
     public static readonly StyledProperty<string> LabelProperty =
         AvaloniaProperty.Register<SelectionInput, string>(nameof(Label));
 
@@ -80,6 +83,84 @@ public partial class SelectionInput : UserControl
         get => GetValue(DirectionProperty);
         set => SetValue(DirectionProperty, value);
     }
+
+    #endregion
+
+    #region New Customization Properties
+    
+    /// <summary>
+    /// Height of the toggle button. Default: 44
+    /// </summary>
+    public static readonly StyledProperty<double> ToggleHeightProperty =
+        AvaloniaProperty.Register<SelectionInput, double>(nameof(ToggleHeight), 44.0);
+
+    public double ToggleHeight
+    {
+        get => GetValue(ToggleHeightProperty);
+        set => SetValue(ToggleHeightProperty, value);
+    }
+
+    /// <summary>
+    /// Background color of the dropdown panel.
+    /// </summary>
+    public static readonly StyledProperty<IBrush?> DropdownBackgroundProperty =
+        AvaloniaProperty.Register<SelectionInput, IBrush?>(nameof(DropdownBackground));
+
+    public IBrush? DropdownBackground
+    {
+        get => GetValue(DropdownBackgroundProperty);
+        set => SetValue(DropdownBackgroundProperty, value);
+    }
+
+    /// <summary>
+    /// Border brush of the dropdown panel.
+    /// </summary>
+    public static readonly StyledProperty<IBrush?> DropdownBorderBrushProperty =
+        AvaloniaProperty.Register<SelectionInput, IBrush?>(nameof(DropdownBorderBrush));
+
+    public IBrush? DropdownBorderBrush
+    {
+        get => GetValue(DropdownBorderBrushProperty);
+        set => SetValue(DropdownBorderBrushProperty, value);
+    }
+
+    /// <summary>
+    /// Maximum height of the dropdown panel. Default: 320
+    /// </summary>
+    public static readonly StyledProperty<double> MaxDropdownHeightProperty =
+        AvaloniaProperty.Register<SelectionInput, double>(nameof(MaxDropdownHeight), 320.0);
+
+    public double MaxDropdownHeight
+    {
+        get => GetValue(MaxDropdownHeightProperty);
+        set => SetValue(MaxDropdownHeightProperty, value);
+    }
+
+    /// <summary>
+    /// Corner radius of the toggle button.
+    /// </summary>
+    public static readonly StyledProperty<CornerRadius> ToggleCornerRadiusProperty =
+        AvaloniaProperty.Register<SelectionInput, CornerRadius>(nameof(ToggleCornerRadius), new CornerRadius(8));
+
+    public CornerRadius ToggleCornerRadius
+    {
+        get => GetValue(ToggleCornerRadiusProperty);
+        set => SetValue(ToggleCornerRadiusProperty, value);
+    }
+
+    /// <summary>
+    /// Corner radius of the dropdown panel.
+    /// </summary>
+    public static readonly StyledProperty<CornerRadius> DropdownCornerRadiusProperty =
+        AvaloniaProperty.Register<SelectionInput, CornerRadius>(nameof(DropdownCornerRadius), new CornerRadius(12));
+
+    public CornerRadius DropdownCornerRadius
+    {
+        get => GetValue(DropdownCornerRadiusProperty);
+        set => SetValue(DropdownCornerRadiusProperty, value);
+    }
+
+    #endregion
     
     private bool _updatingSelection;
     private IDisposable? _pointerOutsideHandler;

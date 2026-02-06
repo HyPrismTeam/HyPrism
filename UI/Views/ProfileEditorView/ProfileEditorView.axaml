@@ -1,0 +1,241 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HyPrism.UI.Views.ProfileEditorView"
+             xmlns:actionInput="using:HyPrism.UI.Components.Inputs.ActionInput"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="600"
+             x:Class="HyPrism.UI.Views.ProfileEditorView.ProfileEditorView"
+             x:DataType="vm:ProfileEditorViewModel">
+
+    <Design.DataContext>
+        <vm:ProfileEditorViewModel/>
+    </Design.DataContext>
+    
+    <!-- Main Container -->
+    <Border Background="#1a1a1a" 
+            CornerRadius="12" 
+            BorderBrush="#333" 
+            BorderThickness="1"
+            ClipToBounds="True">
+        <Grid RowDefinitions="Auto, *">
+            <!-- Header -->
+            <Border Grid.Row="0" 
+                    Background="#111" 
+                    CornerRadius="12,12,0,0" 
+                    Padding="20,16">
+                <Grid ColumnDefinitions="*, Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <svg:Svg Path="/Assets/Icons/user.svg" Width="24" Height="24"/>
+                        <TextBlock Text="Profile Editor" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="White"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Button Grid.Column="1" 
+                            Command="{Binding CloseCommand}"
+                            Background="Transparent" 
+                            Padding="8" 
+                            CornerRadius="6">
+                        <svg:Svg Path="/Assets/Icons/x.svg" Width="20" Height="20"/>
+                    </Button>
+                </Grid>
+            </Border>
+            
+            <!-- Content -->
+            <ScrollViewer Grid.Row="1" Padding="30">
+                <StackPanel Spacing="24">
+                    
+                    <!-- Avatar Section -->
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Avatar" 
+                                   FontSize="15" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="White"/>
+                        
+                        <Grid ColumnDefinitions="Auto, *" ColumnSpacing="20">
+                            <!-- Avatar Preview -->
+                            <Border Grid.Column="0" 
+                                    Width="120" 
+                                    Height="120" 
+                                    CornerRadius="8" 
+                                    Background="#252525"
+                                    BorderBrush="#333"
+                                    BorderThickness="2">
+                                <Panel>
+                                    <!-- Avatar Image (if available) -->
+                                    <Image Source="{Binding AvatarPreview}" 
+                                           IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                           Stretch="Uniform"/>
+                                    
+                                    <!-- Placeholder -->
+                                    <svg:Svg Path="/Assets/Icons/user.svg" 
+                                             Width="64" 
+                                             Height="64"
+                                             IsVisible="{Binding AvatarPreview, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                </Panel>
+                            </Border>
+                            
+                            <!-- Avatar Actions -->
+                            <StackPanel Grid.Column="1" 
+                                        Spacing="12" 
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Drop your skin file here or use the buttons below" 
+                                           FontSize="13" 
+                                           Foreground="#999"
+                                           TextWrapping="Wrap"/>
+                                
+                                <StackPanel Spacing="8">
+                                    <Button Command="{Binding OpenAvatarFolderCommand}"
+                                            Background="#2a2a2a"
+                                            Padding="12,8"
+                                            CornerRadius="6"
+                                            HorizontalAlignment="Left">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <svg:Svg Path="/Assets/Icons/folder.svg" Width="16" Height="16"/>
+                                            <TextBlock Text="Open Avatar Folder" 
+                                                       FontSize="13"
+                                                       Foreground="White"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <Button Command="{Binding RefreshAvatarCommand}"
+                                            Background="Transparent"
+                                            Padding="12,8"
+                                            CornerRadius="6"
+                                            HorizontalAlignment="Left">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <svg:Svg Path="/Assets/Icons/refresh-cw.svg" Width="16" Height="16"/>
+                                            <TextBlock Text="Refresh Preview" 
+                                                       FontSize="13"
+                                                       Foreground="#999"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                    
+                    <!-- Username Section -->
+                    <actionInput:ActionInput Label="Username"
+                                        Text="{Binding EditUsername}"
+                                        Watermark="Enter username (1-16 chars)"
+                                        IsReadOnly="{Binding !IsEditingUsername}">
+                        <actionInput:ActionInput.RightContent>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <!-- Display Mode Buttons -->
+                                <Button Command="{Binding EditUsernameCommand}"
+                                        Background="Transparent"
+                                        Padding="8"
+                                        CornerRadius="6"
+                                        ToolTip.Tip="Edit"
+                                        IsVisible="{Binding !IsEditingUsername}">
+                                    <svg:Svg Path="/Assets/Icons/edit.svg" Width="16" Height="16"/>
+                                </Button>
+                                    
+                                <!-- Edit Mode Buttons -->
+                                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsEditingUsername}">
+                                    <Button Command="{Binding RandomizeUsernameCommand}"
+                                            Background="Transparent"
+                                            Padding="8"
+                                            CornerRadius="6"
+                                            ToolTip.Tip="Generate random username">
+                                        <svg:Svg Path="/Assets/Icons/refresh-cw.svg" Width="16" Height="16"/>
+                                    </Button>
+                                            
+                                    <Button Command="{Binding SaveUsernameCommand}"
+                                            Background="{DynamicResource SystemAccentBrush}"
+                                            Padding="8"
+                                            CornerRadius="6"
+                                            ToolTip.Tip="Save username">
+                                        <svg:Svg Path="/Assets/Icons/check.svg" Width="16" Height="16">
+                                            <svg:Svg.Css>* { stroke: #111 !important; }</svg:Svg.Css>
+                                        </svg:Svg>
+                                    </Button>
+                                            
+                                    <Button Command="{Binding CancelUsernameEditCommand}"
+                                            Background="#333"
+                                            Padding="8"
+                                            CornerRadius="6"
+                                            ToolTip.Tip="Cancel">
+                                        <svg:Svg Path="/Assets/Icons/x.svg" Width="16" Height="16"/>
+                                    </Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </actionInput:ActionInput.RightContent>
+                    </actionInput:ActionInput>
+                    
+                    <!-- UUID Section -->
+                    <StackPanel Spacing="12">
+                        <actionInput:ActionInput Label="UUID"
+                                            Text="{Binding EditUuid}"
+                                            Watermark="Enter UUID"
+                                            IsReadOnly="{Binding !IsEditingUuid}"
+                                            FontFamily="Courier New">
+                            <actionInput:ActionInput.RightContent>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <!-- Display Mode Buttons -->
+                                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsEditingUuid}">
+                                            <Button Command="{Binding CopyUuidCommand}"
+                                                    Background="Transparent"
+                                                    Padding="8"
+                                                    CornerRadius="6"
+                                                    ToolTip.Tip="Copy UUID">
+                                                <svg:Svg Path="/Assets/Icons/copy.svg" Width="16" Height="16"/>
+                                            </Button>
+                                            
+                                            <Button Command="{Binding EditUuidCommand}"
+                                                    Background="Transparent"
+                                                    Padding="8"
+                                                    CornerRadius="6"
+                                                    ToolTip.Tip="Edit UUID">
+                                                <svg:Svg Path="/Assets/Icons/edit.svg" Width="16" Height="16"/>
+                                            </Button>
+                                        </StackPanel>
+                                        
+                                        <!-- Edit Mode Buttons -->
+                                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsEditingUuid}">
+                                            <Button Command="{Binding RandomizeUuidCommand}"
+                                                    Background="Transparent"
+                                                    Padding="8"
+                                                    CornerRadius="6"
+                                                    ToolTip.Tip="Generate new UUID">
+                                                <svg:Svg Path="/Assets/Icons/refresh-cw.svg" Width="16" Height="16"/>
+                                            </Button>
+                                            
+                                            <Button Command="{Binding SaveUuidCommand}"
+                                                    Background="{DynamicResource SystemAccentBrush}"
+                                                    Padding="8"
+                                                    CornerRadius="6"
+                                                    ToolTip.Tip="Save UUID">
+                                                <svg:Svg Path="/Assets/Icons/check.svg" Width="16" Height="16">
+                                                    <svg:Svg.Css>* { stroke: #111 !important; }</svg:Svg.Css>
+                                                </svg:Svg>
+                                            </Button>
+                                            
+                                            <Button Command="{Binding CancelUuidEditCommand}"
+                                                    Background="#333"
+                                                    Padding="8"
+                                                    CornerRadius="6"
+                                                    ToolTip.Tip="Cancel">
+                                                <svg:Svg Path="/Assets/Icons/x.svg" Width="16" Height="16"/>
+                                            </Button>
+                                        </StackPanel>
+                                </StackPanel>
+                            </actionInput:ActionInput.RightContent>
+                        </actionInput:ActionInput>
+                            
+                        <TextBlock Text="Unique identifier for your profile" 
+                                   FontSize="11" 
+                                   Foreground="#666"
+                                   Margin="4,0,0,0"/>
+                   </StackPanel>
+                    
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

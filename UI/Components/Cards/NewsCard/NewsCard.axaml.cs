@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using System.Windows.Input;
 
-namespace HyPrism.UI.Components.Cards;
+namespace HyPrism.UI.Components.Cards.NewsCard;
 
 public partial class NewsCard : UserControl
 {

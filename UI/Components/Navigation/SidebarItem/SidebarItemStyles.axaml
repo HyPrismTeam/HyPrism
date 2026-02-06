@@ -1,0 +1,99 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:nav="using:HyPrism.UI.Components.Navigation.SidebarItem">
+
+    <!-- 
+    =================================================================
+    SidebarItem Styles
+    =================================================================
+    Navigation sidebar item with icon, text, and active indicator.
+    Styles are separated from the component for maintainability.
+    =================================================================
+    -->
+    
+    <!-- Base Button Style -->
+    <Style Selector="nav|SidebarItem Button.sidebar-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="nav|SidebarItem Button.sidebar-btn:pointerover">
+        <Setter Property="Background" Value="#1AFFFFFF"/>
+    </Style>
+
+    <!-- Selected state (using Tag binding) -->
+    <Style Selector="nav|SidebarItem Button.sidebar-btn[Tag=True]">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
+    <!-- Pressed state -->
+    <Style Selector="nav|SidebarItem Button.sidebar-btn:pressed">
+         <Setter Property="Background" Value="#15FFFFFF"/>
+    </Style>
+    
+    <!-- Text Styling -->
+    <Style Selector="nav|SidebarItem TextBlock.item-text">
+        <Setter Property="Foreground" Value="#888"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="nav|SidebarItem Button.sidebar-btn:pointerover TextBlock.item-text">
+        <Setter Property="Foreground" Value="#DDD"/>
+    </Style>
+
+    <Style Selector="nav|SidebarItem Button.sidebar-btn[Tag=True] TextBlock.item-text">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    
+    <!-- Icon Styles -->
+    <Style Selector="nav|SidebarItem Viewbox">
+        <Setter Property="Opacity" Value="0.5"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="nav|SidebarItem Button.sidebar-btn:pointerover Viewbox">
+        <Setter Property="Opacity" Value="0.8"/>
+    </Style>
+
+    <Style Selector="nav|SidebarItem Button.sidebar-btn[Tag=True] Viewbox">
+        <Setter Property="Opacity" Value="1.0"/>
+    </Style>
+
+    <!-- Active Indicator -->
+    <Style Selector="nav|SidebarItem Border.indicator">
+        <Setter Property="Background" Value="{DynamicResource SystemAccentBrush}"/>
+        <Setter Property="Width" Value="4"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Margin" Value="0,8"/>
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="RenderTransform" Value="scaleY(0)"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="nav|SidebarItem Button.sidebar-btn[Tag=True] Border.indicator">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="RenderTransform" Value="scaleY(1)"/>
+    </Style>
+
+</Styles>

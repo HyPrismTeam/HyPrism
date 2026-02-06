@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 
-namespace HyPrism.UI.Components.Layouts;
+namespace HyPrism.UI.Components.Layouts.ModalWrapper;
 
 public partial class ModalWrapper : UserControl
 {

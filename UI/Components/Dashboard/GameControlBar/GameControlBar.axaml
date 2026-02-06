@@ -2,63 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="using:HyPrism.UI.ViewModels"
-             xmlns:btn="using:HyPrism.UI.Components.Buttons"
+             xmlns:vm="using:HyPrism.UI.Components.Dashboard.GameControlBar"
+             xmlns:btn="using:HyPrism.UI.Components.Buttons.IconButton"
+             xmlns:primaryBtn="using:HyPrism.UI.Components.Buttons.PrimaryButton"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="100"
-             x:Class="HyPrism.UI.Components.Dashboard.GameControlBar"
-             x:DataType="vm:Dashboard.GameControlViewModel">
+             x:Class="HyPrism.UI.Components.Dashboard.GameControlBar.GameControlBar"
+             x:DataType="vm:GameControlViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Button.VersionAreaButton">
-            <Setter Property="Background" Value="#2a2a2a"/>
-            <Setter Property="BorderBrush" Value="#333333"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="24,0"/>
-            <Setter Property="CornerRadius" Value="10,0,0,10"/>
-            <Setter Property="Height" Value="50"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Border>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="Button.VersionAreaButton /template/ Border">
-            <Setter Property="RenderTransform" Value="scale(1)"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.VersionAreaButton:pointerover /template/ Border">
-            <Setter Property="Background" Value="#333333"/>
-            <Setter Property="Opacity" Value="0.9"/>
-            <Setter Property="RenderTransform" Value="scale(0.97)"/>
-        </Style>
-        <Style Selector="Button.VersionAreaButton:pressed /template/ Border">
-            <Setter Property="Background" Value="#252525"/>
-            <Setter Property="Opacity" Value="0.85"/>
-            <Setter Property="RenderTransform" Value="scale(0.95)"/>
-        </Style>
-        <Style Selector="Button.VersionAreaButton TextBlock">
-            <Setter Property="Foreground" Value="#ddd"/>
-            <Setter Property="FontSize" Value="13"/>
-        </Style>
+        <StyleInclude Source="GameControlBarStyles.axaml"/>
     </UserControl.Styles>
     
     <Grid>
@@ -127,7 +80,7 @@
                         </StackPanel>
                     </Button>
 
-                    <btn:PrimaryButton Grid.Column="1"
+                    <primaryBtn:PrimaryButton Grid.Column="1"
                                        Command="{Binding LaunchCommand}"
                                        Height="50"
                                        Padding="18,0"
@@ -139,7 +92,7 @@
                             </svg:Svg>
                             <TextBlock Text="{Binding MainPlay^}" VerticalAlignment="Center" Foreground="#111"/>
                         </StackPanel>
-                    </btn:PrimaryButton>
+                    </primaryBtn:PrimaryButton>
                 </Grid>
             </Border>
         </Grid>

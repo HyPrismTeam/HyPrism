@@ -1,6 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:btn="using:HyPrism.UI.Components.Buttons"
+        xmlns:btn="using:HyPrism.UI.Components.Buttons.IconButton"
         xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia">
     
     <Design.PreviewWith>

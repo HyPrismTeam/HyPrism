@@ -1,0 +1,199 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia">
+
+    <!-- 
+    =================================================================
+    SETTINGS VIEW STYLES
+    =================================================================
+    Styles specific to the Settings view
+    -->
+    
+    <!-- ============================================================
+         TAB BUTTON - Sidebar navigation buttons
+         ============================================================ -->
+    <Style Selector="Button.TabButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#AAAAAA"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="15,10"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}" 
+                        Padding="{TemplateBinding Padding}" 
+                        CornerRadius="6">
+                    <ContentPresenter Content="{TemplateBinding Content}" 
+                                      VerticalAlignment="Center"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Button.TabButton:pointerover">
+        <Setter Property="Background" Value="#1AFFFFFF"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+
+    <!-- ============================================================
+         PROFILE CARD - Clickable profile selector
+         ============================================================ -->
+    <Style Selector="Button.ProfileCard">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="RenderTransform" Value="none"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.075" Easing="LinearEasing"/>
+                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}" 
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <ContentPresenter Content="{TemplateBinding Content}"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Button.ProfileCard:pointerover">
+        <Setter Property="Background" Value="#15FFFFFF"/>
+    </Style>
+    
+    <Style Selector="Button.ProfileCard:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.95)"/>
+    </Style>
+    
+    <!-- ============================================================
+         BACKGROUND CARD - Selectable background thumbnail
+         ============================================================ -->
+    <Style Selector="Button.BackgroundCard">
+        <Setter Property="Width" Value="120"/>
+        <Setter Property="Height" Value="75"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0,0,10,10"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid>
+                    <Border CornerRadius="{TemplateBinding CornerRadius}" ClipToBounds="True">
+                        <Grid>
+                            <Image Name="BgImage" 
+                                   Source="{TemplateBinding Content}" 
+                                   Stretch="UniformToFill">
+                                <Image.Transitions>
+                                    <Transitions>
+                                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.35" Easing="CubicEaseOut"/>
+                                    </Transitions>
+                                </Image.Transitions>
+                            </Image>
+                            
+                            <!-- Selected Overlay -->
+                            <Border Name="SelectedOverlay" 
+                                    Background="#99000000" 
+                                    Opacity="0">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                    </Transitions>
+                                </Border.Transitions>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                                    <svg:Svg Path="/Assets/Icons/check.svg" 
+                                             Width="24" Height="24" 
+                                             Css="* { stroke: white; }"/>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Hover Overlay -->
+                            <Border Name="HoverOverlay" Background="#20FFFFFF" IsVisible="False"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Hover: Scale image when not selected -->
+    <Style Selector="Button.BackgroundCard:not(.Selected):pointerover Image#BgImage">
+        <Setter Property="RenderTransform" Value="scale(1.1)"/>
+    </Style>
+    
+    <!-- Selected state -->
+    <Style Selector="Button.BackgroundCard.Selected">
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+
+    <Style Selector="Button.BackgroundCard.Selected Border#SelectedOverlay">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <!-- ============================================================
+         ACCENT COLOR CARD - Selectable accent color swatch
+         ============================================================ -->
+    <Style Selector="Button.AccentColorCard">
+        <Setter Property="Width" Value="40"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0,0,10,10"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="ClipToBounds" Value="False"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid>
+                    <Border Name="ColorBox"
+                            Width="40" Height="40"
+                            CornerRadius="8"
+                            Background="{TemplateBinding Background}"
+                            RenderTransformOrigin="50%,50%">
+                        <Border.Transitions>
+                            <Transitions>
+                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                            </Transitions>
+                        </Border.Transitions>
+
+                        <!-- Selected Overlay -->
+                        <Border Name="SelectedOverlay" 
+                                Background="#66000000" 
+                                CornerRadius="8"
+                                Opacity="0">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                                </Transitions>
+                            </Border.Transitions>
+                            <svg:Svg Path="/Assets/Icons/check.svg" 
+                                     Width="18" Height="18" 
+                                     HorizontalAlignment="Center" 
+                                     VerticalAlignment="Center"
+                                     Css="* { stroke: white; }"/>
+                        </Border>
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Hover: Scale when not selected -->
+    <Style Selector="Button.AccentColorCard:not(.Selected):pointerover Border#ColorBox">
+        <Setter Property="RenderTransform" Value="scale(0.95)"/>
+    </Style>
+    
+    <!-- Selected state -->
+    <Style Selector="Button.AccentColorCard.Selected">
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+
+    <Style Selector="Button.AccentColorCard.Selected Border#SelectedOverlay">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+</Styles>

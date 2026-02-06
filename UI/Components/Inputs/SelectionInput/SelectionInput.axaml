@@ -5,7 +5,7 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              xmlns:cv="using:HyPrism.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
-             x:Class="HyPrism.UI.Components.Inputs.SelectionInput"
+             x:Class="HyPrism.UI.Components.Inputs.SelectionInput.SelectionInput"
              x:Name="Root"
              ClipToBounds="False">
              <!-- ZIndex handled in code-behind to avoid StaticResource resolution issues -->
@@ -13,126 +13,6 @@
     <UserControl.Resources>
         <cv:StringEqualityConverter x:Key="StringEqualityConverter"/>
     </UserControl.Resources>
-    
-    <UserControl.Styles>
-        <!-- ToggleButton Style -->
-        <Style Selector="ToggleButton.InputToggle">
-            <Setter Property="Background" Value="#252525"/>
-            <Setter Property="BorderBrush" Value="#333"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="RenderTransform" Value="none" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}" 
-                                          VerticalAlignment="Center"
-                                          HorizontalAlignment="Stretch"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="ToggleButton.InputToggle:pointerover">
-            <Setter Property="Background" Value="#303030"/>
-        </Style>
-        <Style Selector="ToggleButton.InputToggle:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.98)" />
-            <Setter Property="Background" Value="#151515"/>
-        </Style>
-        
-        <!-- Chevron Rotation -->
-        <Style Selector="ToggleButton.InputToggle:checked svg|Svg.Chevron">
-            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
-        </Style>
-        <Style Selector="ToggleButton.InputToggle:unchecked svg|Svg.Chevron">
-            <!-- 180 is Up (since file is chevron-up) -> We want Down for closed? 
-                 Wait, standard: Closed = Down, Open = Up.
-                 File is 'chevron-up.svg'. 
-                 So Unchecked (Closed) -> Rotate 180 (Down).
-                 Checked (Open) -> Rotate 0 (Up). -->
-            <Setter Property="RenderTransform" Value="rotate(180deg)"/>
-        </Style>
-        
-        <!-- ListBox Item Style -->
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#DDDDDD"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Margin" Value="0,2"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-
-        <!-- Animation for ListBoxItem content -->
-        <Style Selector="ListBoxItem /template/ ContentPresenter">
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#1AFFFFFF"/>
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource SystemAccentBrush}"/>
-            <Setter Property="Foreground" Value="Black"/> <!-- Contrast text -->
-        </Style>
-        
-        <!-- Dropdown Animation -->
-        <Style Selector="Grid#DropdownContainer">
-             <Setter Property="IsHitTestVisible" Value="False"/>
-             <Setter Property="Opacity" Value="0"/>
-             <Setter Property="RenderTransform" Value="scaleY(0.9) translateY(-10px)"/>
-             <Setter Property="Transitions">
-                 <Transitions>
-                     <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
-                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
-                 </Transitions>
-             </Setter>
-        </Style>
-
-        <Style Selector="Canvas#DropdownPlaceholder.down">
-            <Setter Property="Grid.Row" Value="1"/>
-            <Setter Property="VerticalAlignment" Value="Top"/>
-        </Style>
-
-        <Style Selector="Canvas#DropdownPlaceholder.up">
-            <Setter Property="Grid.Row" Value="0"/>
-            <Setter Property="VerticalAlignment" Value="Bottom"/>
-        </Style>
-
-        <Style Selector="Grid#DropdownContainer.down">
-            <Setter Property="Canvas.Top" Value="4"/>
-        </Style>
-
-        <Style Selector="Grid#DropdownContainer.up">
-            <Setter Property="Canvas.Bottom" Value="4"/>
-        </Style>
-        
-        <Style Selector="Grid#DropdownContainer.expanded">
-             <Setter Property="IsHitTestVisible" Value="True"/>
-             <Setter Property="Opacity" Value="1"/>
-             <Setter Property="RenderTransform" Value="scaleY(1) translateY(0px)"/>
-        </Style>
-
-    </UserControl.Styles>
     
     <!-- Outer container: Needs explicit height to not be expanded by canvas if we used one -->
     <!-- But here we use a simple grid flow. The dropdown is floating. -->
@@ -216,20 +96,16 @@
                         BorderThickness="1"
                         CornerRadius="8"
                         Padding="6"
+                        MinWidth="{Binding $parent[UserControl].Bounds.Width}"
                         MaxHeight="300"
                         BoxShadow="0 8 32 0 #66000000">
                     <ScrollViewer VerticalScrollBarVisibility="Hidden">
-                        <ListBox ItemsSource="{Binding ElementName=Root, Path=ItemsSource}"
+                        <ListBox Classes="SelectionList"
+                                 ItemsSource="{Binding ElementName=Root, Path=ItemsSource}"
                                  SelectedItem="{Binding ElementName=Root, Path=SelectedItem}"
                                  ItemTemplate="{Binding ElementName=Root, Path=ItemTemplate}"
                                  Background="Transparent"
-                                 SelectionChanged="OnListBoxSelectionChanged">
-                             <ListBox.Styles>
-                                <Style Selector="ListBox">
-                                    <Setter Property="Padding" Value="0"/>
-                                </Style>
-                             </ListBox.Styles>
-                        </ListBox>
+                                 SelectionChanged="OnListBoxSelectionChanged"/>
                     </ScrollViewer>
                 </Border>
              </Grid>

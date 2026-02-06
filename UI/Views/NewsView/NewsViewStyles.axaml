@@ -1,0 +1,102 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 
+    =================================================================
+    NEWS VIEW STYLES
+    =================================================================
+    Styles specific to the News view
+    -->
+    
+    <!-- ============================================================
+         TAB INDICATOR - Animated sliding indicator
+         ============================================================ -->
+    <Style Selector="Border.tab-indicator">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="(Canvas.Left)" Duration="0:0:0.5" Easing="0.16,1,0.3,1"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         TAB BUTTON - News source tab buttons
+         ============================================================ -->
+    <Style Selector="Button.tab-btn">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#999"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn:pointerover">
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn.active">
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="IsEnabled" Value="False"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn.active /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="Black"/>
+    </Style>
+    
+    <Style Selector="Button.tab-btn:disabled">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    
+    <!-- ============================================================
+         NEWS CARD - Clickable news item
+         ============================================================ -->
+    <Style Selector="Button.news-card">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    
+    <Style Selector="Border.news-card-content">
+        <Setter Property="Background" Value="#CC252525"/>
+        <Setter Property="BorderBrush" Value="#333"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Button.news-card:pointerover Border.news-card-content">
+        <Setter Property="Background" Value="#CC2D2D2D"/>
+        <Setter Property="BorderBrush" Value="#444"/>
+    </Style>
+
+</Styles>

@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="100"
-             x:Class="HyPrism.UI.Components.Inputs.ActionInput"
+             x:Class="HyPrism.UI.Components.Inputs.ActionInput.ActionInput"
              x:Name="Root">
              
     <StackPanel Spacing="8">

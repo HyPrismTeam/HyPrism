@@ -196,9 +196,11 @@ public class LanguageService
         {
             try
             {
-                var versions = branch == "release" 
-                    ? await _versionService.GetVersionListAsync("release") 
-                    : await _versionService.GetVersionListAsync("pre-release");
+                // Use cached versions to avoid refetching
+                if (!_versionService.TryGetCachedVersions(branch, TimeSpan.FromMinutes(30), out var versions))
+                {
+                    versions = await _versionService.GetVersionListAsync(branch);
+                }
                     
                 foreach (var version in versions)
                 {

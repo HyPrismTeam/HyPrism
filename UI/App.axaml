@@ -2,24 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              xmlns:converters="using:HyPrism.UI.Converters"
-             xmlns:btn="using:HyPrism.UI.Components.Buttons"
              x:Class="HyPrism.UI.App"
              RequestedThemeVariant="Dark">
     <Application.Resources>
         <ResourceDictionary>
-            <Color x:Key="HytaleOrange">#FFA845</Color>
-            <Color x:Key="HytaleOrangeDark">#FF6B35</Color>
-            <Color x:Key="HytaleDark">#090909</Color>
-            <Color x:Key="HytaleDarkLight">#0d0d0d</Color>
-            
-            <!-- Dynamic Theme System -->
-            <Color x:Key="SystemAccentColor">#FFA845</Color>
-            <SolidColorBrush x:Key="SystemAccentBrush" Color="{StaticResource SystemAccentColor}" />
-
-            <SolidColorBrush x:Key="HytaleOrangeBrush" Color="{StaticResource HytaleOrange}"/>
-            <SolidColorBrush x:Key="HytaleOrangeDarkBrush" Color="{StaticResource HytaleOrangeDark}"/>
-            <SolidColorBrush x:Key="HytaleDarkBrush" Color="{StaticResource HytaleDark}"/>
-            <SolidColorBrush x:Key="HytaleDarkLightBrush" Color="{StaticResource HytaleDarkLight}"/>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Shared Colors - all theme colors defined here -->
+                <ResourceInclude Source="avares://HyPrism/UI/Styles/SharedColors.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
             
             <!-- Converters -->
             <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
@@ -30,10 +20,27 @@
         </ResourceDictionary>
     </Application.Resources>
     <Application.Styles>
-        <FluentTheme />
+        <!-- Base Control Styles - No FluentTheme, full control -->
+        <StyleInclude Source="avares://HyPrism/UI/Styles/BaseControlStyles.axaml"/>
+        
+        <!-- Common Animations -->
+        <StyleInclude Source="avares://HyPrism/UI/Styles/CommonAnimations.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Styles/DropdownInputStyles.axaml"/>
+        
+        <!-- Component Styles -->
         <StyleInclude Source="avares://HyPrism/UI/Components/Buttons/IconButton/IconButtonStyles.axaml"/>
         <StyleInclude Source="avares://HyPrism/UI/Components/Buttons/PrimaryButton/PrimaryButtonStyles.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Components/Buttons/CloseButton/CloseButtonStyles.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Components/Navigation/SidebarItem/SidebarItemStyles.axaml"/>
         
+        <!-- View Styles -->
+        <StyleInclude Source="avares://HyPrism/UI/Views/SettingsView/SettingsViewStyles.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Views/NewsView/NewsViewStyles.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Views/ModManagerView/ModManagerViewStyles.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Views/LoadingView/LoadingViewStyles.axaml"/>
+        <StyleInclude Source="avares://HyPrism/UI/Views/LaunchOverlayView/LaunchOverlayViewStyles.axaml"/>
+        
+        <!-- Global SVG default style -->
         <Style Selector="svg|Svg">
             <Setter Property="Css" Value="* { stroke: white !important; fill: none !important; }"/>
         </Style>

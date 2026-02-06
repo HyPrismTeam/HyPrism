@@ -1,0 +1,20 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Define styles specifically for this internal button class -->
+    <Style Selector="Button.news-card-btn">
+        <Setter Property="Background" Value="#1A1A1A"/>
+        <Setter Property="BorderBrush" Value="#2A2A2A"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="10"/>
+    </Style>
+    
+    <Style Selector="Button.news-card-btn:pointerover">
+         <Setter Property="Background" Value="#252525"/>
+         <Setter Property="BorderBrush" Value="#3A3A3A"/>
+    </Style>
+    
+    <Style Selector="Button.news-card-btn:pressed">
+         <Setter Property="Background" Value="#151515"/>
+    </Style>
+</Styles>

@@ -5,109 +5,13 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              xmlns:cv="using:HyPrism.UI.Converters"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="120"
-             x:Class="HyPrism.UI.Components.Inputs.MultiSelectionInput"
+             x:Class="HyPrism.UI.Components.Inputs.MultiSelectionInput.MultiSelectionInput"
              x:Name="Root"
              ClipToBounds="False">
 
     <UserControl.Resources>
         <cv:StringEqualityConverter x:Key="StringEqualityConverter"/>
     </UserControl.Resources>
-
-    <UserControl.Styles>
-        <Style Selector="ToggleButton.InputToggle">
-            <Setter Property="Background" Value="#252525"/>
-            <Setter Property="BorderBrush" Value="#333"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="RenderTransform" Value="none" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          VerticalAlignment="Center"
-                                          HorizontalAlignment="Stretch"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="ToggleButton.InputToggle:pointerover">
-            <Setter Property="Background" Value="#303030"/>
-        </Style>
-        <Style Selector="ToggleButton.InputToggle:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.98)" />
-            <Setter Property="Background" Value="#151515"/>
-        </Style>
-
-        <Style Selector="ToggleButton.InputToggle:checked svg|Svg.Chevron">
-            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
-        </Style>
-        <Style Selector="ToggleButton.InputToggle:unchecked svg|Svg.Chevron">
-            <Setter Property="RenderTransform" Value="rotate(180deg)"/>
-        </Style>
-
-        <Style Selector="ListBox.MultiSelectionList">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="ListBox.MultiSelectionList ListBoxItem">
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#DDDDDD"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Margin" Value="0,2"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-
-        <Style Selector="ListBox.MultiSelectionList ListBoxItem /template/ ContentPresenter">
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                    <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="ListBox.MultiSelectionList ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#1AFFFFFF"/>
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        <Style Selector="ListBox.MultiSelectionList ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource SystemAccentBrush}"/>
-            <Setter Property="Foreground" Value="Black"/>
-        </Style>
-
-        <Style Selector="Grid#DropdownContainer">
-            <Setter Property="IsHitTestVisible" Value="False"/>
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="RenderTransform" Value="scaleY(0.9) translateY(-10px)"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="Grid#DropdownContainer.expanded">
-            <Setter Property="IsHitTestVisible" Value="True"/>
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="RenderTransform" Value="scaleY(1) translateY(0px)"/>
-        </Style>
-    </UserControl.Styles>
 
     <Grid RowDefinitions="Auto, Auto" ClipToBounds="False">
         <StackPanel Grid.Row="0" Spacing="8">
@@ -119,7 +23,8 @@
 
             <ToggleButton Name="DropdownToggle"
                           Classes="InputToggle"
-                          Height="44"
+                          Height="{Binding ElementName=Root, Path=ToggleHeight}"
+                          CornerRadius="{Binding ElementName=Root, Path=ToggleCornerRadius}"
                           IsChecked="{Binding ElementName=Root, Path=IsExpanded, Mode=TwoWay}">
                 <Grid ColumnDefinitions="*, Auto">
                     <ContentControl Grid.Column="0"
@@ -137,12 +42,21 @@
                         </ContentControl.DataTemplates>
                     </ContentControl>
 
-                    <TextBlock Grid.Column="0"
-                               Text="{Binding ElementName=Root, Path=Placeholder}"
-                               IsVisible="{Binding ElementName=Root, Path=SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"
-                               Foreground="Gray"
-                               FontSize="14"
-                               VerticalAlignment="Center"/>
+                    <ContentControl Grid.Column="0"
+                                   Content="{Binding ElementName=Root, Path=PlaceholderContent}"
+                                   ContentTemplate="{Binding ElementName=Root, Path=PlaceholderTemplate}"
+                                   IsVisible="{Binding ElementName=Root, Path=SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Left">
+                        <ContentControl.DataTemplates>
+                            <DataTemplate DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="14" Foreground="Gray" />
+                            </DataTemplate>
+                            <DataTemplate DataType="x:Object">
+                                <TextBlock Text="{Binding}" FontSize="14" Foreground="Gray"/>
+                            </DataTemplate>
+                        </ContentControl.DataTemplates>
+                    </ContentControl>
 
                     <svg:Svg Grid.Column="1"
                              Classes="Chevron"
@@ -169,33 +83,39 @@
                 ClipToBounds="False"
             Canvas.Top="8">
 
-                <Border Background="#1E1E1E"
-                        BorderBrush="#333"
+                <Border Background="{Binding ElementName=Root, Path=DropdownBackground, FallbackValue=#1E1E1E}"
+                        BorderBrush="{Binding ElementName=Root, Path=DropdownBorderBrush, FallbackValue=#333}"
                         BorderThickness="1"
-                        CornerRadius="8"
+                        CornerRadius="{Binding ElementName=Root, Path=DropdownCornerRadius}"
                         Padding="0"
-                        MaxHeight="320"
+                        MaxHeight="{Binding ElementName=Root, Path=MaxDropdownHeight}"
                         BoxShadow="0 8 32 0 #66000000">
                     <Grid RowDefinitions="Auto, *">
                         <Border Background="#202020"
                                 BorderBrush="#333"
                                 BorderThickness="0,0,0,1"
-                                Padding="10">
+                                Padding="0">
                             <ContentPresenter Content="{Binding ElementName=Root, Path=HeaderContent}"
                                               ContentTemplate="{Binding ElementName=Root, Path=HeaderTemplate}"/>
                         </Border>
 
-                        <ListBox Grid.Row="1"
+                        <ListBox Name="ItemsListBox"
+                                 Grid.Row="1"
                                  ItemsSource="{Binding ElementName=Root, Path=ItemsSource}"
-                                 SelectedItem="{Binding ElementName=Root, Path=SelectedItem, Mode=TwoWay}"
+                                 SelectedItem="{Binding ElementName=Root, Path=ListSelectedItem, Mode=TwoWay}"
                                  SelectedItems="{Binding ElementName=Root, Path=SelectedItems, Mode=TwoWay}"
                                  SelectionMode="{Binding ElementName=Root, Path=SelectionMode}"
-                                 ItemTemplate="{Binding ElementName=Root, Path=ItemTemplate}"
+                                 ItemTemplate="{Binding ElementName=Root, Path=ItemsTemplate}"
                                  Classes="MultiSelectionList"
                                  Background="Transparent"
                                  MaxHeight="240"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  SelectionChanged="OnListBoxSelectionChanged">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
                             <ListBox.Styles>
                                 <Style Selector="ListBox">
                                     <Setter Property="Padding" Value="8"/>

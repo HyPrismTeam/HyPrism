@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:HyPrism.UI.Views.DashboardView"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
+             x:Class="HyPrism.UI.Views.ErrorModalView.ErrorModalView"
+             x:DataType="vm:DashboardViewModel">
+    
+    <Grid IsVisible="{Binding IsErrorModalOpen}" Background="#CC000000">
+        <Grid.Transitions>
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.5" Easing="CubicEaseInOut"/>
+            </Transitions>
+        </Grid.Transitions>
+        <Grid.Styles>
+            <Style Selector="Grid[IsVisible=True]">
+                <Setter Property="Opacity" Value="1"/>
+            </Style>
+            <Style Selector="Grid[IsVisible=False]">
+                <Setter Property="Opacity" Value="0"/>
+            </Style>
+        </Grid.Styles>
+        
+        <!-- Modal Content -->
+        <Border Background="#0d0d0d" 
+                CornerRadius="12" 
+                BorderBrush="#FF4444" 
+                BorderThickness="1"
+                MaxWidth="550" 
+                VerticalAlignment="Center" 
+                HorizontalAlignment="Center">
+            <StackPanel>
+                <!-- Header -->
+                <Border Background="#1A0d0d0d" Padding="20">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Icon + Title -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                        <Border Width="40" Height="40" 
+                                CornerRadius="12" 
+                                Background="#33FF4444">
+                            <svg:Svg Path="/Assets/Icons/alert-triangle.svg" 
+                                     Width="20" Height="20" 
+                                     HorizontalAlignment="Center" 
+                                     VerticalAlignment="Center">
+                                <svg:Svg.Css>* { stroke: #FF4444 !important; }</svg:Svg.Css>
+                            </svg:Svg>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Error Occurred" 
+                                       FontSize="16" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"/>
+                            <TextBlock Text="{Binding ErrorTitle}" 
+                                       FontSize="11" 
+                                       Foreground="#FF6666"/>
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <!-- Close Button -->
+                    <Button Grid.Column="2" 
+                            Command="{Binding CloseErrorModalCommand}"
+                            Background="Transparent" 
+                            Padding="8" 
+                            CornerRadius="8">
+                        <svg:Svg Path="/Assets/Icons/x.svg" Width="16" Height="16"/>
+                    </Button>
+                    </Grid>
+                </Border>
+                
+                <!-- Body -->
+                <StackPanel Margin="20" Spacing="15">
+                    <!-- Message -->
+                    <TextBlock Text="{Binding ErrorMessage}" 
+                               FontSize="14" 
+                               Foreground="#CCC" 
+                               TextWrapping="Wrap"/>
+                    
+                    <!-- Technical Details (Collapsible) -->
+                    <Border Background="#1A1A1A" 
+                            CornerRadius="8" 
+                            Padding="12"
+                            IsVisible="{Binding ErrorTrace, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Technical Details" 
+                                       FontSize="12" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#999"/>
+                            <ScrollViewer MaxHeight="150">
+                                <TextBlock Text="{Binding ErrorTrace}" 
+                                           FontSize="10" 
+                                           Foreground="#666" 
+                                           TextWrapping="Wrap"
+                                           FontFamily="Consolas,Courier New,monospace"/>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <!-- Copy Error -->
+                        <Button Grid.Column="0" 
+                                Command="{Binding CopyErrorCommand}"
+                                Background="#2a2a2a" 
+                                Padding="12" 
+                                CornerRadius="8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <svg:Svg Path="/Assets/Icons/copy.svg" Width="14" Height="14"/>
+                                <TextBlock Text="Copy Error" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <!-- Close -->
+                        <Button Grid.Column="1" 
+                                Command="{Binding CloseErrorModalCommand}"
+                                Background="{DynamicResource SystemAccentBrush}" 
+                                Foreground="#111"
+                                Padding="12" 
+                                CornerRadius="8"
+                                FontWeight="SemiBold"
+                                HorizontalAlignment="Stretch">
+                            <TextBlock Text="OK" FontSize="12" HorizontalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+    
+</UserControl>

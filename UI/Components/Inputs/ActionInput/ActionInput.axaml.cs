@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace HyPrism.UI.Components.Inputs;
+namespace HyPrism.UI.Components.Inputs.ActionInput;
 
 public partial class ActionInput : UserControl
 {

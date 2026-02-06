@@ -2,7 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Styling;
 
-namespace HyPrism.UI.Components.Buttons;
+namespace HyPrism.UI.Components.Buttons.PrimaryButton;
 
 public class PrimaryButton : Button
 {

@@ -5,7 +5,11 @@ using HyPrism.Services;
 using HyPrism.Services.Core;
 using HyPrism.Services.User;
 using HyPrism.Services.Game;
-using HyPrism.UI.ViewModels;
+using HyPrism.UI.MainWindow;
+using HyPrism.UI.Views.NewsView;
+using HyPrism.UI.Views.SettingsView;
+using HyPrism.UI.Views.ModManagerView;
+using HyPrism.UI.Views.ProfileEditorView;
 
 namespace HyPrism;
 
@@ -31,7 +35,7 @@ public static class Bootstrapper
             });
 
             // Config Service
-            services.AddSingleton<ConfigService>(sp => 
+            services.AddSingleton(sp => 
                 new ConfigService(sp.GetRequiredService<AppPathConfiguration>().AppDir));
 
             #endregion
@@ -40,7 +44,7 @@ public static class Bootstrapper
 
             services.AddSingleton<NewsService>(); 
             
-            services.AddSingleton<ProfileService>(sp => 
+            services.AddSingleton(sp => 
                 new ProfileService(
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<ConfigService>()));
@@ -48,7 +52,7 @@ public static class Bootstrapper
             services.AddSingleton<DownloadService>(); 
             services.AddSingleton<GitHubService>();
             
-            services.AddSingleton<VersionService>(sp => 
+            services.AddSingleton(sp => 
                 new VersionService(
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<HttpClient>(),
@@ -58,7 +62,7 @@ public static class Bootstrapper
 
             #region Game & Instance Management
 
-            services.AddSingleton<ModService>(sp =>
+            services.AddSingleton(sp =>
                 new ModService(
                     sp.GetRequiredService<HttpClient>(),
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
@@ -66,32 +70,32 @@ public static class Bootstrapper
                     sp.GetRequiredService<InstanceService>(),
                     sp.GetRequiredService<ProgressNotificationService>()));
                     
-            services.AddSingleton<LaunchService>(sp =>
+            services.AddSingleton(sp =>
                 new LaunchService(
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<HttpClient>()));
                     
-            services.AddSingleton<InstanceService>(sp =>
+            services.AddSingleton(sp =>
                 new InstanceService(
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<ConfigService>()));
 
-            services.AddSingleton<AssetService>(sp =>
+            services.AddSingleton(sp =>
                 new AssetService(
                     sp.GetRequiredService<InstanceService>(),
                     sp.GetRequiredService<AppPathConfiguration>().AppDir));
 
-            services.AddSingleton<AvatarService>(sp =>
+            services.AddSingleton(sp =>
                 new AvatarService(
                     sp.GetRequiredService<InstanceService>(),
                     sp.GetRequiredService<AppPathConfiguration>().AppDir));
 
             services.AddSingleton<GameProcessService>();
 
-            services.AddSingleton<FileService>(sp =>
+            services.AddSingleton(sp =>
                 new FileService(sp.GetRequiredService<AppPathConfiguration>()));
 
-            services.AddSingleton<UpdateService>(sp =>
+            services.AddSingleton(sp =>
                 new UpdateService(
                     sp.GetRequiredService<HttpClient>(),
                     sp.GetRequiredService<ConfigService>(),
@@ -100,7 +104,7 @@ public static class Bootstrapper
                     sp.GetRequiredService<BrowserService>(),
                     sp.GetRequiredService<ProgressNotificationService>()));
             
-            services.AddSingleton<GameSessionService>(sp =>
+            services.AddSingleton(sp =>
                 new GameSessionService(
                     sp.GetRequiredService<ConfigService>(),
                     sp.GetRequiredService<InstanceService>(),
@@ -122,7 +126,7 @@ public static class Bootstrapper
             
             #region User & Skin Management
 
-            services.AddSingleton<SkinService>(sp =>
+            services.AddSingleton(sp =>
                 new SkinService(
                     sp.GetRequiredService<AppPathConfiguration>(),
                     sp.GetRequiredService<ConfigService>(),
@@ -130,7 +134,7 @@ public static class Bootstrapper
 
             services.AddSingleton<UserIdentityService>();
 
-            services.AddSingleton<ProfileManagementService>(sp =>
+            services.AddSingleton(sp =>
                 new ProfileManagementService(
                     sp.GetRequiredService<AppPathConfiguration>(),
                     sp.GetRequiredService<ConfigService>(),
@@ -145,14 +149,14 @@ public static class Bootstrapper
             services.AddSingleton<LanguageService>();
             services.AddSingleton(sp => LocalizationService.Instance);
             
-            services.AddSingleton<ProgressNotificationService>(sp =>
+            services.AddSingleton(sp =>
                 new ProgressNotificationService(sp.GetRequiredService<DiscordService>()));
             
             services.AddSingleton<BrowserService>();
             services.AddSingleton<DiscordService>();
             services.AddSingleton<RosettaService>();
             services.AddSingleton<FileDialogService>();
-            services.AddSingleton<ButlerService>(sp =>
+            services.AddSingleton(sp =>
                 new ButlerService(sp.GetRequiredService<AppPathConfiguration>().AppDir));
 
             services.AddSingleton<SettingsService>();

@@ -8,8 +8,9 @@ using Avalonia.Animation.Easings;
 using Avalonia.Media;
 using Avalonia.Threading;
 using HyPrism.Services.Core;
+using AvaTransitions = Avalonia.Animation.Transitions;
 
-namespace HyPrism.UI.Components.Buttons;
+namespace HyPrism.UI.Components.Buttons.IconButton;
 
 public class IconButton : Button
 {
@@ -83,7 +84,7 @@ public class IconButton : Button
         // Setup Overlay Transitions (Always 0.2s)
         if (_hoverOverlay != null)
         {
-            _hoverOverlay.Transitions = new Transitions
+            _hoverOverlay.Transitions = new AvaTransitions
             {
                 new DoubleTransition 
                 { 
@@ -104,7 +105,7 @@ public class IconButton : Button
                 Easing = new LinearEasing()
             };
             
-            _baseIconWrapper.Transitions = new Transitions { _baseOpacityTransition };
+            _baseIconWrapper.Transitions = new AvaTransitions { _baseOpacityTransition };
         }
     }
 

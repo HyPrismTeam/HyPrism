@@ -1,0 +1,181 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- 
+    =================================================================
+    HyPrism Common Animations & Transitions
+    =================================================================
+    Reusable animation styles that can be applied via CSS classes.
+    Import this file in App.axaml to use these animations globally.
+    
+    Note: Avalonia requires class selectors to include a type.
+    We use Control as the base type to allow application to any control.
+    =================================================================
+    -->
+    
+    <!-- 
+    =================================================================
+    PRESS-TO-SCALE ANIMATION
+    =================================================================
+    Usage: Add Classes="pressable" to any Control
+    Effect: Scales down to 0.97 on press with smooth transition
+    -->
+    <Style Selector="Control.pressable">
+        <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Control.pressable:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)"/>
+    </Style>
+    
+    <!-- Smaller scale variant -->
+    <Style Selector="Control.pressable-sm:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.98)"/>
+    </Style>
+    
+    <!-- Larger scale variant -->
+    <Style Selector="Control.pressable-lg:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.95)"/>
+    </Style>
+    
+    <!-- 
+    =================================================================
+    HOVER SCALE ANIMATION
+    =================================================================
+    Usage: Add Classes="hoverable" to any Control
+    Effect: Scales up to 1.02 on hover with smooth transition
+    -->
+    <Style Selector="Control.hoverable">
+        <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Control.hoverable:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.02)"/>
+    </Style>
+    
+    <!-- 
+    =================================================================
+    DROPDOWN OPEN/CLOSE ANIMATION
+    =================================================================
+    Usage: Add Classes="dropdown-panel" and toggle Tag="True/False"
+    Effect: Fade + scale + translate animation for dropdowns
+    -->
+    <Style Selector="Control.dropdown-panel">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="RenderTransformOrigin" Value="50%,0%"/>
+        <Setter Property="RenderTransform" Value="scaleY(0.95) translateY(-8px)"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Control.dropdown-panel[Tag=True]">
+        <Setter Property="IsVisible" Value="True"/>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="RenderTransform" Value="scaleY(1) translateY(0px)"/>
+    </Style>
+    
+    <!-- Upward dropdown variant -->
+    <Style Selector="Control.dropdown-panel-up">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="RenderTransformOrigin" Value="50%,100%"/>
+        <Setter Property="RenderTransform" Value="scaleY(0.95) translateY(8px)"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Control.dropdown-panel-up[Tag=True]">
+        <Setter Property="IsVisible" Value="True"/>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="RenderTransform" Value="scaleY(1) translateY(0px)"/>
+    </Style>
+    
+    <!-- 
+    =================================================================
+    OVERLAY LAYER ANIMATION
+    =================================================================
+    Usage: Add Classes="overlay-layer" and toggle Tag="True/False"
+    Effect: Smooth fade in/out for modal overlays
+    -->
+    <Style Selector="Control.overlay-layer">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Control.overlay-layer[Tag=True]">
+        <Setter Property="IsVisible" Value="True"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    
+    <!-- 
+    =================================================================
+    FADE TRANSITION
+    =================================================================
+    Usage: Add Classes="fade" to any control
+    Effect: Smooth opacity transitions
+    -->
+    <Style Selector="Control.fade">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Control.fade-slow">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <!-- 
+    =================================================================
+    BACKGROUND/BORDER TRANSITION
+    =================================================================
+    Usage: Add Classes="transition-colors" to Border or Panel controls
+    Effect: Smooth background and border color transitions
+    -->
+    <Style Selector="Border.transition-colors">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    
+    <Style Selector="Panel.transition-colors">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+</Styles>

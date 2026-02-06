@@ -1,0 +1,416 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- 
+    =================================================================
+    BASE CONTROL STYLES - No FluentTheme, pure custom styling
+    =================================================================
+    These are minimal templates that give you full control.
+    Each control starts with a clean slate - no inherited styles.
+    -->
+    
+    <!-- ============================================================
+         BUTTON - Clean template with ContentPresenter
+         ============================================================ -->
+    <Style Selector="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter x:Name="PART_ContentPresenter"
+                                  Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="{TemplateBinding CornerRadius}"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  RecognizesAccessKey="True"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         TOGGLE BUTTON - Same as Button but with IsChecked support
+         ============================================================ -->
+    <Style Selector="ToggleButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter x:Name="PART_ContentPresenter"
+                                  Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="{TemplateBinding CornerRadius}"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         TEXTBLOCK - Clean text rendering
+         ============================================================ -->
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+    </Style>
+    
+    <!-- ============================================================
+         TEXTBOX - Minimal input field
+         ============================================================ -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="#1A1A1A"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="CaretBrush" Value="White"/>
+        <Setter Property="SelectionBrush" Value="#4D808080"/>
+        <Setter Property="BorderBrush" Value="#333333"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <DockPanel>
+                        <ContentPresenter x:Name="PART_InnerLeftContent"
+                                          DockPanel.Dock="Left"
+                                          Content="{TemplateBinding InnerLeftContent}"/>
+                        <ContentPresenter x:Name="PART_InnerRightContent"
+                                          DockPanel.Dock="Right"
+                                          Content="{TemplateBinding InnerRightContent}"/>
+                        <ScrollViewer x:Name="PART_ScrollViewer"
+                                      HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                                      VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
+                            <Panel>
+                                <TextBlock x:Name="PART_Watermark"
+                                           Text="{TemplateBinding Watermark}"
+                                           Foreground="#666666"
+                                           IsVisible="{TemplateBinding Text, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                           HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                           Margin="{TemplateBinding Padding}"/>
+                                <TextPresenter x:Name="PART_TextPresenter"
+                                               Text="{TemplateBinding Text, Mode=TwoWay}"
+                                               CaretBrush="{TemplateBinding CaretBrush}"
+                                               CaretIndex="{TemplateBinding CaretIndex}"
+                                               SelectionStart="{TemplateBinding SelectionStart}"
+                                               SelectionEnd="{TemplateBinding SelectionEnd}"
+                                               SelectionBrush="{TemplateBinding SelectionBrush}"
+                                               SelectionForegroundBrush="{TemplateBinding SelectionForegroundBrush}"
+                                               TextAlignment="{TemplateBinding TextAlignment}"
+                                               TextWrapping="{TemplateBinding TextWrapping}"
+                                               LineHeight="{TemplateBinding LineHeight}"
+                                               LetterSpacing="{TemplateBinding LetterSpacing}"
+                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                               Margin="{TemplateBinding Padding}"/>
+                            </Panel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <Style Selector="TextBox:focus">
+        <Setter Property="BorderBrush" Value="#555555"/>
+    </Style>
+    
+    <!-- ============================================================
+         SCROLLVIEWER - Clean scrolling container
+         ============================================================ -->
+    <Style Selector="ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
+                    <ScrollContentPresenter Name="PART_ContentPresenter"
+                                            Grid.Row="0"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Grid.RowSpan="2"
+                                            Background="{TemplateBinding Background}"
+                                            Padding="{TemplateBinding Padding}">
+                        <ScrollContentPresenter.GestureRecognizers>
+                            <ScrollGestureRecognizer CanHorizontallyScroll="{Binding CanHorizontallyScroll, ElementName=PART_ContentPresenter}"
+                                                     CanVerticallyScroll="{Binding CanVerticallyScroll, ElementName=PART_ContentPresenter}"
+                                                     IsScrollInertiaEnabled="{TemplateBinding (ScrollViewer.IsScrollInertiaEnabled)}" />
+                        </ScrollContentPresenter.GestureRecognizers>
+                    </ScrollContentPresenter>
+                    <ScrollBar Name="PART_HorizontalScrollBar"
+                               Grid.Row="1"
+                               Orientation="Horizontal" />
+                    <ScrollBar Name="PART_VerticalScrollBar"
+                               Grid.Column="1"
+                               Orientation="Vertical" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         SCROLLBAR - Minimal thin scrollbar
+         ============================================================ -->
+    <Style Selector="ScrollBar">
+        <Setter Property="MinWidth" Value="6"/>
+        <Setter Property="MinHeight" Value="6"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#33FFFFFF"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}">
+                    <Track Minimum="{TemplateBinding Minimum}"
+                           Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value, Mode=TwoWay}"
+                           ViewportSize="{TemplateBinding ViewportSize}"
+                           Orientation="{TemplateBinding Orientation}"
+                           IsDirectionReversed="True">
+                        <Thumb>
+                            <Thumb.Template>
+                                <ControlTemplate>
+                                    <Border Background="#33FFFFFF"
+                                            CornerRadius="3"/>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <Style Selector="ScrollBar:vertical">
+        <Setter Property="Width" Value="6"/>
+    </Style>
+    
+    <Style Selector="ScrollBar:horizontal">
+        <Setter Property="Height" Value="6"/>
+    </Style>
+    
+    <Style Selector="ScrollBar:pointerover /template/ Thumb /template/ Border">
+        <Setter Property="Background" Value="#4DFFFFFF"/>
+    </Style>
+    
+    <!-- ============================================================
+         LISTBOX - Clean list container
+         ============================================================ -->
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <ScrollViewer HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                                  VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
+                        <ItemsPresenter Margin="{TemplateBinding Padding}"/>
+                    </ScrollViewer>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         LISTBOXITEM - Clean list item
+         ============================================================ -->
+    <Style Selector="ListBoxItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter x:Name="PART_ContentPresenter"
+                                  Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  CornerRadius="{TemplateBinding CornerRadius}"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <Style Selector="ListBoxItem:pointerover">
+        <Setter Property="Background" Value="#1AFFFFFF"/>
+    </Style>
+    
+    <Style Selector="ListBoxItem:selected">
+        <Setter Property="Background" Value="#26FFFFFF"/>
+    </Style>
+    
+    <!-- ============================================================
+         ITEMSCONTROL - Clean items container (no selection)
+         ============================================================ -->
+    <Style Selector="ItemsControl">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="ItemsPanel">
+            <ItemsPanelTemplate>
+                <StackPanel/>
+            </ItemsPanelTemplate>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
+                    <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         PROGRESSBAR - Minimal progress indicator
+         ============================================================ -->
+    <Style Selector="ProgressBar">
+        <Setter Property="Background" Value="#333333"/>
+        <Setter Property="Foreground" Value="#CCCCCC"/>
+        <Setter Property="MinHeight" Value="8"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <Panel>
+                        <Border x:Name="PART_Indicator"
+                                Background="{TemplateBinding Foreground}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                HorizontalAlignment="Left"/>
+                    </Panel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         CONTENTCONTROL - Pass-through container
+         ============================================================ -->
+    <Style Selector="ContentControl">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         TRANSITIONINGCONTENTCONTROL - With transition support
+         ============================================================ -->
+    <Style Selector="TransitioningContentControl">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter x:Name="PART_ContentPresenter"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         WINDOW - Base window styling
+         ============================================================ -->
+    <Style Selector="Window">
+        <Setter Property="Background" Value="#0A0A0A"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="TransparencyLevelHint" Value="AcrylicBlur"/>
+    </Style>
+    
+    <!-- ============================================================
+         USERCONTROL - Transparent by default
+         ============================================================ -->
+    <Style Selector="UserControl">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    
+    <!-- ============================================================
+         IMAGE - Default stretch mode
+         ============================================================ -->
+    <Style Selector="Image">
+        <Setter Property="Stretch" Value="Uniform"/>
+    </Style>
+    
+    <!-- ============================================================
+         TOOLTIP - Clean dark tooltip
+         ============================================================ -->
+    <Style Selector="ToolTip">
+        <Setter Property="Background" Value="#1A1A1A"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="#333333"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+    
+    <!-- ============================================================
+         REPEATBUTTON - Same as Button (used in ScrollBar, etc.)
+         ============================================================ -->
+    <Style Selector="RepeatButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <ContentPresenter Background="{TemplateBinding Background}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  Padding="{TemplateBinding Padding}"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+    <!-- ============================================================
+         THUMB - For ScrollBar and Slider
+         ============================================================ -->
+    <Style Selector="Thumb">
+        <Setter Property="Background" Value="#33FFFFFF"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        CornerRadius="3"/>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    
+</Styles>

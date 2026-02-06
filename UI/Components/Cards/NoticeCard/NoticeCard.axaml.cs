@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace HyPrism.UI.Components.Cards;
+namespace HyPrism.UI.Components.Cards.NoticeCard;
 
 public partial class NoticeCard : UserControl
 {

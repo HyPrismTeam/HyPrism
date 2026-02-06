@@ -1,0 +1,203 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:HyPrism.UI.Views.DeleteProfileConfirmationView"
+             x:Class="HyPrism.UI.Views.DeleteProfileConfirmationView.DeleteProfileConfirmationView"
+             x:DataType="vm:DeleteProfileConfirmationViewModel">
+    
+    <!-- Background Overlay -->
+    <Panel>
+        <Border Background="#CC000000" 
+                ZIndex="100"
+                Opacity="{Binding OverlayOpacity}">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+        
+        <!-- Modal Dialog -->
+        <Border Background="#0D0D0D"
+                BorderBrush="#33FF0000"
+                BorderThickness="1"
+                CornerRadius="16"
+                MaxWidth="480"
+                ZIndex="101"
+                Opacity="{Binding DialogOpacity}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                </Transitions>
+            </Border.Transitions>
+            
+            <StackPanel>
+                <!-- Header -->
+                <Border Background="#1A1A1A"
+                        BorderBrush="#1AFFFFFF"
+                        BorderThickness="0,0,0,1"
+                        Padding="20">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <!-- Icon -->
+                        <Border Grid.Column="0"
+                                Width="40" Height="40"
+                                Background="#1AFF0000"
+                                CornerRadius="20"
+                                Margin="0,0,12,0">
+                            <Path Fill="#FF6B6B"
+                                  Width="20" Height="20"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Data="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        
+                        <!-- Title -->
+                        <TextBlock Grid.Column="1"
+                                   Text="Delete Profile?"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"/>
+                        
+                        <!-- Close Button -->
+                        <Button Grid.Column="2"
+                                Width="32" Height="32"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="8"
+                                Command="{Binding CancelCommand}">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="#1AFFFFFF"/>
+                                </Style>
+                            </Button.Styles>
+                            <Path Fill="#66FFFFFF"
+                                  Width="14" Height="14"
+                                  Data="M18 6L6 18M6 6l12 12"
+                                  Stretch="Uniform"/>
+                        </Button>
+                    </Grid>
+                </Border>
+                
+                <!-- Content -->
+                <Border Padding="24">
+                    <StackPanel Spacing="16">
+                        <!-- Profile Name -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Are you sure you want to delete"
+                                   Foreground="#99FFFFFF"
+                                   FontSize="14"/>
+                        <TextBlock Text="{Binding ProfileName}"
+                                   Foreground="{DynamicResource AccentColor}"
+                                   FontWeight="SemiBold"
+                                   FontSize="14"/>
+                        <TextBlock Text="?"
+                                   Foreground="#99FFFFFF"
+                                   FontSize="14"/>
+                    </StackPanel>
+                    
+                    <!-- Warning Box -->
+                    <Border Background="#0DFF0000"
+                            BorderBrush="#1AFF0000"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="16">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Path Grid.Column="0"
+                                      Fill="#FF6B6B"
+                                      Width="18" Height="18"
+                                      Margin="0,2,12,0"
+                                      Data="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Top"/>
+                                
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="This will permanently delete all profile data, including:"
+                                               Foreground="#CCCCCC"
+                                               FontSize="13"
+                                               TextWrapping="Wrap"/>
+                                    
+                                    <StackPanel Spacing="4" Margin="12,0,0,0">
+                                        <TextBlock Text="• Profile settings and preferences"
+                                                   Foreground="#999999"
+                                                   FontSize="12"/>
+                                        <TextBlock Text="• Installed mods"
+                                                   Foreground="#999999"
+                                                   FontSize="12"/>
+                                        <TextBlock Text="• Saved game data"
+                                                   Foreground="#999999"
+                                                   FontSize="12"/>
+                                        <TextBlock Text="• Skin and avatar"
+                                                   Foreground="#999999"
+                                                   FontSize="12"/>
+                                    </StackPanel>
+                                    
+                                    <TextBlock Text="This action cannot be undone."
+                                               Foreground="#FF6B6B"
+                                               FontWeight="SemiBold"
+                                               FontSize="12"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Footer Buttons -->
+                <Border Background="#0A0A0A"
+                        BorderBrush="#1AFFFFFF"
+                        BorderThickness="0,1,0,0"
+                        Padding="20">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <!-- Cancel Button -->
+                        <Button Grid.Column="0"
+                                Height="44"
+                                Background="#0DFFFFFF"
+                                CornerRadius="10"
+                                Command="{Binding CancelCommand}">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="#1AFFFFFF"/>
+                                </Style>
+                            </Button.Styles>
+                            <TextBlock Text="Cancel"
+                                       Foreground="#CCCCCC"
+                                       FontWeight="Medium"
+                                       FontSize="14"/>
+                        </Button>
+                        
+                        <!-- Delete Button -->
+                        <Button Grid.Column="1"
+                                Height="44"
+                                Background="#FF4444"
+                                CornerRadius="10"
+                                Command="{Binding ConfirmCommand}">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="#FF5555"/>
+                                </Style>
+                                <Style Selector="Button:pressed /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="#FF3333"/>
+                                </Style>
+                            </Button.Styles>
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <Path Fill="White"
+                                      Width="16" Height="16"
+                                      Data="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                                      Stretch="Uniform"/>
+                                <TextBlock Text="Delete Profile"
+                                           Foreground="White"
+                                           FontWeight="Bold"
+                                           FontSize="14"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 
-namespace HyPrism.UI.Components.Inputs;
+namespace HyPrism.UI.Components.Inputs.CheckboxInput;
 
 public partial class CheckboxInput : UserControl
 {

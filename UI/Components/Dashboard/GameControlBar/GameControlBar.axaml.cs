@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace HyPrism.UI.Components.Dashboard;
+namespace HyPrism.UI.Components.Dashboard.GameControlBar;
 
 public partial class GameControlBar : UserControl
 {

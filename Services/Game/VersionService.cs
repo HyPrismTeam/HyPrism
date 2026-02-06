@@ -254,6 +254,9 @@ public class VersionService
         return branch.ToLowerInvariant() switch
         {
             "release" => "release",
+            "pre-release" => "pre-release",
+            "prerelease" => "pre-release",
+            "pre_release" => "pre-release",
             "beta" => "beta",
             "alpha" => "alpha",
             _ => "release"
@@ -269,7 +272,7 @@ public class VersionService
     }
 
     private string GetVersionsCacheSnapshotPath()
-        => Path.Combine(_appDir, "Cache", "Game", "Versions", "versions.json");
+        => Path.Combine(_appDir, "Cache", "Game", "versions.json");
 
     private List<int>? TryLoadFreshVersionsCache(string branch, string osName, string arch, TimeSpan maxAge)
     {

@@ -3,7 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using AsyncImageLoader;
 using AsyncImageLoader.Loaders;
-using HyPrism.UI.ViewModels;
+using HyPrism.UI.MainWindow;
 using HyPrism.Services.Core;
 using HyPrism.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,7 +59,7 @@ public partial class App : Application
                 Dispatcher.UIThread.InvokeAsync(() => ThemeService.Instance.ApplyAccentColor(color));
             };
             
-            desktop.MainWindow = new MainWindow
+            desktop.MainWindow = new HyPrism.UI.MainWindow.MainWindow
             {
                 DataContext = mainVm
             };

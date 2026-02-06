@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
+             mc:Ignorable="d" d:DesignWidth="200" d:DesignHeight="50"
+             x:Class="HyPrism.UI.Components.Navigation.SidebarItem.SidebarItem"
+             Name="Root"
+             Cursor="Hand">
+    
+    <!-- Styles moved to SidebarItemStyles.axaml for maintainability -->
+
+    <Button Command="{Binding ElementName=Root, Path=Command}"
+            CommandParameter="{Binding ElementName=Root, Path=CommandParameter}"
+            Classes="sidebar-btn"
+            Tag="{Binding ElementName=Root, Path=IsSelected}"
+            FocusAdorner="{x:Null}"
+            BorderThickness="0"
+            Padding="0"
+            HorizontalAlignment="Stretch">
+        <Button.Template>
+            <ControlTemplate TargetType="Button">
+                <!-- Bind Border Background to Button's Background (handled by styles above) -->
+                <Border Background="{TemplateBinding Background}"
+                        CornerRadius="8"
+                        Height="48">
+                    <!-- Transitions defined directly on Border to persist across state changes -->
+                    <Border.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                        </Transitions>
+                    </Border.Transitions>
+
+                    <Grid ColumnDefinitions="Auto,48,*" HorizontalAlignment="Stretch">
+                        <Border Grid.Column="0" Classes="indicator"/>
+                        <Viewbox Grid.Column="1" Width="22" Height="22" HorizontalAlignment="Center">
+                             <ContentPresenter Content="{Binding ElementName=Root, Path=Icon}"/>
+                        </Viewbox>
+                        <TextBlock Grid.Column="2" 
+                                   Classes="item-text"
+                                   Text="{Binding ElementName=Root, Path=Text}"
+                                   VerticalAlignment="Center"
+                                   FontSize="16"/>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Button.Template>
+    </Button>
+</UserControl>

@@ -1,0 +1,52 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- 
+    =================================================================
+    HyPrism Shared Color Palette
+    =================================================================
+    All theme colors should be defined here and imported via App.axaml.
+    Components and Views should reference these resources instead of
+    hardcoding color values.
+    =================================================================
+    -->
+    
+    <!-- Primary Brand Colors -->
+    <Color x:Key="HytaleOrange">#FFA845</Color>
+    <Color x:Key="HytaleOrangeDark">#FF6B35</Color>
+    <Color x:Key="HytaleDark">#090909</Color>
+    <Color x:Key="HytaleDarkLight">#0d0d0d</Color>
+    
+    <!-- Dynamic Theme System (updated at runtime by ThemeService) -->
+    <Color x:Key="SystemAccentColor">#FFA845</Color>
+    <SolidColorBrush x:Key="SystemAccentBrush" Color="{StaticResource SystemAccentColor}" />
+
+    <!-- Derived Brushes -->
+    <SolidColorBrush x:Key="HytaleOrangeBrush" Color="{StaticResource HytaleOrange}"/>
+    <SolidColorBrush x:Key="HytaleOrangeDarkBrush" Color="{StaticResource HytaleOrangeDark}"/>
+    <SolidColorBrush x:Key="HytaleDarkBrush" Color="{StaticResource HytaleDark}"/>
+    <SolidColorBrush x:Key="HytaleDarkLightBrush" Color="{StaticResource HytaleDarkLight}"/>
+    
+    <!-- UI Element Colors -->
+    <Color x:Key="CardBackground">#1E1E1E</Color>
+    <Color x:Key="CardBorder">#333333</Color>
+    <Color x:Key="InputBackground">#1a1a1a</Color>
+    <Color x:Key="InputBorder">#333333</Color>
+    <Color x:Key="InputBorderHover">#444444</Color>
+    
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackground}"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource CardBorder}"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource InputBackground}"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorder}"/>
+    <SolidColorBrush x:Key="InputBorderHoverBrush" Color="{StaticResource InputBorderHover}"/>
+    
+    <!-- Text Colors -->
+    <Color x:Key="TextPrimary">#FFFFFF</Color>
+    <Color x:Key="TextSecondary">#999999</Color>
+    <Color x:Key="TextMuted">#666666</Color>
+    
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimary}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondary}"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}"/>
+
+</ResourceDictionary>
