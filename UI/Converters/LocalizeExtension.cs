@@ -33,6 +33,9 @@ public class LocalizeExtension : MarkupExtension
         // Use GetObservable which creates a reactive stream via WhenAnyValue
         var observable = LocalizationService.Current?.GetObservable(Key);
         
+        if (observable is null)
+            return new BindingNotification(new InvalidOperationException("LocalizationService not initialized"), BindingErrorType.Error);
+        
         // Return IObservable directly — Avalonia supports IObservable<T> as binding source
         // via its built-in observable-to-binding pipeline. No intermediate ReplaySubject needed.
         return observable;

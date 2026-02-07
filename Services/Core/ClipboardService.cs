@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 
 namespace HyPrism.Services.Core;
 
@@ -23,7 +24,7 @@ public class ClipboardService : IClipboardService
         var clipboard = GetClipboard();
         if (clipboard != null)
         {
-            return await clipboard.GetTextAsync();
+            return await clipboard.TryGetTextAsync();
         }
         return null;
     }
