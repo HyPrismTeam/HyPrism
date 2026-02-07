@@ -7,4 +7,5 @@ public class InstalledInstance
     public string Path { get; set; } = "";
     public bool HasUserData { get; set; }
     public long UserDataSize { get; set; }
+    public long TotalSize { get; set; }
 }

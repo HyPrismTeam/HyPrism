@@ -81,22 +81,27 @@
             <Grid Name="DropdownContainer"
                 Classes.expanded="{Binding ElementName=Root, Path=IsExpanded}"
                 ClipToBounds="False"
+                Width="{Binding ElementName=Root, Path=Bounds.Width}"
             Canvas.Top="8">
 
-                <Border Background="{Binding ElementName=Root, Path=DropdownBackground, FallbackValue=#1E1E1E}"
-                        BorderBrush="{Binding ElementName=Root, Path=DropdownBorderBrush, FallbackValue=#333}"
+                <Border Background="{Binding ElementName=Root, Path=DropdownBackground, TargetNullValue=#1E1E1E}"
+                        BorderBrush="{Binding ElementName=Root, Path=DropdownBorderBrush, TargetNullValue=#333}"
                         BorderThickness="1"
                         CornerRadius="{Binding ElementName=Root, Path=DropdownCornerRadius}"
                         Padding="0"
+                        MinWidth="{Binding $parent[UserControl].Bounds.Width}"
                         MaxHeight="{Binding ElementName=Root, Path=MaxDropdownHeight}"
                         BoxShadow="0 8 32 0 #66000000">
                     <Grid RowDefinitions="Auto, *">
                         <Border Background="#202020"
                                 BorderBrush="#333"
                                 BorderThickness="0,0,0,1"
-                                Padding="0">
+                                Padding="0"
+                                HorizontalAlignment="Stretch">
                             <ContentPresenter Content="{Binding ElementName=Root, Path=HeaderContent}"
-                                              ContentTemplate="{Binding ElementName=Root, Path=HeaderTemplate}"/>
+                                              ContentTemplate="{Binding ElementName=Root, Path=HeaderTemplate}"
+                                              HorizontalAlignment="Stretch"
+                                              HorizontalContentAlignment="Stretch"/>
                         </Border>
 
                         <ListBox Name="ItemsListBox"

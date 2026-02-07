@@ -43,6 +43,7 @@ public class DashboardViewModel : ReactiveObject, IDisposable
     private readonly AppPathConfiguration _appPathConfiguration;
     private readonly LocalizationService _localizationService;
     private readonly IClipboardService _clipboardService;
+    private readonly IProfileManagementService _profileManagementService;
 
     // Partial ViewModels
     public HeaderViewModel HeaderViewModel { get; }
@@ -278,7 +279,8 @@ public class DashboardViewModel : ReactiveObject, IDisposable
         GitHubService gitHubService,
         AppPathConfiguration appPathConfiguration,
         LocalizationService localizationService,
-        IClipboardService clipboardService)
+        IClipboardService clipboardService,
+        IProfileManagementService profileManagementService)
     {
         _gameSessionService = gameSessionService;
         _gameProcessService = gameProcessService;
@@ -297,6 +299,7 @@ public class DashboardViewModel : ReactiveObject, IDisposable
         _appPathConfiguration = appPathConfiguration;
         _localizationService = localizationService;
         _clipboardService = clipboardService;
+        _profileManagementService = profileManagementService;
 
         // Initialize Backgrounds
         try 
@@ -367,7 +370,8 @@ public class DashboardViewModel : ReactiveObject, IDisposable
             _browserService,
             _appPathConfiguration,
             _versionService,
-            _clipboardService);
+            _clipboardService,
+            _profileManagementService);
         SettingsViewModel.CloseCommand.Subscribe(_ => IsSettingsOpen = false);
 
         // --- Commands ---
@@ -393,16 +397,26 @@ public class DashboardViewModel : ReactiveObject, IDisposable
             return;
         }
 
-        // Dispose old VM to prevent memory leak
-        (ProfileEditorViewModel as IDisposable)?.Dispose();
-        ProfileEditorViewModel = new ProfileEditorViewModel(_configService, _profileService, _skinService, _fileService);
-        // Wire up close
-        var closeCmd = ProfileEditorViewModel.CloseCommand as ReactiveCommand<Unit, Unit>;
-        closeCmd?.Subscribe(_ => IsProfileEditorOpen = false);
-        // Wire up update
-        ProfileEditorViewModel.ProfileUpdated += () => HeaderViewModel.RefreshNick();
+        ProfileEditorViewModel = new ProfileEditorViewModel(_profileManagementService, _fileService, _clipboardService);
+        
+        var profiles = _profileManagementService.GetProfiles();
+        var index = _profileManagementService.GetActiveProfileIndex();
+        Profile? activeProfile = null;
+        if (profiles != null && index >= 0 && index < profiles.Count) 
+        {
+            activeProfile = profiles[index];
+        }
 
-        await ProfileEditorViewModel.LoadProfileAsync();
+        ProfileEditorViewModel.Initialize(activeProfile);
+
+        ProfileEditorViewModel.OnRequestClose += () => IsProfileEditorOpen = false;
+        ProfileEditorViewModel.OnSaved += () => 
+        {
+             HeaderViewModel.RefreshNick(); 
+             SettingsViewModel?.LoadProfiles();
+        };
+
+        await Task.CompletedTask;
         IsProfileEditorOpen = true;
     }
 

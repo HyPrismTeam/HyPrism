@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Linq;
 using ReactiveUI;
+using HyPrism.Models;
 using HyPrism.Services;
 using HyPrism.Services.Core;
 using HyPrism.Services.Game;
@@ -135,12 +136,26 @@ public class GameControlViewModel : ReactiveObject, IDisposable
             IsGameRunning = _gameProcessService.CheckForRunningGame();
             return true;
         }, TimeSpan.FromSeconds(2));
+        
+        // Subscribe to launch version changes from Settings
+        _versionChangeSubscription = MessageBus.Current.Listen<LaunchVersionChangedMessage>()
+            .Subscribe(msg =>
+            {
+                SelectedBranch = msg.Branch;
+                SelectedVersion = msg.Version;
+                LoadCachedLatestVersion();
+                UpdateVersionDisplay();
+            });
     }
+
+    private IDisposable? _versionChangeSubscription;
 
     public void Dispose()
     {
         _gameStatusTimer?.Dispose();
         _gameStatusTimer = null;
+        _versionChangeSubscription?.Dispose();
+        _versionChangeSubscription = null;
     }
 
     private void LoadCachedLatestVersion()

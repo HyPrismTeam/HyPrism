@@ -1036,13 +1036,21 @@ public class InstanceService : IInstanceService
                             catch { }
                         }
 
+                        long totalSize = 0;
+                        try
+                        {
+                            totalSize = new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
+                        }
+                        catch { }
+
                         results.Add(new InstalledInstance
                         {
                             Branch = branch,
                             Version = version,
                             Path = folder,
                             HasUserData = hasUserData,
-                            UserDataSize = size
+                            UserDataSize = size,
+                            TotalSize = totalSize
                         });
                     }
                 }

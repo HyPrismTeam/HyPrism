@@ -18,10 +18,13 @@ using Avalonia.Platform;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 
+using System.Threading;
 using System.Windows.Input;
 using HyPrism.UI.Helpers;
 using System.Linq;
 using System.Reactive.Disposables;
+using HyPrism.Services.User;
+using HyPrism.UI.Views.ProfileEditorView;
 
 namespace HyPrism.UI.Views.SettingsView;
 
@@ -92,6 +95,73 @@ public class CreditProfile : ReactiveObject
     public ICommand? OpenCommand { get; set; }
 }
 
+public class ProfileItemViewModel : ReactiveObject
+{
+    private readonly Profile _profile;
+    private readonly SettingsViewModel _parent;
+    private readonly ILocalizationService _localizationService;
+    private readonly ObservableAsPropertyHelper<string> _createdAtString;
+    
+    public Profile Profile => _profile;
+    public string Name => _profile.Name;
+    public string UUID => _profile.UUID;
+    public string ShortUUID => _profile.UUID.Length > 13 ? _profile.UUID.Substring(0, 13) + "..." : _profile.UUID;
+    
+    public bool IsOfficial => _profile.IsOfficial;
+    
+    // Formatting for UI
+    public string PlaytimeString 
+    {
+        get 
+        {
+            var hours = (int)_profile.TotalPlaytime.TotalHours;
+            if (hours == 0) return $"{_profile.TotalPlaytime.Minutes}m played";
+            return $"{hours}h {_profile.TotalPlaytime.Minutes}m played";
+        }
+    }
+    
+    public string CreatedAtString => _createdAtString.Value;
+    
+    private bool _isActive;
+    public bool IsActive
+    {
+        get => _isActive;
+        set => this.RaiseAndSetIfChanged(ref _isActive, value);
+    }
+    
+    public ICommand ActivateCommand { get; }
+    public ICommand EditCommand { get; }
+    public ICommand DeleteCommand { get; }
+    
+    public ProfileItemViewModel(Profile profile, bool isActive, SettingsViewModel parent, ILocalizationService localizationService)
+    {
+        _profile = profile;
+        _parent = parent;
+        _isActive = isActive;
+        _localizationService = localizationService;
+        
+        _createdAtString = _localizationService.WhenAnyValue(x => x.CurrentLanguage)
+            .StartWith(_localizationService.CurrentLanguage)
+            .Select(lang => 
+            {
+                try 
+                {
+                    var culture = new System.Globalization.CultureInfo(lang);
+                    return $"Created {_profile.CreatedAt.ToString("MMM d, yyyy", culture)}";
+                }
+                catch
+                {
+                    return $"Created {_profile.CreatedAt:MMM d, yyyy}";
+                }
+            })
+            .ToProperty(this, x => x.CreatedAtString);
+        
+        ActivateCommand = ReactiveCommand.Create(() => parent.ActivateProfile(_profile));
+        EditCommand = ReactiveCommand.Create(() => parent.EditProfile(_profile));
+        DeleteCommand = ReactiveCommand.Create(() => parent.DeleteProfile(_profile));
+    }
+}
+
 public class SettingsViewModel : ReactiveObject, IDisposable
 {
     private readonly SettingsService _settingsService;
@@ -103,6 +173,8 @@ public class SettingsViewModel : ReactiveObject, IDisposable
     private readonly BrowserService _browserService;
     private readonly VersionService _versionService;
     private readonly IClipboardService _clipboardService;
+    private readonly IProfileManagementService _profileManagementService;
+    private readonly ILocalizationService _localizationService;
     private bool _disposed;
     private readonly CompositeDisposable _subscriptions = new();
 
@@ -200,6 +272,89 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         get => _activeTab;
         set => this.RaiseAndSetIfChanged(ref _activeTab, value);
     }
+
+    // Multi-Profile Logic
+    public ObservableCollection<ProfileItemViewModel> Profiles { get; } = new();
+    public ObservableCollection<ProfileItemViewModel> OtherProfiles { get; } = new();
+
+    private ProfileItemViewModel? _activeProfileItem;
+    public ProfileItemViewModel? ActiveProfileItem
+    {
+        get => _activeProfileItem;
+        set => this.RaiseAndSetIfChanged(ref _activeProfileItem, value);
+    }
+
+    private bool _isProfileEditorOpen;
+    public bool IsProfileEditorOpen
+    {
+        get => _isProfileEditorOpen;
+        set => this.RaiseAndSetIfChanged(ref _isProfileEditorOpen, value);
+    }
+
+    private ProfileEditorViewModel? _currentProfileEditor;
+    public ProfileEditorViewModel? CurrentProfileEditor
+    {
+        get => _currentProfileEditor;
+        set => this.RaiseAndSetIfChanged(ref _currentProfileEditor, value);
+    }
+
+    public ICommand CreateProfileCommand => ReactiveCommand.Create(() => OpenProfileEditor(null));
+
+    public void LoadProfiles()
+    {
+        Profiles.Clear();
+        OtherProfiles.Clear();
+        ActiveProfileItem = null;
+
+        var profiles = _profileManagementService.GetProfiles();
+        var activeIndex = _profileManagementService.GetActiveProfileIndex();
+
+        for (int i = 0; i < profiles.Count; i++)
+        {
+            var vm = new ProfileItemViewModel(profiles[i], i == activeIndex, this, _localizationService);
+            if (i == activeIndex)
+            {
+                ActiveProfileItem = vm;
+            }
+            else
+            {
+                OtherProfiles.Add(vm);
+            }
+            Profiles.Add(vm);
+        }
+    }
+
+    public void ActivateProfile(Profile profile)
+    {
+        var profiles = _profileManagementService.GetProfiles();
+        var index = profiles.FindIndex(p => p.Id == profile.Id);
+        if (index >= 0)
+        {
+            _profileManagementService.SwitchProfile(index);
+            LoadProfiles();
+            this.RaisePropertyChanged(nameof(Nick));
+            this.RaisePropertyChanged(nameof(UUID));
+        }
+    }
+
+    public void EditProfile(Profile profile) => OpenProfileEditor(profile);
+    
+    public void DeleteProfile(Profile profile)
+    {
+        if (Profiles.Count <= 1) return;
+        _profileManagementService.DeleteProfile(profile.Id);
+        LoadProfiles();
+    }
+    
+    private void OpenProfileEditor(Profile? profile)
+    {
+        CurrentProfileEditor = new ProfileEditorViewModel(_profileManagementService, _fileService, _clipboardService);
+        CurrentProfileEditor.Initialize(profile);
+        CurrentProfileEditor.OnRequestClose += () => IsProfileEditorOpen = false;
+        CurrentProfileEditor.OnSaved += LoadProfiles;
+        IsProfileEditorOpen = true;
+    }
+
 
     // Profile
     private string _nick;
@@ -302,6 +457,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
 
     private bool _isInitializingBranches;
     private bool _suppressVersionSave;
+    private CancellationTokenSource? _versionRefreshCts;
     private BranchItem? _selectedLaunchBranchItem;
     public BranchItem? SelectedLaunchBranchItem
     {
@@ -311,6 +467,8 @@ public class SettingsViewModel : ReactiveObject, IDisposable
             var old = _selectedLaunchBranchItem;
             this.RaiseAndSetIfChanged(ref _selectedLaunchBranchItem, value);
             this.RaisePropertyChanged(nameof(SelectedBranchIconPath));
+            this.RaisePropertyChanged(nameof(IsReleaseBranchSelected));
+            this.RaisePropertyChanged(nameof(IsPreReleaseBranchSelected));
 
             if (!_isInitializingBranches && value != null && (old == null || old.Value != value.Value))
             {
@@ -332,6 +490,16 @@ public class SettingsViewModel : ReactiveObject, IDisposable
             this.RaisePropertyChanged(nameof(SelectedBranchIconPath));
         }
     }
+
+    // Branch selection helpers for ToggleButtons
+    public bool IsReleaseBranchSelected => SelectedLaunchBranchItem?.Value == "release";
+    public bool IsPreReleaseBranchSelected => SelectedLaunchBranchItem?.Value == "pre-release";
+    
+    public IObservable<string> BranchReleaseLabel { get; private set; } = null!;
+    public IObservable<string> BranchPreReleaseLabel { get; private set; } = null!;
+    
+    public ReactiveCommand<Unit, Unit> SelectReleaseBranchCommand { get; private set; } = null!;
+    public ReactiveCommand<Unit, Unit> SelectPreReleaseBranchCommand { get; private set; } = null!;
 
     public string SelectedBranchIconPath =>
         AppliedLaunchBranchItem?.Value == "pre-release"
@@ -363,7 +531,16 @@ public class SettingsViewModel : ReactiveObject, IDisposable
                 AppliedLaunchBranchItem = SelectedLaunchBranchItem;
                 AppliedLaunchVersion = value;
             }
+            else if (value == null && SelectedLaunchBranchItem != null)
+            {
+                AppliedLaunchBranchItem = SelectedLaunchBranchItem;
+                AppliedLaunchVersion = 0;
+            }
             _configService.SaveConfig();
+            
+            // Notify GameControlViewModel about the change
+            var branch = SelectedLaunchBranchItem?.Value ?? "release";
+            MessageBus.Current.SendMessage(new LaunchVersionChangedMessage(branch, value ?? 0));
         }
     }
     
@@ -443,11 +620,13 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         BrowserService browserService,
         AppPathConfiguration appPathConfiguration,
         VersionService versionService,
-        IClipboardService clipboardService)
+        IClipboardService clipboardService,
+        IProfileManagementService profileManagementService)
     {
         _settingsService = settingsService;
         _configService = configService;
         _fileDialogService = fileDialogService;
+        _localizationService = localizationService;
         _instanceService = instanceService;
         _fileService = fileService;
         _gitHubService = gitHubService;
@@ -456,8 +635,10 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         _appPathConfiguration = appPathConfiguration;
         _versionService = versionService;
         _clipboardService = clipboardService;
+        _profileManagementService = profileManagementService;
 
         BranchIconAccentCss = BuildBranchIconCss(_settingsService.GetAccentColor());
+        LoadProfiles();
         
         // Initialize reactive localization properties - these will update automatically
         var loc = Localization;
@@ -545,6 +726,29 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         _ = InitializeCreditsAsync();
 
         // Update branch items when language changes
+        // Initialize branch labels for ToggleButtons
+        BranchReleaseLabel = loc.GetObservable("main.release");
+        BranchPreReleaseLabel = loc.GetObservable("main.preRelease");
+        
+        // Initialize branch selection commands
+        SelectReleaseBranchCommand = ReactiveCommand.Create(() =>
+        {
+            var releaseItem = LaunchBranchItems.FirstOrDefault(x => x.Value == "release");
+            if (releaseItem != null)
+            {
+                SelectedLaunchBranchItem = releaseItem;
+            }
+        });
+        
+        SelectPreReleaseBranchCommand = ReactiveCommand.Create(() =>
+        {
+            var preReleaseItem = LaunchBranchItems.FirstOrDefault(x => x.Value == "pre-release");
+            if (preReleaseItem != null)
+            {
+                SelectedLaunchBranchItem = preReleaseItem;
+            }
+        });
+
         Observable.CombineLatest(
             loc.GetObservable("settings.generalSettings.updateChannelStable"),
             loc.GetObservable("settings.generalSettings.updateChannelBeta"),
@@ -615,7 +819,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         var currentLaunchBranch = UtilityService.NormalizeVersionType(_configService.Configuration.VersionType);
         _selectedLaunchBranchItem = LaunchBranchItems.FirstOrDefault(b => b.Value == currentLaunchBranch) ?? LaunchBranchItems.FirstOrDefault();
         _appliedLaunchBranchItem = _selectedLaunchBranchItem;
-        _selectedLaunchVersion = _configService.Configuration.SelectedVersion == 0 ? null : _configService.Configuration.SelectedVersion;
+        _selectedLaunchVersion = _configService.Configuration.SelectedVersion;
         _appliedLaunchVersion = _selectedLaunchVersion;
         
         // Initialize language selection
@@ -690,57 +894,99 @@ public class SettingsViewModel : ReactiveObject, IDisposable
 
         // Initial load
         RefreshInstances();
+        _ = RefreshLaunchVersionsAsync();
     }
 
     private async Task RefreshLaunchVersionsAsync()
     {
+        _versionRefreshCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _versionRefreshCts = cts;
+
         try
         {
             var branch = UtilityService.NormalizeVersionType(SelectedLaunchBranchItem?.Value ?? _configService.Configuration.VersionType);
 
-            List<int> versions;
-            if (_versionService.TryGetCachedVersions(branch, TimeSpan.FromMinutes(15), out var cached) && cached.Count > 0)
+            // 1. Check fresh cache (< 15 min old) — use immediately, no fetch
+            bool hasFreshCache = _versionService.TryGetCachedVersions(branch, TimeSpan.FromMinutes(15), out var freshCached) && freshCached.Count > 0;
+
+            if (hasFreshCache)
             {
-                versions = cached;
-            }
-            else
-            {
-                versions = await _versionService.GetVersionListAsync(branch);
-            }
-
-            versions = versions.OrderByDescending(x => x).ToList();
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                LaunchVersions = versions;
-
-                var pending = SelectedLaunchBranchItem?.Value;
-                var applied = AppliedLaunchBranchItem?.Value;
-
-                _suppressVersionSave = true;
-                if (!string.IsNullOrEmpty(pending) && pending != applied)
+                if (!cts.Token.IsCancellationRequested)
                 {
-                    SelectedLaunchVersion = null;
+                    ApplyVersionList(freshCached, cts.Token);
                 }
-                else
+                return;
+            }
+
+            // 2. Check stale cache — display immediately, then fetch in background (don't update UI)
+            bool hasStaleCache = _versionService.TryGetCachedVersions(branch, TimeSpan.FromDays(3650), out var staleCached) && staleCached.Count > 0;
+
+            if (hasStaleCache && !cts.Token.IsCancellationRequested)
+            {
+                ApplyVersionList(staleCached, cts.Token);
+            }
+
+            // Fetch in background to refresh cache for next time
+            if (!cts.Token.IsCancellationRequested)
+            {
+                var fetched = await _versionService.GetVersionListAsync(branch, cts.Token);
+
+                // Only update UI if there was no stale cache shown (first-ever load for this branch)
+                if (!hasStaleCache && !cts.Token.IsCancellationRequested)
                 {
-                    var configured = _configService.Configuration.SelectedVersion;
-                    if (configured > 0 && versions.Contains(configured))
-                    {
-                        SelectedLaunchVersion = configured;
-                    }
-                    else
-                    {
-                        SelectedLaunchVersion = null;
-                    }
+                    ApplyVersionList(fetched, cts.Token);
                 }
-                _suppressVersionSave = false;
-            });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled by a newer request — ignore
         }
         catch (Exception ex)
         {
             Logger.Error("SettingsViewModel", $"Failed to load launch versions: {ex.Message}");
         }
+    }
+
+    private void ApplyVersionList(List<int> versions, CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested) return;
+
+        var displayVersions = versions.OrderByDescending(x => x).ToList();
+        displayVersions.Insert(0, 0); // 0 = "latest"
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ct.IsCancellationRequested) return;
+
+            _suppressVersionSave = true;
+            LaunchVersions = displayVersions;
+
+            var pending = SelectedLaunchBranchItem?.Value;
+            var applied = AppliedLaunchBranchItem?.Value;
+
+            if (!string.IsNullOrEmpty(pending) && pending != applied)
+            {
+                // Different branch selected - don't highlight any version until user picks one
+                SelectedLaunchVersion = null;
+            }
+            else
+            {
+                // Same branch - restore the applied version
+                var configured = _configService.Configuration.SelectedVersion;
+                if (configured > 0 && displayVersions.Contains(configured))
+                {
+                    SelectedLaunchVersion = configured;
+                }
+                else
+                {
+                    // Only show "latest" as selected if it's actually applied for this branch
+                    SelectedLaunchVersion = (AppliedLaunchVersion == 0 || AppliedLaunchVersion == null) ? 0 : (int?)null;
+                }
+            }
+            _suppressVersionSave = false;
+        });
     }
 
     private void OnBackgroundChanged(string? mode)
@@ -967,6 +1213,10 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         // Unsubscribe from events
         _settingsService.OnBackgroundChanged -= OnBackgroundChanged;
         _settingsService.OnAccentColorChanged -= OnAccentColorChanged;
+
+        // Cancel any in-flight version refresh
+        _versionRefreshCts?.Cancel();
+        _versionRefreshCts?.Dispose();
 
         // Dispose Rx subscriptions (CombineLatest etc.)
         _subscriptions.Dispose();

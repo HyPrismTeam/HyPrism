@@ -106,7 +106,8 @@ public class MainViewModel : ReactiveObject, IDisposable
             gitHubService,
             appPathConfiguration,
             localizationService,
-            clipboardService
+            clipboardService,
+            profileManagementService
         );
 
         // Start App Initialization sequence (fire-and-forget with error handling)

@@ -23,7 +23,7 @@ public class IconButton : Button
     private DoubleTransition? _baseOpacityTransition;
     
     public static readonly StyledProperty<IBrush?> ButtonBackgroundProperty =
-        AvaloniaProperty.Register<IconButton, IBrush?>(nameof(ButtonBackground));
+        AvaloniaProperty.Register<IconButton, IBrush?>(nameof(ButtonBackground), Brushes.Transparent);
 
     public IBrush? ButtonBackground
     {
