@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using HyPrism.Models;
@@ -19,7 +20,22 @@ public class UpdateService : IUpdateService
 {
     private const string GitHubApiUrl = "https://api.github.com/repos/yyyumeniku/HyPrism/releases";
     private const string ReleasesPageUrl = "https://github.com/yyyumeniku/HyPrism/releases/latest";
-    private const string LauncherVersion = "2.0.3";
+    
+    private static readonly Lazy<string> _launcherVersion = new(() =>
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var infoVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        
+        if (!string.IsNullOrEmpty(infoVersion))
+        {
+            // Remove build metadata (e.g., "+abc123" suffix) if present
+            var plusIndex = infoVersion.IndexOf('+');
+            return plusIndex > 0 ? infoVersion[..plusIndex] : infoVersion;
+        }
+        
+        var version = assembly.GetName().Version;
+        return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.0.0";
+    });
     
     private readonly HttpClient _httpClient;
     private readonly ConfigService _configService;
@@ -80,7 +96,7 @@ public class UpdateService : IUpdateService
     /// <summary>
     /// Возвращает текущую версию лаунчера.
     /// </summary>
-    public string GetLauncherVersion() => LauncherVersion;
+    public string GetLauncherVersion() => _launcherVersion.Value;
 
     /// <summary>
     /// Возвращает текущий канал обновлений (release/beta).

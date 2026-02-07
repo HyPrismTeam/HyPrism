@@ -8,6 +8,9 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    
+    <!-- Launcher Version -->
+    <Version>2.0.3</Version>
   </PropertyGroup>
 
   <!-- Windows-specific settings -->
