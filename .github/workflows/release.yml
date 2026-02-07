@@ -335,7 +335,7 @@ jobs:
             sleep 2
             
             # Set up DMG appearance with AppleScript
-            osascript <<EOF
+            osascript <<'APPLESCRIPT'
           tell application "Finder"
             tell disk "HyPrism"
               open
@@ -356,7 +356,7 @@ jobs:
               delay 5
             end tell
           end tell
-EOF
+          APPLESCRIPT
             
             sync
             hdiutil detach "$MOUNT_POINT"
