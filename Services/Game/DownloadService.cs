@@ -5,7 +5,7 @@ namespace HyPrism.Services.Game;
 /// <summary>
 /// Service for handling file downloads with progress tracking.
 /// </summary>
-public class DownloadService
+public class DownloadService : IDownloadService
 {
     private readonly HttpClient _httpClient;
 

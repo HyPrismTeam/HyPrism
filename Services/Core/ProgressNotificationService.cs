@@ -5,7 +5,7 @@ namespace HyPrism.Services.Core;
 /// <summary>
 /// Service responsible for managing and dispatching progress notifications.
 /// </summary>
-public class ProgressNotificationService
+public class ProgressNotificationService : IProgressNotificationService
 {
     private readonly DiscordService _discordService;
     

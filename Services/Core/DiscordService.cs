@@ -25,7 +25,7 @@ internal class SilentDiscordLogger : ILogger
     }
 }
 
-public class DiscordService : IDisposable
+public class DiscordService : IDiscordService, IDisposable
 {
     private const string ApplicationId = "1464867466382540995";
     

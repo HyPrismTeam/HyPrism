@@ -7,7 +7,7 @@ namespace HyPrism.Services.User;
 /// <summary>
 /// Управляет скинами игроков: защита от перезаписи, резервное копирование, восстановление.
 /// </summary>
-public class SkinService : IDisposable
+public class SkinService : ISkinService
 {
     // Skin protection: Watch for skin file overwrites during gameplay
     private FileSystemWatcher? _skinWatcher;

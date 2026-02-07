@@ -27,13 +27,14 @@ public class HeaderViewModel : ReactiveObject
     public HeaderViewModel(
         ConfigService configService,
         Action toggleProfileEditor, 
-        Action toggleSettings)
+        Action toggleSettings,
+        LocalizationService localizationService)
     {
         _configService = configService;
         _nick = _configService.Configuration.Nick;
         
         // Localization
-        var loc = LocalizationService.Instance;
+        var loc = localizationService;
         AppVersion = loc.GetObservable("app.version");
         
         // Commands

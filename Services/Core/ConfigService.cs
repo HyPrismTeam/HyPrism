@@ -6,7 +6,7 @@ namespace HyPrism.Services.Core;
 /// <summary>
 /// Manages launcher configuration (loading, saving, settings)
 /// </summary>
-public class ConfigService
+public class ConfigService : IConfigService
 {
     private readonly string _configPath;
     private Config _config;

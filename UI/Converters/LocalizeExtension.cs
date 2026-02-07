@@ -31,7 +31,7 @@ public class LocalizeExtension : MarkupExtension
             return new BindingNotification(new InvalidOperationException("LocalizeExtension: Key is required"), BindingErrorType.Error);
         
         // Use GetObservable which creates a reactive stream via WhenAnyValue
-        var observable = LocalizationService.Instance.GetObservable(Key);
+        var observable = LocalizationService.Current?.GetObservable(Key);
         
         // Return IObservable directly — Avalonia supports IObservable<T> as binding source
         // via its built-in observable-to-binding pipeline. No intermediate ReplaySubject needed.

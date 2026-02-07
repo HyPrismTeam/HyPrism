@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace HyPrism.Services.Core;
 
-public class FileService
+public class FileService : IFileService
 {
     private readonly string _appDir;
 

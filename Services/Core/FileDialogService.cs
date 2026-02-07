@@ -7,7 +7,7 @@ namespace HyPrism.Services.Core;
 /// Handles native file dialog interactions across different operating systems.
 /// Provides cross-platform file browsing capabilities using OS-specific dialogs.
 /// </summary>
-public class FileDialogService
+public class FileDialogService : IFileDialogService
 {
     /// <summary>
     /// Opens a folder browser dialog and returns the selected path.

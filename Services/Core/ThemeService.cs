@@ -7,20 +7,12 @@ using System.Threading.Tasks;
 
 namespace HyPrism.Services.Core;
 
-public class ThemeService : ReactiveObject
+public class ThemeService : ReactiveObject, IThemeService, IDisposable
 {
-    private static ThemeService? _instance;
-    public static ThemeService Instance => _instance ??= new ThemeService();
-    
     private CancellationTokenSource? _animationCts;
 
     public ThemeService()
     {
-        // Depends on existing Backend architecture
-        // We can access ConfigService via AppService or creating a new instance if needed, 
-        // but ideally we should hook into the main AppService singleton.
-        // For now, we will assume we can get the config from the config service directly 
-        // OR simply observe the current config.
     }
 
     /// <summary>
@@ -122,5 +114,12 @@ public class ThemeService : ReactiveObject
                 Application.Current.Resources["SystemAccentBrush"] = new SolidColorBrush(color);
             }
         }
+    }
+
+    public void Dispose()
+    {
+        _animationCts?.Cancel();
+        _animationCts?.Dispose();
+        _animationCts = null;
     }
 }

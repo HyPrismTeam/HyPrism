@@ -7,7 +7,7 @@ namespace HyPrism.Services.Core;
 /// <summary>
 /// Service responsible for opening URLs in the default browser.
 /// </summary>
-public class BrowserService
+public class BrowserService : IBrowserService
 {
     /// <summary>
     /// Opens the specified URL in the default browser.

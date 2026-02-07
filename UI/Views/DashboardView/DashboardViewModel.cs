@@ -41,6 +41,8 @@ public class DashboardViewModel : ReactiveObject, IDisposable
     private readonly ProfileService _profileService;
     private readonly SkinService _skinService;
     private readonly AppPathConfiguration _appPathConfiguration;
+    private readonly LocalizationService _localizationService;
+    private readonly IClipboardService _clipboardService;
 
     // Partial ViewModels
     public HeaderViewModel HeaderViewModel { get; }
@@ -274,7 +276,9 @@ public class DashboardViewModel : ReactiveObject, IDisposable
         ProfileService profileService,
         SkinService skinService,
         GitHubService gitHubService,
-        AppPathConfiguration appPathConfiguration)
+        AppPathConfiguration appPathConfiguration,
+        LocalizationService localizationService,
+        IClipboardService clipboardService)
     {
         _gameSessionService = gameSessionService;
         _gameProcessService = gameProcessService;
@@ -291,6 +295,8 @@ public class DashboardViewModel : ReactiveObject, IDisposable
         _profileService = profileService;
         _skinService = skinService;
         _appPathConfiguration = appPathConfiguration;
+        _localizationService = localizationService;
+        _clipboardService = clipboardService;
 
         // Initialize Backgrounds
         try 
@@ -318,11 +324,11 @@ public class DashboardViewModel : ReactiveObject, IDisposable
                 (s, m, p, e) => s || m || p || e)
             .ToProperty(this, x => x.IsOverlayOpen);
 
-        _launchAfterDownloadLabel = LocalizationService.Instance
+        _launchAfterDownloadLabel = _localizationService
             .GetObservable("launch.option.runAfterDownload")
             .ToProperty(this, x => x.LaunchAfterDownloadLabel);
 
-        _cancelLaunchLabel = LocalizationService.Instance
+        _cancelLaunchLabel = _localizationService
             .GetObservable("launch.option.cancel")
             .ToProperty(this, x => x.CancelLaunchLabel);
 
@@ -344,9 +350,9 @@ public class DashboardViewModel : ReactiveObject, IDisposable
         };
 
         // --- Initialize Child ViewModels ---
-        HeaderViewModel = new HeaderViewModel(_configService, toggleProfileEditorAction, toggleSettingsAction);
-        GameControlViewModel = new GameControlViewModel(_instanceService, _fileService, _gameProcessService, _configService, _versionService, toggleModsAction, toggleSettingsAction, openInstancesAction, LaunchAsync);
-        NewsViewModel = new NewsViewModel(_newsService, _browserService);
+        HeaderViewModel = new HeaderViewModel(_configService, toggleProfileEditorAction, toggleSettingsAction, _localizationService);
+        GameControlViewModel = new GameControlViewModel(_instanceService, _fileService, _gameProcessService, _configService, _versionService, toggleModsAction, toggleSettingsAction, openInstancesAction, LaunchAsync, _localizationService);
+        NewsViewModel = new NewsViewModel(_newsService, _browserService, _localizationService);
         
         // Lazy-load settings if possible, or init straight away
         // We'll init settings VM here to handle the lazy open
@@ -354,13 +360,14 @@ public class DashboardViewModel : ReactiveObject, IDisposable
             _settingsService, 
             _configService, 
             _fileDialogService, 
-            LocalizationService.Instance,
+            _localizationService,
             _instanceService,
             _fileService,
             gitHubService,
             _browserService,
             _appPathConfiguration,
-            _versionService);
+            _versionService,
+            _clipboardService);
         SettingsViewModel.CloseCommand.Subscribe(_ => IsSettingsOpen = false);
 
         // --- Commands ---
@@ -408,11 +415,11 @@ public class DashboardViewModel : ReactiveObject, IDisposable
         // Reset state with localized values matching "preparing" event
         // This ensures smooth visual transition (no icon swap) when service starts
         DownloadProgress = 0;
-        StatusTitle = LocalizationService.Instance.Translate("launch.state.preparing");
+        StatusTitle = _localizationService.Translate("launch.state.preparing");
         if (string.IsNullOrEmpty(StatusTitle)) StatusTitle = "Preparing...";
         
         ProgressIconPath = "/Assets/Icons/settings.svg"; // Matches 'preparing' state icon
-        ProgressText = LocalizationService.Instance.Translate("launch.detail.preparing_session");
+        ProgressText = _localizationService.Translate("launch.detail.preparing_session");
         if (string.IsNullOrEmpty(ProgressText)) ProgressText = "Preparing game session...";
 
         IsLaunchAfterDownloadVisible = false;
@@ -481,7 +488,7 @@ public class DashboardViewModel : ReactiveObject, IDisposable
                 IsLaunchAfterDownloadVisible = msg.State == "download";
 
                 // Title
-                StatusTitle = LocalizationService.Instance.Translate($"launch.state.{msg.State}");
+                StatusTitle = _localizationService.Translate($"launch.state.{msg.State}");
                 if (string.IsNullOrEmpty(StatusTitle)) StatusTitle = msg.State; // Fallback
                 
                 // Detail
@@ -491,7 +498,7 @@ public class DashboardViewModel : ReactiveObject, IDisposable
                 }
                 else
                 {
-                   ProgressText = LocalizationService.Instance.Translate(msg.MessageKey, msg.Args ?? Array.Empty<object>());
+                   ProgressText = _localizationService.Translate(msg.MessageKey, msg.Args ?? Array.Empty<object>());
                 }
 
                 DownloadProgress = msg.Progress;

@@ -84,7 +84,8 @@ public class GameControlViewModel : ReactiveObject, IDisposable
         Action<string, int> toggleMods, 
         Action toggleSettings,
         Action openInstances,
-        Func<Task> launchAction)
+        Func<Task> launchAction,
+        LocalizationService localizationService)
     {
         _instanceService = instanceService;
         _fileService = fileService;
@@ -92,7 +93,7 @@ public class GameControlViewModel : ReactiveObject, IDisposable
         _configService = configService;
         _versionService = versionService;
 
-        var loc = LocalizationService.Instance;
+        var loc = localizationService;
         MainEducational = loc.GetObservable("main.educational");
         MainBuyIt = loc.GetObservable("main.buyIt");
         BranchReleaseLabel = loc.GetObservable("main.release");

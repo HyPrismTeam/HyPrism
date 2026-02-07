@@ -20,7 +20,7 @@ public enum NewsSource
 /// <summary>
 /// Fetches news from Hytale API and HyPrism GitHub Releases
 /// </summary>
-public class NewsService
+public class NewsService : INewsService
 {
     private readonly HttpClient _httpClient;
     private readonly string _appIconPath = "avares://HyPrism/Assets/logo.png";

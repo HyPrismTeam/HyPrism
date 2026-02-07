@@ -5,7 +5,7 @@ using System.IO;
 
 namespace HyPrism.Services.Game;
 
-public class GameProcessService
+public class GameProcessService : IGameProcessService
 {
     private Process? _gameProcess;
 

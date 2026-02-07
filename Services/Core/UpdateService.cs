@@ -11,7 +11,7 @@ namespace HyPrism.Services.Core;
 /// Управляет обновлениями лаунчера HyPrism через GitHub Releases.
 /// Поддерживает каналы: release (стабильный) и beta (пре-релизы).
 /// </summary>
-public class UpdateService
+public class UpdateService : IUpdateService
 {
     private const string GitHubApiUrl = "https://api.github.com/repos/yyyumeniku/HyPrism/releases";
     private const string ReleasesPageUrl = "https://github.com/yyyumeniku/HyPrism/releases/latest";

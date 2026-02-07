@@ -11,7 +11,7 @@ namespace HyPrism.Services.Game;
 /// Отвечает за запуск игры: управление JRE, Visual C++ Redistributable,
 /// патчинг бинарников, запуск процесса игры.
 /// </summary>
-public class LaunchService
+public class LaunchService : ILaunchService
 {
     private const string RequiredJreVersion = "25.0.1_8";
     private const string VCRedistUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe";

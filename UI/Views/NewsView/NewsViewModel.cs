@@ -108,13 +108,13 @@ public class NewsViewModel : ReactiveObject, IDisposable
     public ReactiveCommand<string, Unit> SetFilterCommand { get; }
     public ReactiveCommand<string, Unit> OpenLinkCommand { get; }
     
-    public NewsViewModel(NewsService newsService, BrowserService browserService)
+    public NewsViewModel(NewsService newsService, BrowserService browserService, LocalizationService localizationService)
     {
         _newsService = newsService;
         _browserService = browserService;
         
         // Initialize reactive localization properties
-        var loc = LocalizationService.Instance;
+        var loc = localizationService;
         NewsTitle = loc.GetObservable("news.title");
         NewsAll = loc.GetObservable("news.all");
         NewsHytale = loc.GetObservable("news.hytale");

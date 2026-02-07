@@ -102,6 +102,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
     private readonly GitHubService _gitHubService;
     private readonly BrowserService _browserService;
     private readonly VersionService _versionService;
+    private readonly IClipboardService _clipboardService;
     private bool _disposed;
     private readonly CompositeDisposable _subscriptions = new();
 
@@ -441,7 +442,8 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         GitHubService gitHubService,
         BrowserService browserService,
         AppPathConfiguration appPathConfiguration,
-        VersionService versionService)
+        VersionService versionService,
+        IClipboardService clipboardService)
     {
         _settingsService = settingsService;
         _configService = configService;
@@ -453,6 +455,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         Localization = localizationService;
         _appPathConfiguration = appPathConfiguration;
         _versionService = versionService;
+        _clipboardService = clipboardService;
 
         BranchIconAccentCss = BuildBranchIconCss(_settingsService.GetAccentColor());
         
@@ -539,7 +542,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         ).Subscribe(t => UpdateCreditRoles(t.m, t.a, t.c, t.o))
         .DisposeWith(_subscriptions);
 
-        InitializeCredits();
+        _ = InitializeCreditsAsync();
 
         // Update branch items when language changes
         Observable.CombineLatest(
@@ -827,7 +830,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
         }
     }
 
-    private async void InitializeCredits()
+    private async Task InitializeCreditsAsync()
     {
         try 
         {
@@ -953,17 +956,7 @@ public class SettingsViewModel : ReactiveObject, IDisposable
     
     private async Task CopyUuidAsync()
     {
-        if (Avalonia.Application.Current != null)
-        {
-            var topLevel = Avalonia.Application.Current.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-                ? desktop.MainWindow
-                : null;
-            
-            if (topLevel?.Clipboard != null)
-            {
-                await topLevel.Clipboard.SetTextAsync(UUID);
-            }
-        }
+        await _clipboardService.SetTextAsync(UUID);
     }
 
     public void Dispose()

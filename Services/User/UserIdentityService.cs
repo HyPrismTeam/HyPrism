@@ -8,7 +8,7 @@ namespace HyPrism.Services.User;
 /// Manages user identities (UUID and username mappings).
 /// Handles UUID generation, username switching, and orphaned skin recovery.
 /// </summary>
-public class UserIdentityService
+public class UserIdentityService : IUserIdentityService
 {
     // Delegates to access AppService state
     private readonly ConfigService _configService;

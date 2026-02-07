@@ -6,7 +6,7 @@ namespace HyPrism.Services.User;
 /// <summary>
 /// Manages user profiles, avatars, nicknames, and UUIDs
 /// </summary>
-public class ProfileService
+public class ProfileService : IProfileService
 {
     private readonly string _appDataPath;
     private readonly ConfigService _configService;

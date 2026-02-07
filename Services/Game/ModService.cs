@@ -9,7 +9,7 @@ namespace HyPrism.Services.Game;
 /// Service for managing mods - searching, installing, updating, and managing mod lists.
 /// Stubs for future rewrite.
 /// </summary>
-public class ModService
+public class ModService : IModService
 {
     private readonly HttpClient _httpClient;
     private readonly string _appDir;

@@ -9,7 +9,7 @@ namespace HyPrism.Services.User;
 /// <summary>
 /// Manages profile operations: creation, deletion, switching, and profile folder/symlink management.
 /// </summary>
-public class ProfileManagementService
+public class ProfileManagementService : IProfileManagementService
 {
     private readonly string _appDir;
     private readonly ConfigService _configService;

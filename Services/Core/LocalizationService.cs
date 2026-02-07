@@ -5,19 +5,22 @@ using ReactiveUI;
 
 namespace HyPrism.Services.Core;
 
-public class LocalizationService : ReactiveObject
+public class LocalizationService : ReactiveObject, ILocalizationService
 {
-    private static LocalizationService? _instance;
-    public static LocalizationService Instance => _instance ??= new LocalizationService();
-    
-    private Dictionary<string, string> _translations = new();
+    // Static accessor for XAML markup extensions only (cannot use DI).
+    // Set during app initialization from the DI container.
+    internal static LocalizationService? Current { get; set; }
+
+    // Thread-safe translations access
+    private volatile Dictionary<string, string> _translations = new();
     private string _currentLanguage = "en-US";
     
     // Cache for available languages to avoid scanning assembly every time
     private static Dictionary<string, string>? _cachedAvailableLanguages;
 
     // Cache for loaded translations: Key=LanguageCode, Value=Dictionary of translations
-    private Dictionary<string, Dictionary<string, string>> _languageCache = new();
+    private readonly Dictionary<string, Dictionary<string, string>> _languageCache = new();
+    private readonly object _cacheLock = new();
 
     /// <summary>
     /// Gets available languages by scanning embedded resources.
@@ -132,9 +135,12 @@ public class LocalizationService : ReactiveObject
         var languages = GetAvailableLanguages();
         foreach (var lang in languages.Keys)
         {
-            if (!_languageCache.ContainsKey(lang))
+            lock (_cacheLock)
             {
-                LoadLanguageInternal(lang);
+                if (!_languageCache.ContainsKey(lang))
+                {
+                    LoadLanguageInternal(lang);
+                }
             }
         }
         Logger.Success("Localization", "All translations successfully loaded");
@@ -152,12 +158,15 @@ public class LocalizationService : ReactiveObject
     
     private void LoadLanguage(string languageCode)
     {
-        // Check cache first
-        if (_languageCache.TryGetValue(languageCode, out var cachedTranslations))
+        // Check cache first (thread-safe)
+        lock (_cacheLock)
         {
-            _translations = cachedTranslations;
-            Logger.Info("Localization", $"Loaded language '{languageCode}' from memory cache");
-            return;
+            if (_languageCache.TryGetValue(languageCode, out var cachedTranslations))
+            {
+                _translations = cachedTranslations;
+                Logger.Info("Localization", $"Loaded language '{languageCode}' from memory cache");
+                return;
+            }
         }
 
         var loaded = LoadLanguageInternal(languageCode);
@@ -202,7 +211,7 @@ public class LocalizationService : ReactiveObject
             FlattenJson(doc.RootElement, "", translations);
             
             // Add to cache
-            lock (_languageCache) 
+            lock (_cacheLock) 
             {
                 _languageCache[languageCode] = translations;
             }
@@ -244,9 +253,7 @@ public class LocalizationService : ReactiveObject
         // Fallback to English if missing
         else if (_currentLanguage != "en-US")
         {
-            // Safe access to cache? We should probably lock or rely on the fact that en-US is loaded early
-            // Locking is safer.
-            lock (_languageCache)
+            lock (_cacheLock)
             {
                 if (_languageCache.TryGetValue("en-US", out var enDict) && enDict.TryGetValue(key, out var enVal))
                 {

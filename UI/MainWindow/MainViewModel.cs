@@ -14,7 +14,7 @@ using HyPrism.UI.Views.DashboardView;
 
 namespace HyPrism.UI.MainWindow;
 
-public class MainViewModel : ReactiveObject
+public class MainViewModel : ReactiveObject, IDisposable
 {
     private readonly NewsService _newsService;
     private readonly DiscordService _discordService;
@@ -23,6 +23,7 @@ public class MainViewModel : ReactiveObject
     private readonly SkinService _skinService;
     private readonly VersionService _versionService;
     private readonly ConfigService _configService;
+    private bool _disposed;
 
     // --- Core Architecture ---
     // The Loading Screen is distinct and effectively "covers" the application
@@ -62,7 +63,9 @@ public class MainViewModel : ReactiveObject
         ProfileService profileService,
         SkinService skinService,
         GitHubService gitHubService,
-        AppPathConfiguration appPathConfiguration)
+        AppPathConfiguration appPathConfiguration,
+        LocalizationService localizationService,
+        IClipboardService clipboardService)
     {
         _newsService = newsService;
         _discordService = discordService;
@@ -101,16 +104,18 @@ public class MainViewModel : ReactiveObject
             profileService,
             skinService,
             gitHubService,
-            appPathConfiguration
+            appPathConfiguration,
+            localizationService,
+            clipboardService
         );
 
-        // Start App Initialization sequence
-        InitializeAppAsync();
+        // Start App Initialization sequence (fire-and-forget with error handling)
+        _ = InitializeAppAsync();
     }
     
     // --- Initialization ---
 
-    private async void InitializeAppAsync()
+    private async Task InitializeAppAsync()
     {
         try
         {
@@ -173,5 +178,16 @@ public class MainViewModel : ReactiveObject
                  await LoadingViewModel.CompleteLoadingAsync();
             }
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        
+        _isLoading.Dispose();
+        _mainContentOpacity.Dispose();
+        
+        (DashboardViewModel as IDisposable)?.Dispose();
     }
 }

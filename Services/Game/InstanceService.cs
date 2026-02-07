@@ -9,7 +9,7 @@ namespace HyPrism.Services.Game;
 /// Manages game instance paths, versioning, and legacy data migration.
 /// Handles directory structure, instance discovery, and automatic migration from old launcher versions.
 /// </summary>
-public class InstanceService
+public class InstanceService : IInstanceService
 {
     private readonly string _appDir;
     

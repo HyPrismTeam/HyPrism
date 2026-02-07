@@ -24,7 +24,7 @@ public class GitHubUser
     public string Type { get; set; } = "";
 }
 
-public class GitHubService
+public class GitHubService : IGitHubService
 {
     private readonly HttpClient _httpClient;
     private const string RepoOwner = "yyyumeniku";

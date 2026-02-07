@@ -40,7 +40,11 @@ public partial class App : Application
         try 
         {
             var configService = Services!.GetRequiredService<ConfigService>();
-            ThemeService.Instance.Initialize(configService.Configuration.AccentColor);
+            var themeService = Services!.GetRequiredService<IThemeService>();
+            themeService.Initialize(configService.Configuration.AccentColor);
+            
+            // Set static accessor for XAML markup extensions
+            LocalizationService.Current = Services!.GetRequiredService<LocalizationService>();
         }
         catch { /* ignore, fallback to default */ }
 
@@ -51,9 +55,10 @@ public partial class App : Application
             
             // Subscribe to accent color changes
             var settingsService = Services!.GetRequiredService<SettingsService>();
+            var themeService = Services!.GetRequiredService<IThemeService>();
             settingsService.OnAccentColorChanged += (color) =>
             {
-                Dispatcher.UIThread.InvokeAsync(() => ThemeService.Instance.ApplyAccentColor(color));
+                Dispatcher.UIThread.InvokeAsync(() => themeService.ApplyAccentColor(color));
             };
             
             desktop.MainWindow = new HyPrism.UI.MainWindow.MainWindow

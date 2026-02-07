@@ -8,13 +8,13 @@ namespace HyPrism.Services.Game;
 /// <summary>
 /// Service for managing game versions, checking updates, and version caching.
 /// </summary>
-public class VersionService
+public class VersionService : IVersionService
 {
     private readonly string _appDir;
     private readonly HttpClient _httpClient;
-    private readonly ConfigService _configService;
+    private readonly IConfigService _configService;
 
-    public VersionService(string appDir, HttpClient httpClient, ConfigService configService)
+    public VersionService(string appDir, HttpClient httpClient, IConfigService configService)
     {
         _appDir = appDir;
         _httpClient = httpClient;
@@ -24,8 +24,9 @@ public class VersionService
     /// <summary>
     /// Get list of available versions for a branch.
     /// Uses caching to avoid re-checking all versions every time.
+    /// Checks versions in parallel batches for performance.
     /// </summary>
-    public async Task<List<int>> GetVersionListAsync(string branch)
+    public async Task<List<int>> GetVersionListAsync(string branch, CancellationToken ct = default)
     {
         var normalizedBranch = NormalizeBranch(branch);
         var result = new List<int>();
@@ -39,30 +40,47 @@ public class VersionService
             return freshCache;
         }
 
-        // Check for versions starting from 0
-        int currentVersion = 0;
-
+        const int batchSize = 20;
+        const int maxConsecutiveFailures = 20;
+        int batchStart = 0;
         int consecutiveFailures = 0;
-        const int maxConsecutiveFailures = 20; // Increased to skip potential gaps or missing early versions
+        using var semaphore = new SemaphoreSlim(8);
 
         while (consecutiveFailures < maxConsecutiveFailures)
         {
-            var (version, exists) = await CheckVersionExistsAsync(osName, arch, normalizedBranch, currentVersion);
-            
-            if (exists)
+            ct.ThrowIfCancellationRequested();
+
+            var tasks = Enumerable.Range(batchStart, batchSize)
+                .Select(async version =>
+                {
+                    await semaphore.WaitAsync(ct);
+                    try
+                    {
+                        return await CheckVersionExistsAsync(osName, arch, normalizedBranch, version, ct);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+
+            var batchResults = await Task.WhenAll(tasks);
+
+            foreach (var (version, exists) in batchResults.OrderBy(r => r.version))
             {
-                if (!result.Contains(version))
+                if (exists)
                 {
                     result.Add(version);
+                    consecutiveFailures = 0;
                 }
-                consecutiveFailures = 0;
+                else
+                {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= maxConsecutiveFailures) break;
+                }
             }
-            else
-            {
-                consecutiveFailures++;
-            }
-            
-            currentVersion++;
+
+            batchStart += batchSize;
         }
 
         result.Sort((a, b) => b.CompareTo(a)); // Sort descending (latest first)
@@ -93,14 +111,18 @@ public class VersionService
     /// <summary>
     /// Check if a specific version exists on the server.
     /// </summary>
-    private async Task<(int version, bool exists)> CheckVersionExistsAsync(string os, string arch, string versionType, int version)
+    private async Task<(int version, bool exists)> CheckVersionExistsAsync(string os, string arch, string versionType, int version, CancellationToken ct = default)
     {
         try
         {
             string url = $"https://game-patches.hytale.com/patches/{os}/{arch}/{versionType}/0/{version}.pwr";
             using var request = new HttpRequestMessage(HttpMethod.Head, url);
-            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             return (version, response.IsSuccessStatusCode);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

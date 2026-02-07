@@ -4,20 +4,21 @@ namespace HyPrism.Services.Core;
 /// Manages all launcher settings (preferences, UI config, behavior options).
 /// Provides centralized access to configuration properties with automatic persistence.
 /// </summary>
-public class SettingsService
+public class SettingsService : ISettingsService
 {
     private readonly ConfigService _configService;
+    private readonly LocalizationService _localizationService;
     
-    public SettingsService(ConfigService configService)
+    public SettingsService(ConfigService configService, LocalizationService localizationService)
     {
         _configService = configService;
+        _localizationService = localizationService;
         
         // Apply initial language override from config
         var savedLang = _configService.Configuration.Language;
         if (!string.IsNullOrEmpty(savedLang))
         {
-            // Sync singleton state with saved config
-            LocalizationService.Instance.CurrentLanguage = savedLang;
+            _localizationService.CurrentLanguage = savedLang;
         }
     }
     
@@ -35,8 +36,8 @@ public class SettingsService
         if (availableLanguages.ContainsKey(languageCode))
         {
             _configService.Configuration.Language = languageCode;
-            // Update the singleton which drives the UI
-            LocalizationService.Instance.CurrentLanguage = languageCode;
+            // Update the localization service which drives the UI
+            _localizationService.CurrentLanguage = languageCode;
             _configService.SaveConfig();
             Logger.Info("Config", $"Language changed to: {languageCode}");
             return true;

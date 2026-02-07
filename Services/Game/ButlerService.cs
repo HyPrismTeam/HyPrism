@@ -5,7 +5,7 @@ using HyPrism.Services.Core;
 
 namespace HyPrism.Services.Game;
 
-public class ButlerService
+public class ButlerService : IButlerService
 {
     private const string ButlerVersion = "15.21.0";
     private const string BrothUrlTemplate = "https://broth.itch.zone/butler/{0}-{1}/LATEST/archive/default";
