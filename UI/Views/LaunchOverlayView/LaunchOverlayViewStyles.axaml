@@ -19,7 +19,7 @@
         <Setter Property="Foreground" Value="#666"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Foreground" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Foreground" Duration="0:0:0.12" Easing="CubicEaseOut"/>
             </Transitions>
         </Setter>
     </Style>

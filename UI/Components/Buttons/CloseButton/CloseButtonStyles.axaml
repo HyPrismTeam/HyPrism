@@ -15,7 +15,7 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                <BrushTransition Property="Background" Duration="0:0:0.08"/>
             </Transitions>
         </Setter>
     </Style>

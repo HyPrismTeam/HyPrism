@@ -7,7 +7,8 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="600"
              x:Class="HyPrism.UI.Views.ProfileEditorView.ProfileEditorView"
-             x:DataType="vm:ProfileEditorViewModel">
+             x:DataType="vm:ProfileEditorViewModel"
+             x:CompileBindings="True">
 
     <Design.DataContext>
         <vm:ProfileEditorViewModel/>

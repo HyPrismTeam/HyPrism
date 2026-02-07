@@ -8,7 +8,8 @@
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              mc:Ignorable="d" d:DesignWidth="380" d:DesignHeight="700"
              x:Class="HyPrism.UI.Views.NewsView.NewsView"
-             x:DataType="vm:NewsViewModel">
+             x:DataType="vm:NewsViewModel"
+             x:CompileBindings="True">
     
     <Grid Width="380" 
           VerticalAlignment="Stretch"
@@ -152,28 +153,34 @@
                 <ItemsControl ItemsSource="{Binding News}"
                               IsVisible="{Binding !IsLoading}"
                               Margin="0,0,0,20">
-                    <ItemsControl.Styles>
-                        <Style Selector="ItemsControl > ContentPresenter">
-                            <Setter Property="Opacity" Value="0"/>
-                            <Style.Animations>
-                                <Animation Duration="0:0:0.6" Easing="0.16,1,0.3,1" FillMode="Forward">
-                                    <KeyFrame Cue="0%">
-                                        <Setter Property="Opacity" Value="0"/>
-                                        <Setter Property="TranslateTransform.Y" Value="30"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="100%">
-                                        <Setter Property="Opacity" Value="1"/>
-                                        <Setter Property="TranslateTransform.Y" Value="0"/>
-                                    </KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </ItemsControl.Styles>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <cards:NewsCard Command="{Binding $parent[UserControl].DataContext.OpenLinkCommand}"
-                                           CommandParameter="{Binding Url}"
-                                           Margin="0,0,0,12"/>
+                        <DataTemplate x:CompileBindings="False">
+                            <!-- Class-driven visibility: .visible triggers animation, :not(.visible) collapses -->
+                            <Panel Classes.visible="{Binding IsVisible}">
+                                <Panel.Styles>
+                                    <Style Selector="Panel:not(.visible)">
+                                        <Setter Property="IsVisible" Value="False"/>
+                                    </Style>
+                                    <Style Selector="Panel.visible">
+                                        <Style.Animations>
+                                            <Animation Duration="0:0:0.4" Easing="0.16,1,0.3,1" FillMode="None">
+                                                <KeyFrame Cue="0%">
+                                                    <Setter Property="Opacity" Value="0"/>
+                                                    <Setter Property="TranslateTransform.Y" Value="20"/>
+                                                </KeyFrame>
+                                                <KeyFrame Cue="100%">
+                                                    <Setter Property="Opacity" Value="1"/>
+                                                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                                                </KeyFrame>
+                                            </Animation>
+                                        </Style.Animations>
+                                    </Style>
+                                </Panel.Styles>
+                                <cards:NewsCard DataContext="{Binding Item}"
+                                               Command="{Binding $parent[UserControl].DataContext.OpenLinkCommand}"
+                                               CommandParameter="{Binding Url}"
+                                               Margin="0,0,0,12"/>
+                            </Panel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

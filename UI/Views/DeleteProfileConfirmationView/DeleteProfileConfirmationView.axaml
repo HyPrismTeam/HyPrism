@@ -2,7 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:HyPrism.UI.Views.DeleteProfileConfirmationView"
              x:Class="HyPrism.UI.Views.DeleteProfileConfirmationView.DeleteProfileConfirmationView"
-             x:DataType="vm:DeleteProfileConfirmationViewModel">
+             x:DataType="vm:DeleteProfileConfirmationViewModel"
+             x:CompileBindings="True">
     
     <!-- Background Overlay -->
     <Panel>

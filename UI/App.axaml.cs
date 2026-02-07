@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using AsyncImageLoader;
-using AsyncImageLoader.Loaders;
 using HyPrism.UI.MainWindow;
 using HyPrism.Services.Core;
 using HyPrism.Services;
@@ -23,10 +22,12 @@ public partial class App : Application
     {
         AvaloniaXamlLoader.Load(this);
         
-        // Initialize AsyncImageLoader with Disk Cache to save RAM
+        // Initialize AsyncImageLoader with disk cache + thumbnail decoding.
+        // Images are saved to disk at full quality but decoded at 240px width max,
+        // which reduces native SkiaSharp memory from ~8 MB to ~130 KB per image.
         var cacheDir = Path.Combine(UtilityService.GetEffectiveAppDir(), "Cache", "Images");
         Directory.CreateDirectory(cacheDir);
-        ImageLoader.AsyncImageLoader = new DiskCachedWebImageLoader(cacheDir);
+        ImageLoader.AsyncImageLoader = new DiskOnlyCachedWebImageLoader(cacheDir, decodeWidth: 240);
         
         // Initialize DI
         Services = Bootstrapper.Initialize();

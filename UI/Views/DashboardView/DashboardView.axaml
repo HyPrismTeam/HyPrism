@@ -14,7 +14,8 @@
              xmlns:gameControl="using:HyPrism.UI.Components.Dashboard.GameControlBar"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="HyPrism.UI.Views.DashboardView.DashboardView"
-             x:DataType="vm:DashboardViewModel">
+             x:DataType="vm:DashboardViewModel"
+             x:CompileBindings="True">
 
     <Grid>
         <!-- Content Root with Blur Effect and Fade In -->
@@ -48,11 +49,12 @@
                 <header:Header DataContext="{Binding HeaderViewModel}" VerticalAlignment="Top" />
                 
                 <!-- RIGHT PANEL: News (UserControl) -->
-                <newsView:NewsView VerticalAlignment="Stretch" 
-                                HorizontalAlignment="Right"
-                                Margin="0,140,0,80"
-                                DataContext="{Binding NewsViewModel}"
-                                IsVisible="{Binding !DisableNews}"/>                
+                <Grid VerticalAlignment="Stretch" 
+                      HorizontalAlignment="Right"
+                      Margin="0,140,0,80"
+                      IsVisible="{Binding !DisableNews}">
+                    <newsView:NewsView DataContext="{Binding NewsViewModel}"/>
+                </Grid>                
                                 
                 <!-- Game Control Bar (Bottom Actions + Play) -->
                 <gameControl:GameControlBar DataContext="{Binding GameControlViewModel}" VerticalAlignment="Bottom" />
@@ -63,7 +65,13 @@
         <Grid Classes="overlay-layer" Tag="{Binding IsSettingsOpen}" ZIndex="100">
             <Border Background="#B3000000"/>
             <layouts:ModalWrapper IsOpen="{Binding IsSettingsOpen}">
-                <settingsView:SettingsView DataContext="{Binding SettingsViewModel}" Width="900" Height="650" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <layouts:LazyContentControl IsActive="{Binding IsSettingsOpen}">
+                    <layouts:LazyContentControl.ContentTemplate>
+                        <DataTemplate x:CompileBindings="False">
+                            <settingsView:SettingsView DataContext="{Binding SettingsViewModel}" Width="900" Height="650" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </layouts:LazyContentControl.ContentTemplate>
+                </layouts:LazyContentControl>
             </layouts:ModalWrapper>
         </Grid>
         
@@ -71,7 +79,13 @@
         <Grid Classes="overlay-layer" Tag="{Binding IsModsOpen}" ZIndex="100">
             <Border Background="#B3000000"/>
             <layouts:ModalWrapper IsOpen="{Binding IsModsOpen}">
-                <modManagerView:ModManagerView DataContext="{Binding ModManagerViewModel}" Width="1100" Height="750" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <layouts:LazyContentControl IsActive="{Binding IsModsOpen}">
+                    <layouts:LazyContentControl.ContentTemplate>
+                        <DataTemplate x:CompileBindings="False">
+                            <modManagerView:ModManagerView DataContext="{Binding ModManagerViewModel}" Width="1100" Height="750" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </layouts:LazyContentControl.ContentTemplate>
+                </layouts:LazyContentControl>
             </layouts:ModalWrapper>
         </Grid>
         
@@ -79,7 +93,13 @@
         <Grid Classes="overlay-layer" Tag="{Binding IsProfileEditorOpen}" ZIndex="100">
             <Border Background="#B3000000"/>
             <layouts:ModalWrapper IsOpen="{Binding IsProfileEditorOpen}">
-                <profileEditorView:ProfileEditorView DataContext="{Binding ProfileEditorViewModel}" Width="700" Height="600" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <layouts:LazyContentControl IsActive="{Binding IsProfileEditorOpen}">
+                    <layouts:LazyContentControl.ContentTemplate>
+                        <DataTemplate x:CompileBindings="False">
+                            <profileEditorView:ProfileEditorView DataContext="{Binding ProfileEditorViewModel}" Width="700" Height="600" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </layouts:LazyContentControl.ContentTemplate>
+                </layouts:LazyContentControl>
             </layouts:ModalWrapper>
         </Grid>
         

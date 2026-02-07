@@ -18,7 +18,7 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Background" Duration="0:0:0.1" Easing="CubicEaseOut"/>
             </Transitions>
         </Setter>
     </Style>
@@ -43,7 +43,7 @@
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                <BrushTransition Property="Foreground" Duration="0:0:0.1"/>
             </Transitions>
         </Setter>
     </Style>

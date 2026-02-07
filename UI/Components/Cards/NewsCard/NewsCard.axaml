@@ -7,6 +7,7 @@
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="100"
              x:Class="HyPrism.UI.Components.Cards.NewsCard.NewsCard"
              x:DataType="models:NewsItemResponse"
+             x:CompileBindings="True"
              x:Name="Root">
 
     <UserControl.Styles>
@@ -14,7 +15,7 @@
     </UserControl.Styles>
 
     <!-- Use fallback null for command to prevent binding errors at design time -->
-    <Button Command="{Binding $parent[ItemsControl].DataContext.OpenLinkCommand, FallbackValue={x:Null}}"
+    <Button Command="{ReflectionBinding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}, FallbackValue={x:Null}}"
             CommandParameter="{Binding Url}"
             Classes="news-card-btn"
             HorizontalAlignment="Stretch"
@@ -32,8 +33,8 @@
                         Padding="{TemplateBinding Padding}">
                     <Border.Transitions>
                         <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                            <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+                            <BrushTransition Property="Background" Duration="0:0:0.1"/>
+                            <BrushTransition Property="BorderBrush" Duration="0:0:0.1"/>
                         </Transitions>
                     </Border.Transitions>
                     
@@ -52,7 +53,8 @@
                     ClipToBounds="True"
                     Margin="0,0,12,0"
                     Background="#0F0F0F">
-                <Image asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"
+                <Image x:Name="NewsImage"
+                       asyncImageLoader:ImageLoader.Source="{Binding ImageUrl}"
                        Stretch="UniformToFill"
                        RenderOptions.BitmapInterpolationMode="HighQuality"/>
             </Border>

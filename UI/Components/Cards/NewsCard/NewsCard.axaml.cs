@@ -1,3 +1,5 @@
+using System;
+using AsyncImageLoader;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
@@ -7,9 +9,6 @@ namespace HyPrism.UI.Components.Cards.NewsCard;
 
 public partial class NewsCard : UserControl
 {
-    // We expect the DataContext to be NewsItemResponse
-    
-    // Command to execute when card is clicked (passed via binding usually, but we can expose it if needed)
     public static readonly StyledProperty<ICommand?> CommandProperty =
         AvaloniaProperty.Register<NewsCard, ICommand?>(nameof(Command));
 
@@ -31,5 +30,21 @@ public partial class NewsCard : UserControl
     public NewsCard()
     {
         InitializeComponent();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+
+        // Dispose the loaded bitmap to prevent native SkiaSharp memory leaks.
+        // Without RAM cache, each Image gets a unique Bitmap instance that must
+        // be explicitly disposed — GC does not track native allocations effectively.
+        if (NewsImage is not null)
+        {
+            var bitmap = NewsImage.Source;
+            ImageLoader.SetSource(NewsImage, null);
+            NewsImage.Source = null;
+            (bitmap as IDisposable)?.Dispose();
+        }
     }
 }

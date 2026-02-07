@@ -8,7 +8,8 @@
              xmlns:checkboxInput="using:HyPrism.UI.Components.Inputs.CheckboxInput"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="HyPrism.UI.Views.LaunchOverlayView.LaunchOverlayView"
-             x:DataType="vm:DashboardViewModel">
+             x:DataType="vm:DashboardViewModel"
+             x:CompileBindings="True">
     
     <Grid IsHitTestVisible="{Binding IsLaunchOverlayVisible}" 
           Opacity="{Binding OverlayOpacity}"

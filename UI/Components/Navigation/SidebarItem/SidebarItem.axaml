@@ -27,7 +27,7 @@
                     <!-- Transitions defined directly on Border to persist across state changes -->
                     <Border.Transitions>
                         <Transitions>
-                            <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                            <BrushTransition Property="Background" Duration="0:0:0.1"/>
                         </Transitions>
                     </Border.Transitions>
 

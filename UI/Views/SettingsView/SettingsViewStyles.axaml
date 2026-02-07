@@ -45,7 +45,7 @@
         <Setter Property="Transitions">
             <Transitions>
                 <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.075" Easing="LinearEasing"/>
-                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                <BrushTransition Property="Background" Duration="0:0:0.1"/>
             </Transitions>
         </Setter>
         <Setter Property="Template">

@@ -6,7 +6,8 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="100"
              x:Class="HyPrism.UI.Components.Dashboard.Header.Header"
-             x:DataType="vm:HeaderViewModel">
+             x:DataType="vm:HeaderViewModel"
+             x:CompileBindings="True">
     
     <Grid>
         <!-- TOP LEFT: Profile -->

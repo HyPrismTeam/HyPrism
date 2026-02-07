@@ -1,6 +1,5 @@
 using ReactiveUI;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
@@ -12,13 +11,31 @@ using HyPrism.Models;
 
 namespace HyPrism.UI.Views.NewsView;
 
+/// <summary>
+/// Thin wrapper around <see cref="NewsItemResponse"/> that adds a reactive
+/// <see cref="IsVisible"/> property for filter-based visibility toggling.
+/// This avoids destroying/recreating UI elements (and their loaded Bitmaps)
+/// every time the user switches news tabs.
+/// </summary>
+public class NewsItemViewModel : ReactiveObject
+{
+    public NewsItemResponse Item { get; }
+
+    private bool _isVisible = true;
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set => this.RaiseAndSetIfChanged(ref _isVisible, value);
+    }
+
+    public NewsItemViewModel(NewsItemResponse item) => Item = item;
+}
+
 public class NewsViewModel : ReactiveObject, IDisposable
 {
     private readonly NewsService _newsService;
     private readonly BrowserService _browserService;
     private bool _disposed;
-
-    private readonly List<NewsItemResponse> _allNews = new();
     
     // Reactive Localization Properties
     public IObservable<string> NewsTitle { get; }
@@ -34,7 +51,8 @@ public class NewsViewModel : ReactiveObject, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _activeFilter, value);
-            FilterNews();            this.RaisePropertyChanged(nameof(ActiveTabPosition));
+            FilterNews();
+            this.RaisePropertyChanged(nameof(ActiveTabPosition));
         }
     }
     
@@ -60,11 +78,15 @@ public class NewsViewModel : ReactiveObject, IDisposable
                 "hytale" => TabWidth,
                 "hyprism" => TabWidth * 2,
                 _ => 0
-            };        }
+            };
+        }
     }
     
-    // News collection
-    public ObservableCollection<NewsItemResponse> News { get; } = new();
+    /// <summary>
+    /// All news items, always present. Filtering is done via <see cref="NewsItemViewModel.IsVisible"/>.
+    /// Items are never removed from this collection on tab switch — only on full data refresh.
+    /// </summary>
+    public ObservableCollection<NewsItemViewModel> News { get; } = new();
     
     // Loading state
     private bool _isLoading;
@@ -105,7 +127,7 @@ public class NewsViewModel : ReactiveObject, IDisposable
             { 
                 ActiveFilter = filter; 
             },
-            Observable.Return(true)); // Temporarily allow all
+            Observable.Return(true));
         OpenLinkCommand = ReactiveCommand.Create<string>(url =>
         {
             if (!string.IsNullOrEmpty(url))
@@ -126,10 +148,14 @@ public class NewsViewModel : ReactiveObject, IDisposable
         {
             var allNewsItems = await _newsService.GetNewsAsync(30, NewsSource.All);
             
-            _allNews.Clear();
-            _allNews.AddRange(allNewsItems);
+            // Full data refresh — clear and rebuild wrappers
+            News.Clear();
+            foreach (var item in allNewsItems)
+            {
+                News.Add(new NewsItemViewModel(item));
+            }
             
-            // Apply initial filter
+            // Apply current filter (sets IsVisible on each wrapper)
             FilterNews();
         }
         catch (Exception ex)
@@ -142,48 +168,33 @@ public class NewsViewModel : ReactiveObject, IDisposable
         }
     }
     
+    /// <summary>
+    /// Toggle visibility on each wrapper instead of clearing/re-adding items.
+    /// No UI elements are destroyed or recreated — only IsVisible changes.
+    /// This means loaded Bitmaps stay alive and no async race conditions occur.
+    /// </summary>
     private void FilterNews()
     {
-        News.Clear();
-        
-        var filtered = ActiveFilter switch
+        foreach (var wrapper in News)
         {
-            "hytale" => _allNews.Where(n => n.Source == "hytale"),
-            "hyprism" => _allNews.Where(n => n.Source == "hyprism"),
-            _ => _allNews
-        };
-        
-        foreach (var item in filtered)
-        {
-            News.Add(item);
+            wrapper.IsVisible = ActiveFilter switch
+            {
+                "hytale" => wrapper.Item.Source == "hytale",
+                "hyprism" => wrapper.Item.Source == "hyprism",
+                _ => true
+            };
         }
-    }
-    
-    private string FormatDate(string dateString)
-    {
-        if (DateTime.TryParse(dateString, out var date))
-        {
-            var now = DateTime.Now;
-            var diff = now - date;
-            
-            if (diff.TotalDays < 1)
-                return "Today";
-            if (diff.TotalDays < 2)
-                return "Yesterday";
-            if (diff.TotalDays < 7)
-                return $"{(int)diff.TotalDays} days ago";
-            
-            return date.ToString("MMM d, yyyy");
-        }
-        
-        return dateString;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
-        _allNews.Clear();
+        
+        RefreshCommand.Dispose();
+        SetFilterCommand.Dispose();
+        OpenLinkCommand.Dispose();
+        
         News.Clear();
     }
 }

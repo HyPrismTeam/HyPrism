@@ -26,7 +26,7 @@
     <Style Selector="btn|PrimaryButton /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.150"/>
+                <BrushTransition Property="Background" Duration="0:0:0.08"/>
                 <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.150"/>
                 <DoubleTransition Property="Opacity" Duration="0:0:0.150"/>
             </Transitions>

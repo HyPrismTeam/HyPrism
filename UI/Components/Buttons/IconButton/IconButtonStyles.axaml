@@ -22,7 +22,7 @@
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                <BrushTransition Property="Foreground" Duration="0:0:0.1"/>
             </Transitions>
         </Setter>
         <Setter Property="Template">

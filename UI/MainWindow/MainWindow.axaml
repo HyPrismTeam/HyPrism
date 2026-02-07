@@ -8,6 +8,7 @@
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
         x:Class="HyPrism.UI.MainWindow.MainWindow"
         x:DataType="vm:MainViewModel"
+        x:CompileBindings="True"
         Title="HyPrism"
         Width="1280" Height="800"
         MinWidth="1024" MinHeight="700"

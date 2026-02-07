@@ -67,8 +67,8 @@
             <Style Selector="ToggleButton /template/ Border#Container">
                  <Setter Property="Transitions">
                      <Transitions>
-                         <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                         <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                         <BrushTransition Property="Background" Duration="0:0:0.08"/>
+                         <BrushTransition Property="BorderBrush" Duration="0:0:0.08"/>
                          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
                      </Transitions>
                  </Setter>

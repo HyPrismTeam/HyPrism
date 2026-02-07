@@ -5,7 +5,8 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="HyPrism.UI.Views.ModManagerView.ModManagerView"
-             x:DataType="vm:ModManagerViewModel">
+             x:DataType="vm:ModManagerViewModel"
+             x:CompileBindings="True">
 
     <Border Background="#F2111111" CornerRadius="16" BorderBrush="#33FFFFFF" BorderThickness="1" ClipToBounds="True" BoxShadow="0 10 30 5 #000000">
         <Grid RowDefinitions="60, *">
@@ -79,7 +80,7 @@
                            </Style>
                         </ListBox.Styles>
                         <ListBox.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate x:CompileBindings="False">
                                 <Border Background="#252525" CornerRadius="8" Padding="12">
                                     <Grid ColumnDefinitions="50, *, Auto">
                                          <!-- Icon -->
@@ -131,7 +132,7 @@
                                     </Style>
                                 </ListBox.Styles>
                                 <ListBox.ItemTemplate>
-                                    <DataTemplate>
+                                    <DataTemplate x:CompileBindings="False">
                                         <TextBlock Text="{Binding Name}" Foreground="#CCC"/>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
@@ -164,7 +165,7 @@
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
+                                        <DataTemplate x:CompileBindings="False">
                                             <Border Background="#252525" CornerRadius="12" Padding="10" Margin="5" Width="220" Height="290">
                                                 <Grid RowDefinitions="Auto, *, Auto">
                                                     <!-- Thumbnail -->
@@ -250,7 +251,7 @@
                              
                              <ListBox Grid.Row="1" ItemsSource="{Binding SelectedModFiles}" Background="#151515" CornerRadius="8">
                                  <ListBox.ItemTemplate>
-                                     <DataTemplate>
+                                     <DataTemplate x:CompileBindings="False">
                                          <Grid ColumnDefinitions="*, 120, Auto" Margin="5">
                                              <StackPanel Grid.Column="0">
                                                  <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="Medium"/>

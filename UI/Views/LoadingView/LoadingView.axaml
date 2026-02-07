@@ -5,7 +5,8 @@
              xmlns:vm="clr-namespace:HyPrism.UI.Views.LoadingView"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="HyPrism.UI.Views.LoadingView.LoadingView"
-             x:DataType="vm:LoadingViewModel">
+             x:DataType="vm:LoadingViewModel"
+             x:CompileBindings="True">
     
     <Grid Background="#000000"
           Classes="loading-container">

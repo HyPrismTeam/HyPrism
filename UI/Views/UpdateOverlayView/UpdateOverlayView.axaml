@@ -7,9 +7,10 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
              x:Class="HyPrism.UI.Views.UpdateOverlayView.UpdateOverlayView"
-             x:DataType="vm:DashboardViewModel">
+             x:DataType="vm:DashboardViewModel"
+             x:CompileBindings="True">
     
-    <Grid IsVisible="{Binding IsDownloading}" 
+    <Grid IsVisible="{ReflectionBinding IsDownloading}" 
           Opacity="{Binding OverlayOpacity}"
           Background="#F2090909">
         <Grid.Transitions>
@@ -26,7 +27,7 @@
                     <trans:OffsetFadeTransition Duration="0:0:0.3" Offset="20" IsHorizontal="True" />
                 </TransitioningContentControl.PageTransition>
                 <TransitioningContentControl.ContentTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:CompileBindings="False">
                         <Viewbox Width="80" Height="80" HorizontalAlignment="Center">
                              <Viewbox.RenderTransform>
                                 <TranslateTransform />
@@ -65,7 +66,7 @@
                         <trans:OffsetFadeTransition Duration="0:0:0.3" Offset="30" IsHorizontal="True" />
                     </TransitioningContentControl.PageTransition>
                     <TransitioningContentControl.ContentTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:CompileBindings="False">
                              <TextBlock Text="{Binding}" 
                                        Foreground="White" 
                                        FontSize="32" 

@@ -8,7 +8,8 @@
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Avalonia.Svg.Skia"
              mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="100"
              x:Class="HyPrism.UI.Components.Dashboard.GameControlBar.GameControlBar"
-             x:DataType="vm:GameControlViewModel">
+             x:DataType="vm:GameControlViewModel"
+             x:CompileBindings="True">
 
     <UserControl.Styles>
         <StyleInclude Source="GameControlBarStyles.axaml"/>

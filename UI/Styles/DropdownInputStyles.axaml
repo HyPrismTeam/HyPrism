@@ -24,7 +24,7 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                <BrushTransition Property="Background" Duration="0:0:0.1"/>
                 <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" Easing="CubicEaseOut"/>
             </Transitions>
         </Setter>
@@ -82,8 +82,8 @@
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                <BrushTransition Property="Foreground" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Background" Duration="0:0:0.1" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Foreground" Duration="0:0:0.1" Easing="CubicEaseOut"/>
             </Transitions>
         </Setter>
     </Style>
@@ -117,8 +117,8 @@
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                <BrushTransition Property="Foreground" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Background" Duration="0:0:0.1" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Foreground" Duration="0:0:0.1" Easing="CubicEaseOut"/>
             </Transitions>
         </Setter>
     </Style>
