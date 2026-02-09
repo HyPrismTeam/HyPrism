@@ -3,17 +3,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { HardDrive, FolderOpen, Trash2, Download, Upload, RefreshCw, Clock, Calendar, Box, Loader2, AlertTriangle, Check } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { ipc } from '@/lib/ipc';
+import { ipc, InstalledInstance } from '@/lib/ipc';
 import { formatBytes } from '../utils/format';
 
-// IPC stubs matching SettingsModal
+// IPC stubs - only for features not yet implemented
 const _stub = <T,>(name: string, fb: T) => async (..._a: any[]): Promise<T> => { console.warn(`[IPC] ${name}: no channel`); return fb; };
-const GetInstalledVersionsDetailed = _stub<InstalledVersionInfo[]>('GetInstalledVersionsDetailed', []);
 const ExportInstance = _stub('ExportInstance', '');
 const DeleteGame = _stub('DeleteGame', false);
 const OpenInstanceFolder = _stub('OpenInstanceFolder', undefined as void);
 const ImportInstanceFromZip = _stub('ImportInstanceFromZip', true);
 const GetCustomInstanceDir = async (): Promise<string> => { return (await ipc.settings.get()).dataDirectory ?? ''; };
+
+// Convert InstalledInstance to InstalledVersionInfo
+const toVersionInfo = (inst: InstalledInstance): InstalledVersionInfo => ({
+  branch: inst.branch,
+  version: inst.version,
+  path: inst.path,
+  sizeBytes: inst.totalSize,
+  isLatest: false,
+  isLatestInstance: inst.version === 0,
+});
 
 export interface InstalledVersionInfo {
   branch: string;
@@ -53,8 +62,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
   const loadInstances = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await GetInstalledVersionsDetailed();
-      setInstances(data || []);
+      const data = await ipc.game.instances();
+      console.log('[InstancesPage] Loaded instances:', data);
+      setInstances((data || []).map(toVersionInfo));
     } catch (err) {
       console.error('Failed to load instances:', err);
     }
@@ -72,12 +82,12 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
     try {
       const result = await ExportInstance(inst.branch, inst.version);
       if (result) {
-        setMessage({ type: 'success', text: t('Instance exported successfully') });
+        setMessage({ type: 'success', text: t('instances.exportedSuccess') });
       } else {
-        setMessage({ type: 'error', text: t('Failed to export instance') });
+        setMessage({ type: 'error', text: t('instances.exportFailed') });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: t('Failed to export instance') });
+      setMessage({ type: 'error', text: t('instances.exportFailed') });
     }
     setExportingInstance(null);
     setTimeout(() => setMessage(null), 3000);
@@ -89,10 +99,10 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
       setInstanceToDelete(null);
       loadInstances();
       onInstanceDeleted?.();
-      setMessage({ type: 'success', text: t('Instance deleted') });
+      setMessage({ type: 'success', text: t('instances.deleted') });
       setTimeout(() => setMessage(null), 3000);
     } catch (err) {
-      setMessage({ type: 'error', text: t('Failed to delete instance') });
+      setMessage({ type: 'error', text: t('instances.deleteFailed') });
     }
   };
 
@@ -101,11 +111,11 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
     try {
       const result = await ImportInstanceFromZip();
       if (result) {
-        setMessage({ type: 'success', text: t('Instance imported successfully') });
+        setMessage({ type: 'success', text: t('instances.importedSuccess') });
         loadInstances();
       }
     } catch (err) {
-      setMessage({ type: 'error', text: t('Failed to import instance') });
+      setMessage({ type: 'error', text: t('instances.importFailed') });
     }
     setIsImporting(false);
     setTimeout(() => setMessage(null), 3000);
@@ -128,7 +138,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
           <HardDrive size={22} className="text-white/80" />
-          <h1 className="text-xl font-bold text-white">{t('Instances')}</h1>
+          <h1 className="text-xl font-bold text-white">{t('instances.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -142,7 +152,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
             }}
           >
             {isImporting ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            {t('Import')}
+            {t('instances.import')}
           </button>
           <button
             onClick={loadInstances}
@@ -174,7 +184,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
       {/* Instance Dir */}
       {instanceDir && (
         <div className="mb-4 px-3 py-2 rounded-xl bg-white/5 border border-white/5 text-xs text-white/40 flex-shrink-0">
-          <span className="text-white/25">{t('Storage')}:</span> {instanceDir}
+          <span className="text-white/25">{t('instances.storage')}:</span> {instanceDir}
         </div>
       )}
 
@@ -187,8 +197,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Box size={48} className="text-white/15 mx-auto mb-4" />
-            <p className="text-white/40 text-lg">{t('No instances installed')}</p>
-            <p className="text-white/25 text-sm mt-2">{t('Download a game version from the Dashboard')}</p>
+            <p className="text-white/40 text-lg">{t('instances.noInstances')}</p>
+            <p className="text-white/25 text-sm mt-2">{t('instances.downloadFromDashboard')}</p>
           </div>
         </div>
       ) : (
@@ -220,7 +230,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
                       </div>
                       <div>
                         <div className="text-white font-semibold text-sm flex items-center gap-2">
-                          {inst.isLatestInstance ? t('latest') : `v${inst.version}`}
+                          {inst.isLatestInstance ? t('common.latest') : `v${inst.version}`}
                           <span className="text-white/30 text-xs font-normal capitalize">{inst.branch}</span>
                         </div>
                         {inst.sizeBytes != null && inst.sizeBytes > 0 && (
@@ -230,15 +240,15 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleOpenFolder(inst)}
-                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all" title={t('Open Folder')}>
+                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all" title={t('common.openFolder')}>
                         <FolderOpen size={14} />
                       </button>
                       <button onClick={() => handleExport(inst)} disabled={isExporting}
-                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all" title={t('Export')}>
+                        className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all" title={t('common.export')}>
                         {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                       </button>
                       <button onClick={() => setInstanceToDelete(inst)}
-                        className="p-2 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all" title={t('Delete')}>
+                        className="p-2 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all" title={t('common.delete')}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -276,18 +286,18 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({ onInstanceDeleted 
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl"
             >
-              <h3 className="text-white font-bold text-lg mb-2">{t('Delete Instance')}</h3>
+              <h3 className="text-white font-bold text-lg mb-2">{t('instances.deleteTitle')}</h3>
               <p className="text-white/60 text-sm mb-4">
-                {t('Are you sure you want to delete')} <strong>{instanceToDelete.isLatestInstance ? t('latest') : `v${instanceToDelete.version}`}</strong> ({instanceToDelete.branch})?
+                {t('instances.deleteConfirm')} <strong>{instanceToDelete.isLatestInstance ? t('common.latest') : `v${instanceToDelete.version}`}</strong> ({instanceToDelete.branch})?
               </p>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setInstanceToDelete(null)}
                   className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all">
-                  {t('Cancel')}
+                  {t('common.cancel')}
                 </button>
                 <button onClick={() => handleDelete(instanceToDelete)}
                   className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all">
-                  {t('Delete')}
+                  {t('common.delete')}
                 </button>
               </div>
             </motion.div>

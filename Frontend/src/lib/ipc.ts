@@ -71,7 +71,7 @@ export interface ProgressUpdate {
 }
 
 export interface GameState {
-  state: 'starting' | 'running' | 'stopped';
+  state: 'starting' | 'started' | 'running' | 'stopped';
   exitCode: number;
 }
 
@@ -156,10 +156,12 @@ export interface AppConfig {
 }
 
 export interface InstalledInstance {
-  id: string;
-  name: string;
-  version: string;
+  branch: string;
+  version: number;
   path: string;
+  hasUserData: boolean;
+  userDataSize: number;
+  totalSize: number;
 }
 
 export interface LanguageInfo {
@@ -180,6 +182,8 @@ const _game = {
   launch: () => send('hyprism:game:launch'),
   cancel: () => send('hyprism:game:cancel'),
   instances: () => invoke<InstalledInstance[]>('hyprism:game:instances'),
+  isRunning: (data?: unknown) => invoke<boolean>('hyprism:game:isRunning', data),
+  versions: (data?: unknown) => invoke<number[]>('hyprism:game:versions', data),
   onProgress: (cb: (data: ProgressUpdate) => void) => on('hyprism:game:progress', cb as (d: unknown) => void),
   onState: (cb: (data: GameState) => void) => on('hyprism:game:state', cb as (d: unknown) => void),
   onError: (cb: (data: GameError) => void) => on('hyprism:game:error', cb as (d: unknown) => void),

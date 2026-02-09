@@ -51,7 +51,7 @@ export const UpdateConfirmationModal = ({
                             <HardDrive className="w-5 h-5" style={{ color: accentColor }} />
                         </div>
                         <h2 className="text-xl font-semibold text-white">
-                            {t('Game Update Available')}
+                            {t('updateConfirmation.title')}
                         </h2>
                     </div>
                     <button
@@ -66,7 +66,7 @@ export const UpdateConfirmationModal = ({
                 <div className="space-y-4">
                     <div className="bg-[#151515] rounded-xl p-4 border border-white/5">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/60">{t('Current Version')}</span>
+                            <span className="text-white/60">{t('updateConfirmation.currentVersion')}</span>
                             <span className="text-white font-medium">v{oldVersion}</span>
                         </div>
                         <div className="flex items-center justify-center my-2">
@@ -75,7 +75,7 @@ export const UpdateConfirmationModal = ({
                             </svg>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-white/60">{t('New Version')}</span>
+                            <span className="text-white/60">{t('updateConfirmation.newVersion')}</span>
                             <span className="font-medium" style={{ color: accentColor }}>v{newVersion}</span>
                         </div>
                     </div>
@@ -83,13 +83,13 @@ export const UpdateConfirmationModal = ({
                     {hasOldUserData ? (
                         <div className="space-y-3">
                             <p className="text-white/70 text-sm">
-                                {t('A new game version is available. Your current version has saved data (settings, mods, etc.).')}
+                                {t('updateConfirmation.hasDataMessage')}
                             </p>
                             
                             <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
                                 <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                                 <p className="text-yellow-400/80 text-xs">
-                                    {t('Would you like to copy your saved data to the new version?')}
+                                    {t('updateConfirmation.copyDataQuestion')}
                                 </p>
                             </div>
 
@@ -101,7 +101,7 @@ export const UpdateConfirmationModal = ({
                                     style={{ backgroundColor: accentColor, color: accentTextColor }}
                                 >
                                     <Copy size={18} />
-                                    {t('Update & Copy Data')}
+                                    {t('updateConfirmation.updateCopyData')}
                                 </button>
                                 <button
                                     onClick={handleConfirmWithoutCopy}
@@ -109,14 +109,14 @@ export const UpdateConfirmationModal = ({
                                     className="w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                                 >
                                     <SkipForward size={18} />
-                                    {t('Update Without Copying')}
+                                    {t('updateConfirmation.updateWithoutCopy')}
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <div className="space-y-3">
                             <p className="text-white/70 text-sm">
-                                {t('A new game version is available. Ready to update?')}
+                                {t('updateConfirmation.readyMessage')}
                             </p>
 
                             <button
@@ -125,7 +125,7 @@ export const UpdateConfirmationModal = ({
                                 className="w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 hover:opacity-90"
                                 style={{ backgroundColor: accentColor, color: accentTextColor }}
                             >
-                                {t('Update Now')}
+                                {t('updateConfirmation.updateNow')}
                             </button>
                         </div>
                     )}
@@ -134,7 +134,7 @@ export const UpdateConfirmationModal = ({
                         onClick={onCancel}
                         className="w-full h-10 rounded-xl text-white/40 hover:text-white/70 text-sm transition-colors"
                     >
-                        {t('Cancel')}
+                        {t('common.cancel')}
                     </button>
                 </div>
             </div>

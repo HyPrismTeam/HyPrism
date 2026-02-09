@@ -34,7 +34,7 @@ export const LogsModal: React.FC<LogsModalProps> = ({
         }
       }, 50);
     } catch (err) {
-      setLogs(t('Failed to load logs: ') + (err instanceof Error ? err.message : String(err)));
+      setLogs(t('logs.failedToLoad') + (err instanceof Error ? err.message : String(err)));
       setIsLoading(false);
     }
   };
@@ -98,8 +98,8 @@ export const LogsModal: React.FC<LogsModalProps> = ({
               <Terminal size={20} style={{ color: accentColor }} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{t('Game Logs')}</h2>
-              <p className="text-xs text-gray-400">{t('View game output and errors')}</p>
+              <h2 className="text-lg font-bold text-white">{t('logs.title')}</h2>
+              <p className="text-xs text-gray-400">{t('logs.description')}</p>
             </div>
           </div>
           <button
@@ -115,7 +115,7 @@ export const LogsModal: React.FC<LogsModalProps> = ({
           {isLoading && !logs ? (
             <div className="flex flex-col items-center justify-center h-full">
               <Loader2 size={32} className="animate-spin mb-4" style={{ color: accentColor }} />
-              <p className="text-gray-400">{t('Loading logs...')}</p>
+              <p className="text-gray-400">{t('logs.loading')}</p>
             </div>
           ) : (
             <pre
@@ -124,7 +124,7 @@ export const LogsModal: React.FC<LogsModalProps> = ({
               className="w-full h-full overflow-auto bg-black/50 rounded-xl p-4 text-xs font-mono text-gray-300 whitespace-pre-wrap"
               style={{ tabSize: 4 }}
             >
-              {logs || t('No logs available yet. Run the game to generate logs.')}
+              {logs || t('logs.noLogs')}
             </pre>
           )}
         </div>
@@ -133,7 +133,7 @@ export const LogsModal: React.FC<LogsModalProps> = ({
         <div className="flex items-center justify-between p-5 border-t border-white/10 bg-black/30 flex-shrink-0">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            {t('Auto-refreshing every 3 seconds')}
+            {t('logs.autoRefresh')}
           </div>
 
           <div className="flex gap-3">
@@ -142,21 +142,21 @@ export const LogsModal: React.FC<LogsModalProps> = ({
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 transition-colors"
             >
               {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-              {copied ? t('Copied!') : t('Copy')}
+              {copied ? t('common.copied') : t('common.copy')}
             </button>
             <button
               onClick={downloadLogs}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 transition-colors"
             >
               <Download size={14} />
-              {t('Download')}
+              {t('logs.download')}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-2 rounded-lg transition-colors font-medium hover:opacity-80"
               style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
             >
-              {t('Close')}
+              {t('common.close')}
             </button>
           </div>
         </div>

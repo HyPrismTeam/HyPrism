@@ -56,7 +56,7 @@ export const OnlineToggle = forwardRef<HTMLButtonElement, OnlineToggleProps>(({ 
                     ? 'border-green-500/30 text-green-400 hover:text-green-300 hover:bg-green-500/10'
                     : 'border-white/5 text-white/60 hover:text-white/80 hover:bg-white/5'
             } ${className}`}
-            title={isOnline ? t('Online Mode') : t('Offline Mode')}
+            title={isOnline ? t('onlineToggle.online') : t('onlineToggle.offline')}
             style={focused ? { boxShadow: `0 0 0 2px ${accentColor}, 0 0 0 4px #090909` } : undefined}
         >
             {isOnline ? (
@@ -65,7 +65,7 @@ export const OnlineToggle = forwardRef<HTMLButtonElement, OnlineToggleProps>(({ 
                 <WifiOff size={20} />
             )}
             <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                {isOnline ? t('Online Mode (Click to disable)') : t('Offline Mode (Click to enable online)')}
+                {isOnline ? t('onlineToggle.onlineClickDisable') : t('onlineToggle.offlineClickEnable')}
             </span>
         </button>
     );

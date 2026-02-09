@@ -191,7 +191,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = memo(({ className = '', f
         onClick={toggleMute}
         disabled={forceMuted}
         className={`p-2 rounded-lg hover:bg-white/10 transition-colors ${forceMuted ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
-        title={forceMuted ? t('Music muted while game is running') : isMuted ? t('Unmute') : t('Mute')}
+        title={forceMuted ? t('music.mutedWhilePlaying') : isMuted ? t('music.unmute') : t('music.mute')}
       >
         {forceMuted ? (
           <VolumeX size={20} className="text-gray-500" />

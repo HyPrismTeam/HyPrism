@@ -33,7 +33,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
           <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
             <Trash2 size={28} className="text-red-400" />
           </div>
-          <h2 className="text-xl font-bold text-white">{t('Delete Game?')}</h2>
+          <h2 className="text-xl font-bold text-white">{t('deleteGame.title')}</h2>
         </div>
 
         {/* Content */}
@@ -43,15 +43,15 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm text-gray-300">
-                  {t('This will permanently delete all game files, including:')}
+                  {t('deleteGame.warning')}
                 </p>
                 <ul className="mt-2 text-xs text-gray-400 space-y-1 list-disc list-inside">
-                  <li>{t('Game installation')}</li>
-                  <li>{t('Downloaded patches')}</li>
-                  <li>{t('Cache files')}</li>
+                  <li>{t('deleteGame.gameInstallation')}</li>
+                  <li>{t('deleteGame.downloadedPatches')}</li>
+                  <li>{t('deleteGame.cacheFiles')}</li>
                 </ul>
                 <p className="mt-3 text-xs text-gray-400">
-                  {t('Your user data and skin presets will be preserved.')}
+                  {t('deleteGame.preserveNote')}
                 </p>
               </div>
             </div>
@@ -64,7 +64,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             onClick={onCancel}
             className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-gray-300 hover:bg-white/10 transition-colors font-medium"
           >
-            {t('Cancel')}
+            {t('common.cancel')}
           </button>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -73,7 +73,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
           >
             <Trash2 size={16} />
-            {t('Delete')}
+            {t('common.delete')}
           </motion.button>
         </div>
       </motion.div>

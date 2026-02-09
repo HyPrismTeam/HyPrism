@@ -76,14 +76,67 @@ const _OpenInstanceFolder = stub('OpenInstanceFolder', undefined as void);
 const DeleteGame = stub('DeleteGame', false);
 const Update = stub('Update', undefined as void);
 const ExitGame = stub('ExitGame', undefined as void);
-const IsGameRunning = stub('IsGameRunning', false);
 const GetRecentLogs = stub<string[]>('GetRecentLogs', []);
 const GetVersionType = stub('GetVersionType', 'release');
 const SetVersionType = stub<void>('SetVersionType', undefined as void);
 const SetSelectedVersion = stub<void>('SetSelectedVersion', undefined as void);
-const GetVersionList = stub<number[]>('GetVersionList', [0]);
-const IsVersionInstalled = stub('IsVersionInstalled', false);
-const GetInstalledVersionsForBranch = stub<number[]>('GetInstalledVersionsForBranch', []);
+
+// Real IPC call to check if game is running
+async function IsGameRunning(): Promise<boolean> {
+  try {
+    return await ipc.game.isRunning();
+  } catch (e) {
+    console.error('[IPC] IsGameRunning failed:', e);
+    return false;
+  }
+}
+
+// Get available versions from server (includes versions for download)
+async function GetVersionList(branch: string): Promise<number[]> {
+  try {
+    // Get available versions from server
+    const availableVersions = await ipc.game.versions({ branch });
+    console.log('[IPC] GetVersionList: available versions for', branch, ':', availableVersions);
+    // Always include "latest" (0) as an option at the start
+    if (!availableVersions.includes(0)) {
+      availableVersions.unshift(0);
+    }
+    return availableVersions;
+  } catch (e) {
+    console.error('[IPC] GetVersionList failed:', e);
+    return [0];
+  }
+}
+
+async function IsVersionInstalled(branch: string, version: number): Promise<boolean> {
+  try {
+    const instances = await ipc.game.instances();
+    console.log('[IPC] IsVersionInstalled: checking', branch, version, 'in', instances);
+    // Version 0 means "latest" - check if there's at least one instance of the branch
+    if (version === 0) {
+      return instances.some(inst => inst.branch === branch);
+    }
+    return instances.some(inst => inst.branch === branch && inst.version === version);
+  } catch (e) {
+    console.error('[IPC] IsVersionInstalled failed:', e);
+    return false;
+  }
+}
+
+async function GetInstalledVersionsForBranch(branch: string): Promise<number[]> {
+  try {
+    const instances = await ipc.game.instances();
+    console.log('[IPC] GetInstalledVersionsForBranch: for', branch, 'found', instances);
+    return instances
+      .filter(inst => inst.branch === branch)
+      .map(inst => inst.version)
+      .sort((a, b) => b - a); // Sort descending
+  } catch (e) {
+    console.error('[IPC] GetInstalledVersionsForBranch failed:', e);
+    return [];
+  }
+}
+
 const GetLatestVersionStatus = stub<VersionStatus | null>('GetLatestVersionStatus', null);
 const _ForceUpdateLatest = stub('ForceUpdateLatest', undefined as void);
 const DuplicateLatest = stub('DuplicateLatest', true);
@@ -456,6 +509,14 @@ const App: React.FC = () => {
     GetLauncherVersion().then((v: string) => setLauncherVersion(v));
     GetCustomInstanceDir().then((dir: string) => dir && setCustomInstanceDir(dir));
 
+    // Check if game is already running on startup
+    IsGameRunning().then((running: boolean) => {
+      console.log('[App] Initial game running state:', running);
+      if (running) {
+        setIsGameRunning(true);
+      }
+    });
+
     // Load background mode, news settings, and accent color
     GetBackgroundMode().then((mode: string) => setBackgroundMode(mode || 'slideshow'));
     GetDisableNews().then((disabled: boolean) => setNewsDisabled(disabled));
@@ -595,6 +656,7 @@ const App: React.FC = () => {
       } else if (data.state === 'install') {
         setDownloadState('extracting');
       } else if (data.state === 'complete') {
+        console.log('[App] Progress complete state received, waiting for game-state event');
         setDownloadState('launching');
         // Game is now installed, update state
         if (data.progress >= 100) {
@@ -608,6 +670,14 @@ const App: React.FC = () => {
             });
           }
         }
+      } else if (data.state === 'launch' || data.state === 'launching') {
+        // Game is launching - set running immediately for better UX
+        console.log('[App] Launch/launching state received, setting isGameRunning=true');
+        setIsGameRunning(true);
+        setIsDownloading(false);
+        setProgress(0);
+        setLaunchState('');
+        setLaunchDetail('');
       } else {
         // Fallback to progress-based detection
         if (data.progress >= 0 && data.progress < 70) {
@@ -622,10 +692,14 @@ const App: React.FC = () => {
     
     // Game state event listener
     const unsubGameState = EventsOn('game-state', async (data: any) => {
+      console.log('[App] Game state event received:', data);
       if (data.state === 'started') {
+        console.log('[App] Game started, resetting download state');
         setIsGameRunning(true);
         setIsDownloading(false);
         setProgress(0);
+        setLaunchState('');
+        setLaunchDetail('');
         
         // Check if close after launch is enabled
         try {
@@ -640,6 +714,7 @@ const App: React.FC = () => {
           console.error('Failed to check close after launch:', err);
         }
       } else if (data.state === 'stopped') {
+        console.log('[App] Game stopped, exitCode:', data.exitCode);
         // Only show error if exit code is non-zero (crash/error)
         // Exit code 0 or undefined = normal exit, null = unknown
         const exitCode = data.exitCode;
@@ -647,18 +722,21 @@ const App: React.FC = () => {
           try {
             const logs = await GetRecentLogs(10);
             setLaunchTimeoutError({
-              message: t('Game crashed with exit code {{code}}', { code: exitCode }),
+              message: t('app.gameCrashed', { code: exitCode }),
               logs: logs || []
             });
           } catch {
             setLaunchTimeoutError({
-              message: t('Game crashed with exit code {{code}}', { code: exitCode }),
+              message: t('app.gameCrashed', { code: exitCode }),
               logs: []
             });
           }
         }
         setIsGameRunning(false);
+        setIsDownloading(false);
         setProgress(0);
+        setLaunchState('');
+        setLaunchDetail('');
         gameLaunchTimeRef.current = null; // Clear launch time to prevent polling error
       }
     });
@@ -697,15 +775,15 @@ const App: React.FC = () => {
       await Update();
       setError({
         type: 'INFO',
-        message: t('Downloaded the latest HyPrism to your Downloads folder.'),
-        technical: t('We attempted to open the file so you can install it. If it did not open, go to Downloads and run the file manually.'),
+        message: t('app.downloadedUpdate'),
+        technical: t('app.downloadedUpdateHint'),
         timestamp: new Date().toISOString()
       });
     } catch (err) {
       console.error('Update failed:', err);
       setError({
         type: 'UPDATE_ERROR',
-        message: t('Failed to update launcher'),
+        message: t('app.failedUpdate'),
         technical: err instanceof Error ? err.message : String(err),
         timestamp: new Date().toISOString()
       });
@@ -715,12 +793,22 @@ const App: React.FC = () => {
   };
 
   const handlePlay = async () => {
+    // Prevent launching if game is already running or download is in progress
+    if (isGameRunning) {
+      console.log('[App] Game already running, ignoring play request');
+      return;
+    }
+    if (isDownloading) {
+      console.log('[App] Download already in progress, ignoring play request');
+      return;
+    }
+
     const trimmedUsername = username.trim();
     if (!trimmedUsername || trimmedUsername.length < 1 || trimmedUsername.length > 16) {
       setError({
         type: 'VALIDATION',
-        message: t('Invalid Nickname'),
-        technical: t('Nickname must be between 1 and 16 characters'),
+        message: t('app.invalidNickname'),
+        technical: t('app.nicknameLengthError'),
         timestamp: new Date().toISOString(),
         launcherVersion: launcherVersion
       });
@@ -889,7 +977,7 @@ const App: React.FC = () => {
   const _handleCustomDirChange = async () => {
     try {
       const input = window.prompt(
-        t('Enter the full path where you want HyPrism instances stored:'),
+        t('app.enterInstancePath'),
         customInstanceDir || ''
       );
 
@@ -900,8 +988,8 @@ const App: React.FC = () => {
       if (!selectedDir) {
         setError({
           type: 'SETTINGS_ERROR',
-          message: t('Failed to change instance directory'),
-          technical: t('The path could not be used. Please check it exists and you have write permissions.'),
+          message: t('app.failedChangeDir'),
+          technical: t('app.pathError'),
           timestamp: new Date().toISOString()
         });
         return;
@@ -911,8 +999,8 @@ const App: React.FC = () => {
       console.log('Instance directory updated to:', selectedDir);
 
       window.alert(
-        t('Instance Directory Updated') + '\n\n' +
-        t('Game instances will now be stored in:\n{{dir}}\n\nNote: The following remain in AppData:\n• Java Runtime (JRE)\n• Butler tool\n• Cache files\n• Logs\n• Launcher settings\n• WebView2 (EBWebView folder)\n\nYou may need to reinstall the game if switching drives.', { dir: selectedDir })
+        t('app.instanceDirUpdated') + '\n\n' +
+        t('app.instanceDirUpdatedDetail', { dir: selectedDir })
       );
 
       // Reload version list and check installed versions for new directory
@@ -941,7 +1029,7 @@ const App: React.FC = () => {
       console.error('Failed to change instance directory:', err);
       setError({
         type: 'SETTINGS_ERROR',
-        message: t('Failed to change instance directory'),
+        message: t('app.failedChangeDir'),
         technical: err instanceof Error ? err.message : String(err),
         timestamp: new Date().toISOString()
       });

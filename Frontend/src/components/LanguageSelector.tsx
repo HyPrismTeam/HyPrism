@@ -104,7 +104,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className="w-12 h-12 rounded-xl glass border border-white/5 flex items-center justify-center text-white/60 active:scale-95 transition-all duration-150 relative group"
-                    title={t('Change Language')}
+                    title={t('languageSelector.changeLanguage')}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.color = accentColor;
                         e.currentTarget.style.backgroundColor = `${accentColor}1a`;
@@ -116,7 +116,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 >
                     <span className="font-bold text-sm">{i18n.language.split('-')[0].toUpperCase()}</span>
                     <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 text-xs bg-black/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                        {t('Change Language')}
+                        {t('languageSelector.changeLanguage')}
                     </span>
                 </button>
 
@@ -147,9 +147,9 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             {showConfirm && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-                        <h3 className="text-lg font-bold text-white mb-2">{t('Install Translation?')}</h3>
+                        <h3 className="text-lg font-bold text-white mb-2">{t('languageSelector.installTranslation')}</h3>
                         <p className="text-white/60 text-sm mb-6">
-                            {t('Would you like to search for {{lang}} translation mods?', { lang: showConfirm.langName })}
+                            {t('languageSelector.searchTranslationMods', { lang: showConfirm.langName })}
                         </p>
 
                         <div className="flex gap-3 mt-4">
@@ -157,14 +157,14 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                                 onClick={handleIgnore}
                                 className="flex-1 py-2 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20 transition-colors"
                             >
-                                {t('No')}
+                                {t('languageSelector.no')}
                             </button>
                             <button
                                 onClick={handleConfirmInstall}
                                 className="flex-1 py-2 rounded-xl text-sm font-medium shadow-lg transition-all hover:opacity-90"
                                 style={{ backgroundColor: accentColor, color: accentTextColor, boxShadow: `0 10px 15px -3px ${accentColor}33` }}
                             >
-                                {t('Yes, search')}
+                                {t('languageSelector.yesSearch')}
                             </button>
                         </div>
 
@@ -177,7 +177,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                                     className="rounded bg-white/10 border-white/20 focus:ring-offset-0"
                                     style={{ accentColor }}
                                 />
-                                {t("Don't ask again")}
+                                {t('languageSelector.dontAskAgain')}
                             </label>
                         </div>
                     </div>

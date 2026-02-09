@@ -131,7 +131,7 @@ const ConfirmModal: React.FC<{
             onClick={onCancel}
             className="flex-1 py-2 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20"
           >
-            {t('Cancel')}
+            {t('common.cancel')}
           </button>
           <button onClick={onConfirm} className={`flex-1 py-2 rounded-xl text-sm ${confirmColor}`} style={{ ...confirmStyle, color: confirmTextColor }}>
             {confirmText}
@@ -150,10 +150,10 @@ const formatDownloads = (count: number): string => {
 
 const getReleaseTypeLabel = (type: number, t: (key: string) => string) => {
   switch (type) {
-    case 1: return t('Release');
-    case 2: return t('Beta');
-    case 3: return t('Alpha');
-    default: return t('Unknown');
+    case 1: return t('modManager.releaseType.release');
+    case 2: return t('modManager.releaseType.beta');
+    case 3: return t('modManager.releaseType.alpha');
+    default: return t('modManager.releaseType.unknown');
   }
 };
 
@@ -251,19 +251,19 @@ export const ModManager: React.FC<ModManagerProps> = ({
 
   // Sort options for CurseForge API
   const sortOptions = [
-    { id: 1, name: t('Relevancy') },
-    { id: 2, name: t('Popularity') },
-    { id: 3, name: t('Latest update') },
-    { id: 11, name: t('Creation Date') },
-    { id: 6, name: t('Total Downloads') },
+    { id: 1, name: t('modManager.sortRelevancy') },
+    { id: 2, name: t('modManager.sortPopularity') },
+    { id: 3, name: t('modManager.sortLatestUpdate') },
+    { id: 11, name: t('modManager.sortCreationDate') },
+    { id: 6, name: t('modManager.sortTotalDownloads') },
   ];
 
   const instanceBranchLabel = currentBranch === GameBranch.RELEASE
-    ? t('Release')
+    ? t('modManager.releaseType.release')
     : currentBranch === GameBranch.PRE_RELEASE
-      ? t('Pre-Release')
-      : t('Release');
-  const instanceName = currentVersion === 0 ? t('latest') : `${instanceBranchLabel} v${currentVersion}`;
+      ? t('common.preRelease')
+      : t('modManager.releaseType.release');
+  const instanceName = currentVersion === 0 ? t('common.latest') : `${instanceBranchLabel} v${currentVersion}`;
 
   // Filter installed mods by search
   const filteredInstalledMods = useMemo(() => {
@@ -686,7 +686,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
     if (items.length > 0) {
       setConfirmModal({ type: 'download', items });
     } else {
-      setError(t('No downloadable files found for the selected mods.'));
+      setError(t('modManager.noDownloadableFiles'));
     }
   };
 
@@ -724,7 +724,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
           console.log(`[ModManager] Downloading ${item.name} (attempt ${attempt}/${maxRetries})`);
           const ok = await InstallModFileToInstance(String(item.id), String(item.fileId), currentBranch, currentVersion);
           if (!ok) {
-            throw new Error(t('Backend refused to install this mod. Please try again.'));
+            throw new Error(t('modManager.backendRefused'));
           }
           console.log(`[ModManager] Successfully installed ${item.name}`);
           setDownloadJobs((prev) => prev.map((j) => j.id === item.id ? { ...j, status: 'success', attempts: attempt } : j));
@@ -919,7 +919,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
   // Perform export
   const handleExport = async () => {
     if (!exportPath) {
-      setError(t('Please select an export folder'));
+      setError(t('modManager.selectExportFolder'));
       return;
     }
     
@@ -931,15 +931,15 @@ export const ModManager: React.FC<ModManagerProps> = ({
         setShowExportModal(false);
         setImportProgress(
           exportType === 'zip' 
-            ? t('Mods exported as ZIP to {{path}}').replace('{{path}}', resultPath)
-            : t('Mod list exported to {{path}}').replace('{{path}}', resultPath)
+            ? t('modManager.exportedZip').replace('{{path}}', resultPath)
+            : t('modManager.exportedList').replace('{{path}}', resultPath)
         );
         setTimeout(() => setImportProgress(null), 4000);
       } else {
-        setError(exportType === 'zip' ? t('No mod files to export') : t('No CurseForge mods to export'));
+        setError(exportType === 'zip' ? t('modManager.noModFiles') : t('modManager.noCurseForge'));
       }
     } catch (err: any) {
-      setError(err?.message || t('Failed to export mods'));
+      setError(err?.message || t('modManager.exportFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -1015,7 +1015,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
         if (file.name.endsWith('.json') && (file.name.includes('ModList') || file.name.includes('modlist'))) {
           if (hasFilePath && filePath) {
             // Use file path method
-            setImportProgress(t('Importing mod list...'));
+            setImportProgress(t('modManager.importingList'));
             console.log('[MOD MANAGER] Importing mod list from path:', filePath);
             const count = await ImportModList(filePath, currentBranch, currentVersion);
             console.log('[MOD MANAGER] Mod list imported, count:', count);
@@ -1030,7 +1030,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
         }
         // Accept any mod file (JAR, ZIP, etc.)
         else {
-          setImportProgress(t('Installing {{name}}...').replace('{{name}}', file.name));
+          setImportProgress(t('modManager.installingMod').replace('{{name}}', file.name));
           
           if (hasFilePath && filePath) {
             // Use file path method (preferred, faster)
@@ -1069,17 +1069,17 @@ export const ModManager: React.FC<ModManagerProps> = ({
         await loadInstalledMods();
         setImportProgress(
           modListImported 
-            ? t('Imported {{count}} mods').replace('{{count}}', successCount.toString())
-            : t('Installed {{count}} mod(s)').replace('{{count}}', successCount.toString())
+            ? t('modManager.importedCount').replace('{{count}}', successCount.toString())
+            : t('modManager.installedCount').replace('{{count}}', successCount.toString())
         );
         setTimeout(() => setImportProgress(null), 3000);
       } else {
         console.log('[MOD MANAGER] No mods installed, showing error');
-        setError(t('Failed to install mods. Please try again.'));
+        setError(t('modManager.installFailed'));
       }
     } catch (err: any) {
       console.error('[MOD MANAGER] Error in handleDrop:', err);
-      setError(err?.message || t('Failed to import mods'));
+      setError(err?.message || t('modManager.importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -1100,7 +1100,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
         
         // Check if it's a mod list JSON file
         if (fileName.endsWith('.json') && (fileName.includes('ModList') || fileName.includes('modlist'))) {
-          setImportProgress(t('Importing mod list...'));
+          setImportProgress(t('modManager.importingList'));
           const count = await ImportModList(filePath, currentBranch, currentVersion);
           if (count > 0) {
             successCount += count;
@@ -1109,7 +1109,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
         }
         // Accept any mod file (JAR, ZIP, etc.)
         else {
-          setImportProgress(t('Installing {{name}}...').replace('{{name}}', fileName));
+          setImportProgress(t('modManager.installingMod').replace('{{name}}', fileName));
           const success = await InstallLocalModFile(filePath, currentBranch, currentVersion);
           if (success) {
             successCount++;
@@ -1121,24 +1121,24 @@ export const ModManager: React.FC<ModManagerProps> = ({
         await loadInstalledMods();
         setImportProgress(
           modListImported 
-            ? t('Imported {{count}} mods').replace('{{count}}', successCount.toString())
-            : t('Installed {{count}} mod(s)').replace('{{count}}', successCount.toString())
+            ? t('modManager.importedCount').replace('{{count}}', successCount.toString())
+            : t('modManager.installedCount').replace('{{count}}', successCount.toString())
         );
         setTimeout(() => setImportProgress(null), 3000);
       } else {
-        setError(t('Failed to install mods. Please try again.'));
+        setError(t('modManager.installFailed'));
       }
     } catch (err: any) {
-      setError(err?.message || t('Failed to import mods'));
+      setError(err?.message || t('modManager.importFailed'));
     } finally {
       setIsImporting(false);
     }
   };
 
   const getCategoryName = () => {
-    if (selectedCategory === 0) return t('All');
+    if (selectedCategory === 0) return t('common.all');
     const cat = categories.find((c) => c.id === selectedCategory);
-    return cat ? t(cat.name) : t('All');
+    return cat ? t(cat.name) : t('common.all');
   };
 
   // Get screenshots for selected mod - check both browse mods and installed mods
@@ -1165,8 +1165,8 @@ export const ModManager: React.FC<ModManagerProps> = ({
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 rounded-2xl pointer-events-none">
             <div className="text-center">
               <Upload size={64} className="mx-auto mb-4" style={{ color: accentColor }} />
-              <p className="text-white text-xl font-bold">{t('Drop mods here')}</p>
-              <p className="text-white/60 mt-2">{t('Drag mod files or a mod list')}</p>
+              <p className="text-white text-xl font-bold">{t('modManager.dropModsHere')}</p>
+              <p className="text-white/60 mt-2">{t('modManager.dragModFiles')}</p>
             </div>
           </div>
         )}
@@ -1176,7 +1176,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
           <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 rounded-2xl">
             <div className="text-center">
               <Loader2 size={48} className="mx-auto mb-4 animate-spin" style={{ color: accentColor }} />
-              <p className="text-white text-lg">{importProgress || t('Importing...')}</p>
+              <p className="text-white text-lg">{importProgress || t('common.importing')}</p>
             </div>
           </div>
         )}
@@ -1196,7 +1196,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 onClick={handleCheckUpdates}
                 disabled={isLoadingUpdates || isDownloading}
                 className="p-2 rounded-xl hover:bg-white/10 text-green-400 hover:text-green-300 disabled:opacity-50 relative"
-                title={updateCount > 0 ? t('{{count}} updates available').replace('{{count}}', updateCount.toString()) : t('Check for updates')}
+                title={updateCount > 0 ? t('modManager.updatesAvailableCount').replace('{{count}}', updateCount.toString()) : t('modManager.checkForUpdates')}
               >
                 <RefreshCw size={20} className={isLoadingUpdates ? 'animate-spin' : ''} />
                 {updateCount > 0 && !isLoadingUpdates && (
@@ -1221,7 +1221,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                     ? t(`Download {{count}} mod(s)`).replace('{{count}}', selectedBrowseMods.size.toString())
                     : activeTab === 'installed' && selectedInstalledMods.size > 0
                       ? t(`Re-download {{count}} mod(s)`).replace('{{count}}', selectedInstalledMods.size.toString())
-                      : t('Select mods to download')
+                      : t('modManager.selectModsToDownload')
                 }
               >
                 <Download size={20} />
@@ -1233,7 +1233,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   ? 'text-red-400 hover:bg-red-500/10'
                   : 'text-white/20 cursor-not-allowed'
                   }`}
-                title={(selectedInstalledMods.size > 0 || highlightedInstalledMods.size > 0) ? t(`Delete {{count}} mod(s)`).replace('{{count}}', (selectedInstalledMods.size + highlightedInstalledMods.size).toString()) : t('Select mods to delete')}
+                title={(selectedInstalledMods.size > 0 || highlightedInstalledMods.size > 0) ? t(`Delete {{count}} mod(s)`).replace('{{count}}', (selectedInstalledMods.size + highlightedInstalledMods.size).toString()) : t('modManager.selectModsToDelete')}
               >
                 <Trash2 size={20} />
               </button>
@@ -1241,7 +1241,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 onClick={handleBrowseModFiles}
                 disabled={isImporting}
                 className={`p-2 rounded-xl hover:bg-white/10 ${isImporting ? 'text-white/20 cursor-not-allowed' : 'text-white/60 hover:text-white'}`}
-                title={t('Add Mods')}
+                title={t('modManager.addMods')}
               >
                 <FilePlus2 size={20} />
               </button>
@@ -1249,14 +1249,14 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 onClick={handleOpenExportModal}
                 disabled={installedMods.length === 0}
                 className={`p-2 rounded-xl hover:bg-white/10 ${installedMods.length > 0 ? 'text-white/60 hover:text-white' : 'text-white/20 cursor-not-allowed'}`}
-                title={t('Export Mods')}
+                title={t('modManager.exportMods')}
               >
                 <Upload size={20} />
               </button>
               <button
                 onClick={handleOpenFolder}
                 className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
-                title={t('Open Mods Folder')}
+                title={t('modManager.openModsFolder')}
               >
                 <FolderOpen size={20} />
               </button>
@@ -1277,10 +1277,10 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   <div className="flex items-center gap-3">
                     <Package size={24} style={{ color: accentColor }} />
                     <div>
-                      <h2 className="text-lg font-bold text-white">{t('Mod Manager')} <span className="text-white/50 font-normal">({instanceName})</span></h2>
+                      <h2 className="text-lg font-bold text-white">{t('modManager.title')} <span className="text-white/50 font-normal">({instanceName})</span></h2>
                       {currentProfileName && (
                         <p className="text-xs text-white/40 flex items-center gap-1">
-                          <span style={{ color: accentColor }}>●</span> {t('Profile')}: {currentProfileName}
+                          <span style={{ color: accentColor }}>●</span> {t('modManager.profile')}: {currentProfileName}
                         </p>
                       )}
                     </div>
@@ -1309,7 +1309,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
             className={`flex-1 py-3 text-sm font-medium relative  ${activeTab === 'installed' ? 'text-white bg-white/5' : 'text-white/50 hover:text-white/70 hover:bg-white/5'
               }`}
           >
-            {t('Installed Mods')} ({installedMods.length})
+            {t('modManager.installed')} ({installedMods.length})
             {activeTab === 'installed' && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: accentColor }} />}
           </button>
           <button
@@ -1322,7 +1322,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
             className={`flex-1 py-3 text-sm font-medium relative  ${activeTab === 'browse' ? 'text-white bg-white/5' : 'text-white/50 hover:text-white/70 hover:bg-white/5'
               }`}
           >
-            {t('Browse Mods')}
+            {t('modManager.browse')}
             {selectedBrowseMods.size > 0 && (
               <span className="ml-2 text-white/50">
                 {selectedBrowseMods.size}
@@ -1341,7 +1341,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 type="text"
                 value={installedSearchQuery}
                 onChange={(e) => setInstalledSearchQuery(e.target.value)}
-                placeholder={t('Search installed mods...')}
+                placeholder={t('modManager.searchInstalled')}
                 className="w-full h-10 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/40 focus:outline-none"
               />
             </div>
@@ -1357,7 +1357,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('Search mods...')}
+                placeholder={t('modManager.search')}
                 className="w-full h-10 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/40 focus:outline-none"
               />
             </div>
@@ -1386,7 +1386,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                       }`}
                     style={selectedCategory === 0 ? { color: accentColor } : undefined}
                   >
-                    {t('All Categories')}
+                    {t('modManager.allCategories')}
                   </button>
                   {categories.map((cat) => (
                     <button
@@ -1412,8 +1412,8 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
                 className="h-10 px-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm hover:border-white/20 flex items-center gap-2 min-w-[160px] whitespace-nowrap"
               >
-                <span className="text-white/50 mr-1">{t('Sort by')}</span>
-                <span className="truncate">{sortOptions.find(s => s.id === selectedSortField)?.name || t('Total Downloads')}</span>
+                <span className="text-white/50 mr-1">{t('modManager.sortBy')}</span>
+                <span className="truncate">{sortOptions.find(s => s.id === selectedSortField)?.name || t('modManager.sortTotalDownloads')}</span>
                 <ChevronDown
                   size={14}
                   className={`absolute right-3 text-white/40 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`}
@@ -1473,7 +1473,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
               ) : filteredInstalledMods.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-white/30">
                   <Package size={48} className="mb-4 opacity-50" />
-                  <p className="text-sm">{installedSearchQuery ? t('No mods match your search') : t('No mods installed')}</p>
+                  <p className="text-sm">{installedSearchQuery ? t('modManager.noMatch') : t('modManager.noModsInstalled')}</p>
                 </div>
               ) : (
                 <div className="p-3 space-y-2">
@@ -1543,7 +1543,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                             className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? '' : 'bg-transparent border-white/30 hover:border-white/50'
                               }`}
                             style={isSelected ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
-                            title={isSelected ? t('Selected') : t('Select (Shift+click for range)')}
+                            title={isSelected ? t('modManager.selected') : t('modManager.selectShift')}
                           >
                             {isSelected && <Check size={12} style={{ color: accentTextColor }} />}
                           </button>
@@ -1563,7 +1563,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                               {mod.name}
                             </p>
                             <div className="flex items-center gap-2 text-white/50 text-xs">
-                              <span>{mod.author || t('Unknown')}</span>
+                              <span>{mod.author || t('modManager.releaseType.unknown')}</span>
                               <span>•</span>
                               <span>{mod.version}</span>
                             </div>
@@ -1583,7 +1583,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
               ) : searchResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-white/40">
                   <Search size={48} className="mb-4 opacity-50" />
-                  <p className="text-lg font-medium">{t('No mods found')}</p>
+                  <p className="text-lg font-medium">{t('modManager.noModsFound')}</p>
                 </div>
               ) : (
                 <div className="p-3 space-y-2">
@@ -1663,7 +1663,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                             className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? '' : 'bg-transparent border-white/30 hover:border-white/50'
                               }`}
                             style={isSelected ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
-                            title={isSelected ? t('Selected for download') : t('Select for download (Shift+click for range)')}
+                            title={isSelected ? t('modManager.selectedForDownload') : t('modManager.selectForDownload')}
                           >
                             {isSelected && <Check size={12} style={{ color: accentTextColor }} />}
                           </button>
@@ -1693,12 +1693,12 @@ export const ModManager: React.FC<ModManagerProps> = ({
                               </button>
                               {isInstalled && (
                                 <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400 flex-shrink-0">
-                                  {t('Installed')}
+                                  {t('modManager.installedBadge')}
                                 </span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 text-white/50 text-xs mt-1">
-                              <span>{mod.author || mod.authors?.[0]?.name || t('Unknown')}</span>
+                              <span>{mod.author || mod.authors?.[0]?.name || t('modManager.releaseType.unknown')}</span>
                               <span>•</span>
                               <span>
                                 <Download size={10} className="inline mr-1" />
@@ -1775,16 +1775,16 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                   {/* Description */}
                   <div>
-                    <h4 className="text-white/50 text-xs uppercase mb-2">{t('Description')}</h4>
+                    <h4 className="text-white/50 text-xs uppercase mb-2">{t('modManager.description')}</h4>
                     <p className="text-white/70 text-sm">
-                      {'summary' in selectedMod ? selectedMod.summary : 'description' in selectedMod ? selectedMod.description : t('No description')}
+                      {'summary' in selectedMod ? selectedMod.summary : 'description' in selectedMod ? selectedMod.description : t('modManager.noDescription')}
                     </p>
                   </div>
 
                   {/* Screenshots - show for all mods */}
                   {screenshots && screenshots.length > 0 && (
                     <div>
-                      <h4 className="text-white/50 text-xs uppercase mb-2">{t('Screenshots')}</h4>
+                      <h4 className="text-white/50 text-xs uppercase mb-2">{t('modManager.screenshots')}</h4>
                       <div className="relative">
                         <button
                           onClick={() => setFullscreenImage({
@@ -1793,7 +1793,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           })}
                           className="w-full h-40 rounded-xl overflow-hidden bg-black/30 cursor-pointer hover:ring-2 transition-all"
                           style={{ '--tw-ring-color': `${accentColor}80` } as React.CSSProperties}
-                          title={t('Click to view full image')}
+                          title={t('modManager.clickToViewImage')}
                         >
                           <img
                             src={screenshots[activeScreenshot]?.url}
@@ -1835,14 +1835,14 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 <div className="p-4 border-t border-white/10 space-y-3 flex-shrink-0">
                   {/* Version Selector Dropdown */}
                   <div>
-                    <h4 className="text-white/50 text-xs uppercase mb-2">{t('Version selected:')}</h4>
+                    <h4 className="text-white/50 text-xs uppercase mb-2">{t('modManager.versionSelected')}</h4>
                     {isLoadingModFiles ? (
                       <div className="flex items-center gap-2 text-white/40">
                         <Loader2 size={14} className="animate-spin" />
-                        <span className="text-sm">{t('Loading versions...')}</span>
+                        <span className="text-sm">{t('modManager.loadingVersions')}</span>
                       </div>
                     ) : selectedModFiles.length === 0 ? (
-                      <p className="text-white/40 text-sm">{t('No versions available')}</p>
+                      <p className="text-white/40 text-sm">{t('modManager.noVersionsAvailable')}</p>
                     ) : (
                       <div className="relative">
                         <select
@@ -1931,14 +1931,14 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           const allHighlightedSelected = isCurrentModSelected &&
                             Array.from(highlightedInstalledMods).every(id => selectedInstalledMods.has(id));
                           return allHighlightedSelected
-                            ? t('Unselect {{count}} mods').replace('{{count}}', totalCount.toString())
-                            : t('Select {{count}} mods').replace('{{count}}', totalCount.toString());
+                            ? t('modManager.unselectCountMods').replace('{{count}}', totalCount.toString())
+                            : t('modManager.selectCountMods').replace('{{count}}', totalCount.toString());
                         })()
                         : selectedInstalledMods.has((selectedMod as Mod).id)
                           ? selectedInstalledMods.size > 1
-                            ? t('Unselect all ({{count}})').replace('{{count}}', selectedInstalledMods.size.toString())
-                            : t('Unselect mod')
-                          : t('Select mod')}
+                            ? t('modManager.unselectAllCount').replace('{{count}}', selectedInstalledMods.size.toString())
+                            : t('modManager.unselectMod')
+                          : t('modManager.selectMod')}
                     </button>
                   ) : (
                     // Browse mod - toggle selection (also handles highlighted mods)
@@ -2004,14 +2004,14 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           const allHighlightedSelected = isCurrentModSelected &&
                             Array.from(highlightedBrowseMods).every(id => selectedBrowseMods.has(id));
                           return allHighlightedSelected
-                            ? t('Unselect {{count}} mods').replace('{{count}}', totalCount.toString())
-                            : t('Select {{count}} mods for download').replace('{{count}}', totalCount.toString());
+                            ? t('modManager.unselectCountMods').replace('{{count}}', totalCount.toString())
+                            : t('modManager.selectCountForDownload').replace('{{count}}', totalCount.toString());
                         })()
                         : selectedBrowseMods.has((selectedMod as CurseForgeMod).id)
                           ? selectedBrowseMods.size > 1
-                            ? t('Unselect all ({{count}})').replace('{{count}}', selectedBrowseMods.size.toString())
-                            : t('Unselect mod')
-                          : t('Select mod for download')}
+                            ? t('modManager.unselectAllCount').replace('{{count}}', selectedBrowseMods.size.toString())
+                            : t('modManager.unselectMod')
+                          : t('modManager.selectModForDownload')}
                     </button>
                   )}
                 </div>
@@ -2020,7 +2020,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
               // Empty state when no mod selected
               <div className="h-full flex flex-col items-center justify-center text-white/30">
                 <Package size={48} className="mb-4 opacity-50" />
-                <p className="text-sm">{t('Select a mod to view details')}</p>
+                <p className="text-sm">{t('modManager.selectModToView')}</p>
               </div>
             )}
           </div>
@@ -2036,7 +2036,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
           />
           <div className="relative bg-[#1a1a1a]/95 rounded-2xl border border-white/10 w-full max-w-lg mx-4 overflow-hidden">
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">{t('Check for Updates')}</h3>
+              <h3 className="text-lg font-bold text-white">{t('modManager.checkForUpdates')}</h3>
               <button
                 onClick={() => setShowUpdatesModal(false)}
                 className="p-1 hover:bg-white/10 rounded-lg"
@@ -2053,17 +2053,17 @@ export const ModManager: React.FC<ModManagerProps> = ({
               ) : installedMods.length === 0 ? (
                 <div className="text-center py-8 text-white/50">
                   <Package size={40} className="mx-auto mb-3 opacity-50" />
-                  <p>{t('No mods installed')}</p>
+                  <p>{t('modManager.noModsInstalled')}</p>
                 </div>
               ) : modsWithUpdates.length === 0 ? (
                 <div className="text-center py-8 text-white/50">
                   <Check size={40} className="mx-auto mb-3 text-green-400" />
-                  <p className="text-green-400 font-medium">{t('All mods are up to date!')}</p>
+                  <p className="text-green-400 font-medium">{t('modManager.allUpToDate')}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <p className="text-white/50 text-sm mb-3">
-                    {t('{{count}} mod(s) have updates available:').replace('{{count}}', modsWithUpdates.length.toString())}
+                    {t('modManager.updatesAvailable').replace('{{count}}', modsWithUpdates.length.toString())}
                   </p>
                   {modsWithUpdates.map((mod) => (
                     <div
@@ -2094,7 +2094,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           }
                         }}
                         className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white flex-shrink-0"
-                        title={t('View changelog')}
+                        title={t('modManager.viewChangelog')}
                       >
                         <FileText size={14} />
                       </button>
@@ -2109,7 +2109,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 onClick={() => setShowUpdatesModal(false)}
                 className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-medium hover:bg-white/20"
               >
-                {t('Close')}
+                {t('common.close')}
               </button>
               {modsWithUpdates.length > 0 && (
                 <button
@@ -2120,12 +2120,12 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   {isDownloading ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      {t('Updating...')}
+                      {t('modManager.updating')}
                     </>
                   ) : (
                     <>
                       <ArrowUpCircle size={14} />
-                      {t('Update All')} ({modsWithUpdates.length})
+                      {t('modManager.updateAll')} ({modsWithUpdates.length})
                     </>
                   )}
                 </button>
@@ -2138,13 +2138,13 @@ export const ModManager: React.FC<ModManagerProps> = ({
       {/* Confirmation Modal */}
       {confirmModal && (
         <ConfirmModal
-          title={confirmModal.type === 'download' ? t('Download Mods') : t('Delete Mods')}
+          title={confirmModal.type === 'download' ? t('modManager.downloadMods') : t('modManager.deleteMods')}
           message={
             confirmModal.type === 'download'
-              ? t('Are you sure you want to download {{count}} mod(s)?').replace('{{count}}', confirmModal.items.length.toString())
-              : t('Are you sure you want to delete {{count}} mod(s)? This cannot be undone.').replace('{{count}}', confirmModal.items.length.toString())
+              ? t('modManager.confirmDownload').replace('{{count}}', confirmModal.items.length.toString())
+              : t('modManager.confirmDelete').replace('{{count}}', confirmModal.items.length.toString())
           }
-          confirmText={confirmModal.type === 'download' ? t('Download') : t('Delete')}
+          confirmText={confirmModal.type === 'download' ? t('modManager.download') : t('common.delete')}
           confirmColor={confirmModal.type === 'download' ? 'hover:opacity-90' : 'bg-red-500 hover:bg-red-600'}
           confirmStyle={confirmModal.type === 'download' ? { backgroundColor: accentColor } : undefined}
           confirmTextColor={confirmModal.type === 'download' ? accentTextColor : undefined}
@@ -2168,9 +2168,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
             <div className="flex items-center gap-3 mb-4">
               <Loader2 size={24} className="animate-spin" style={{ color: accentColor }} />
               <div>
-                <h3 className="text-white font-semibold">{t('Downloading Mods')}</h3>
+                <h3 className="text-white font-semibold">{t('modManager.downloadingMods')}</h3>
                 <p className="text-white/60 text-sm">
-                  {downloadProgress.current} {t('of')} {downloadProgress.total}
+                  {downloadProgress.current} {t('modManager.of')} {downloadProgress.total}
                 </p>
               </div>
             </div>
@@ -2232,7 +2232,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 </span>
               )}
               <span className="px-3 py-1 rounded-lg bg-black/40 text-white/70 text-sm shadow-md shadow-black/30">
-                {t('Click anywhere to close')}
+                {t('modManager.clickToClose')}
               </span>
             </div>
         </div>
@@ -2243,7 +2243,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60]">
           <div className="bg-[#1a1a1a] rounded-2xl border border-white/10 p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">{t('Export Mods')}</h3>
+              <h3 className="text-xl font-bold text-white">{t('modManager.exportMods')}</h3>
               <button
                 onClick={() => setShowExportModal(false)}
                 className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
@@ -2254,7 +2254,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
 
             {/* Export Type */}
             <div className="mb-4">
-              <label className="block text-white/60 text-sm mb-2">{t('Export Type')}</label>
+              <label className="block text-white/60 text-sm mb-2">{t('modManager.exportType.title')}</label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setExportType('modlist')}
@@ -2266,8 +2266,8 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   style={exportType === 'modlist' ? { borderColor: accentColor, backgroundColor: `${accentColor}20` } : undefined}
                 >
                   <FileText size={20} className="mx-auto mb-1" style={exportType === 'modlist' ? { color: accentColor } : { color: 'rgba(255,255,255,0.6)' }} />
-                  <div className="text-sm text-white font-medium">{t('Mod List')}</div>
-                  <div className="text-xs text-white/40">{t('JSON file for re-downloading')}</div>
+                  <div className="text-sm text-white font-medium">{t('modManager.exportType.modList')}</div>
+                  <div className="text-xs text-white/40">{t('modManager.exportType.modListHint')}</div>
                 </button>
                 <button
                   onClick={() => setExportType('zip')}
@@ -2279,21 +2279,21 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   style={exportType === 'zip' ? { borderColor: accentColor, backgroundColor: `${accentColor}20` } : undefined}
                 >
                   <Package size={20} className="mx-auto mb-1" style={exportType === 'zip' ? { color: accentColor } : { color: 'rgba(255,255,255,0.6)' }} />
-                  <div className="text-sm text-white font-medium">{t('ZIP Archive')}</div>
-                  <div className="text-xs text-white/40">{t('All mod files bundled')}</div>
+                  <div className="text-sm text-white font-medium">{t('modManager.exportType.zipArchive')}</div>
+                  <div className="text-xs text-white/40">{t('modManager.exportType.zipArchiveHint')}</div>
                 </button>
               </div>
             </div>
 
             {/* Export Folder */}
             <div className="mb-6">
-              <label className="block text-white/60 text-sm mb-2">{t('Export Folder')}</label>
+              <label className="block text-white/60 text-sm mb-2">{t('modManager.exportType.exportFolder')}</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={exportPath}
                   onChange={(e) => setExportPath(e.target.value)}
-                  placeholder={t('Select export folder...')}
+                  placeholder={t('modManager.exportType.selectFolder')}
                   className="flex-1 px-4 py-2 bg-[#252525] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-white/30"
                 />
                 <button
@@ -2319,10 +2319,10 @@ export const ModManager: React.FC<ModManagerProps> = ({
               {isExporting ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 size={20} className="animate-spin" />
-                  {t('Exporting...')}
+                  {t('common.exporting')}
                 </span>
               ) : (
-                t('Export')
+                t('common.export')
               )}
             </button>
           </div>

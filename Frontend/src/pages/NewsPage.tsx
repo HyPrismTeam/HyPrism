@@ -92,8 +92,8 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
         transition={{ duration: 0.3 }} className="h-full flex items-center justify-center">
         <div className="text-center">
           <Newspaper size={48} className="text-white/20 mx-auto mb-4" />
-          <p className="text-white/40 text-lg">{t('News is disabled')}</p>
-          <p className="text-white/25 text-sm mt-2">{t('Enable news in Settings')}</p>
+          <p className="text-white/40 text-lg">{t('news.disabled')}</p>
+          <p className="text-white/25 text-sm mt-2">{t('news.enableInSettings')}</p>
         </div>
       </motion.div>
     );
@@ -112,7 +112,7 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Newspaper size={22} className="text-white/80" />
-          <h1 className="text-xl font-bold text-white">{t('News')}</h1>
+          <h1 className="text-xl font-bold text-white">{t('news.title')}</h1>
           {isRefreshing && <RefreshCw size={14} className="animate-spin text-white/40" />}
         </div>
 
@@ -134,7 +134,7 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
                 border: '1px solid rgba(255,255,255,0.08)',
               }}
             >
-              {f === 'all' ? t('All') : f === 'hytale' ? t('Hytale') : t('HyPrism')}
+              {f === 'all' ? t('news.all') : f === 'hytale' ? t('news.hytale') : t('news.hyprism')}
             </button>
           ))}
         </div>
@@ -151,13 +151,13 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
             <p className="text-red-400 mb-4">{error}</p>
             <button onClick={() => fetchNews(limit, true)}
               className="px-6 py-2 bg-white/10 hover:bg-white/15 rounded-xl transition-colors">
-              {t('Try Again')}
+              {t('news.tryAgain')}
             </button>
           </div>
         </div>
       ) : filteredNews.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-white/40">{t('No news found')}</p>
+          <p className="text-white/40">{t('news.noNewsFound')}</p>
         </div>
       ) : (
         <div ref={scrollRef} onScroll={handleScroll}
@@ -257,7 +257,7 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
               className="font-semibold hover:underline cursor-pointer text-xs"
               style={{ color: accentColor }}
             >
-              {t('Read more on hytale.com')} →
+              {t('news.readMore')} →
             </button>
           </div>
         </div>

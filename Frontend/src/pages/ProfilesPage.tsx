@@ -31,7 +31,7 @@ export const ProfilesPage: React.FC<ProfilesPageProps> = ({ onProfileUpdate }) =
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Users size={22} className="text-white/80" />
-          <h1 className="text-xl font-bold text-white">{t('Profiles')}</h1>
+          <h1 className="text-xl font-bold text-white">{t('profiles.title')}</h1>
         </div>
       </div>
 

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderOpen, Play, Package, Square, Settings, Loader2, Download, ChevronDown, Check, X, GitBranch, RefreshCw, Copy } from 'lucide-react';
-import { CoffeeIcon } from './CoffeeIcon';
-import { OnlineToggle } from './OnlineToggle';
+import { CoffeeIcon } from './icons/CoffeeIcon';
+import { OnlineToggle } from './icons/OnlineToggle';
 import { ipc } from '@/lib/ipc';
 import { GameBranch } from '../constants/enums';
 import { useAccentColor } from '../contexts/AccentColorContext';
@@ -154,10 +154,10 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
   };
 
   const branchLabel = currentBranch === GameBranch.RELEASE
-    ? t('Release')
+    ? t('common.release')
     : currentBranch === GameBranch.PRE_RELEASE
-      ? t('Pre-Release')
-      : t('Release');
+      ? t('common.preRelease')
+      : t('common.release');
 
   // Use auto width to accommodate different translation lengths
   // min-w ensures it doesn't get too small
@@ -224,7 +224,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
                 >
                   {currentBranch === branch && <Check size={14} className="text-white" strokeWidth={3} />}
                   <span className={currentBranch === branch ? '' : 'ml-[22px]'}>
-                    {branch === GameBranch.RELEASE ? t('Release') : t('Pre-Release')}
+                    {branch === GameBranch.RELEASE ? t('common.release') : t('common.preRelease')}
                   </span>
                 </button>
               ))}
@@ -256,7 +256,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
             }}
           >
             <span className="text-sm font-medium">
-              {isLoadingVersions ? '...' : currentVersion === 0 ? t('latest') : `v${currentVersion}`}
+              {isLoadingVersions ? '...' : currentVersion === 0 ? t('common.latest') : `v${currentVersion}`}
             </span>
             <ChevronDown
               size={12}
@@ -287,13 +287,13 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
                         <span className="w-[14px]" />
                       )}
                       <span>
-                        {version === 0 ? t('latest') : `v${version}`}
+                        {version === 0 ? t('common.latest') : `v${version}`}
                       </span>
                     </button>
                   );
                 })
               ) : (
-                <div className="px-3 py-2 text-sm text-white/40">{t('No versions')}</div>
+                <div className="px-3 py-2 text-sm text-white/40">{t('main.noVersions')}</div>
               )}
             </div>
           )}
@@ -302,9 +302,9 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
 
       {/* Row 2: Nav buttons */}
       <div className="flex gap-2 items-center flex-wrap">
-        <NavBtn onClick={() => actions.showModManager()} icon={<Package size={18} />} tooltip={t('Mod Manager')} accentColor={accentColor} />
-        <NavBtn onClick={actions.openFolder} icon={<FolderOpen size={18} />} tooltip={t('Open Instance Folder')} accentColor={accentColor} />
-        <NavBtn onClick={onOpenSettings} icon={<Settings size={18} />} tooltip={t('Settings')} accentColor={accentColor} />
+        <NavBtn onClick={() => actions.showModManager()} icon={<Package size={18} />} tooltip={t('main.modManager')} accentColor={accentColor} />
+        <NavBtn onClick={actions.openFolder} icon={<FolderOpen size={18} />} tooltip={t('main.openInstanceFolder')} accentColor={accentColor} />
+        <NavBtn onClick={onOpenSettings} icon={<Settings size={18} />} tooltip={t('main.settings')} accentColor={accentColor} />
         <OnlineToggle accentColor={accentColor} />
         <button
           tabIndex={-1}
@@ -315,14 +315,14 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
             '--accent-bg': `${accentColor}1a`
           } as React.CSSProperties}
         >
-          <span className="text-xs">{t('Buy me a')}</span>
+          <span className="text-xs">{t('main.buyMeA')}</span>
           <CoffeeIcon size={20} />
         </button>
 
         {/* Spacer + Disclaimer in center */}
         <div className="flex-1 flex justify-center min-w-0">
           <p className="text-white/40 text-xs whitespace-nowrap truncate">
-            {t('Educational only.')} {t('Like it?')} <button onClick={() => ipc.browser.open('https://hytale.com')} className="font-semibold hover:underline cursor-pointer" style={{ color: accentColor }}>{t('BUY IT')}</button>
+            {t('main.educationalOnly')} {t('main.likeIt')} <button onClick={() => ipc.browser.open('https://hytale.com')} className="font-semibold hover:underline cursor-pointer" style={{ color: accentColor }}>{t('main.buyIt')}</button>
           </p>
         </div>
 
@@ -335,7 +335,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
               className="h-12 px-6 rounded-xl font-black text-base tracking-tight flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 text-white hover:shadow-lg hover:shadow-red-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
             >
               <Square size={16} fill="currentColor" />
-              <span>{t('EXIT')}</span>
+              <span>{t('main.exit')}</span>
             </button>
           ) : isDownloading ? (
             <div 
@@ -355,16 +355,16 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
               {showCancelButton && canCancel && onCancelDownload ? (
                 <div className="relative z-10 flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
                   <X size={16} />
-                  <span className="text-xs font-bold">{t('CANCEL')}</span>
+                  <span className="text-xs font-bold">{t('main.cancel')}</span>
                 </div>
               ) : (
                 <div className="relative z-10 flex flex-col items-center justify-center gap-0.5">
                   <div className="flex items-center gap-2">
                     <Loader2 size={12} className="animate-spin text-white flex-shrink-0" />
                     <span className="text-[10px] font-bold text-white uppercase">
-                      {downloadState === 'downloading' && t('Downloading...')}
-                      {downloadState === 'extracting' && t('Extracting...')}
-                      {downloadState === 'launching' && t('Launching...')}
+                      {downloadState === 'downloading' && t('update.downloading')}
+                      {downloadState === 'extracting' && t('update.extracting')}
+                      {downloadState === 'launching' && t('update.launching')}
                     </span>
                     <span className="text-xs font-mono text-white/80 flex-shrink-0">{Math.min(Math.round(progress), 100)}%</span>
                   </div>
@@ -383,7 +383,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
               className="h-12 px-5 rounded-xl font-black text-base tracking-tight flex items-center justify-center gap-2 bg-white/10 text-white/50 cursor-not-allowed"
             >
               <Loader2 size={16} className="animate-spin" />
-              <span>{t('CHECKING...')}</span>
+              <span>{t('main.checking')}</span>
             </button>
           ) : isVersionInstalled && versionStatus?.status === 'update_available' && currentVersion === 0 ? (
             // Show UPDATE button when latest instance needs an update
@@ -399,7 +399,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
                 } transition-all duration-150`}
               >
                 <RefreshCw size={16} className={isDownloading ? 'animate-spin' : ''} />
-                <span>{t('UPDATE')}</span>
+                <span>{t('main.update')}</span>
               </button>
               <button
                 tabIndex={-1}
@@ -415,7 +415,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
                 }}
               >
                 <Play size={16} fill="currentColor" />
-                <span>{t('PLAY')}</span>
+                <span>{t('main.play')}</span>
               </button>
             </div>
           ) : isVersionInstalled ? (
@@ -430,7 +430,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
               }}
             >
               <Play size={18} fill="currentColor" />
-              <span>{t('PLAY')}</span>
+              <span>{t('main.play')}</span>
             </button>
           ) : currentVersion > 0 && versionStatus?.installedVersion === currentVersion ? (
             // Show DUPLICATE button for historical versions that can be duplicated from latest
@@ -440,7 +440,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
               className="h-12 px-4 rounded-xl font-black text-base tracking-tight flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:shadow-lg hover:shadow-purple-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
             >
               <Copy size={16} />
-              <span>{t('DUPLICATE')}</span>
+              <span>{t('main.duplicate')}</span>
             </button>
           ) : (
             <button
@@ -449,7 +449,7 @@ export const ControlSection: React.FC<ControlSectionProps> = memo(({
               className="h-12 px-6 rounded-xl font-black text-base tracking-tight flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
             >
               <Download size={16} />
-              <span>{t('DOWNLOAD')}</span>
+              <span>{t('main.download')}</span>
             </button>
           )}
         </div>

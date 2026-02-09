@@ -131,12 +131,12 @@ export const DiscordAnnouncement: React.FC<DiscordAnnouncementProps> = ({ onDism
           <div className="flex items-center justify-between px-4 py-3 bg-[#5865F2]/20 border-b border-white/5">
             <div className="flex items-center gap-2">
               <MessageCircle size={18} className="text-[#5865F2]" />
-              <span className="text-sm font-semibold text-white/90">{t('Announcement')}</span>
+              <span className="text-sm font-semibold text-white/90">{t('discord.announcement')}</span>
             </div>
             <button
               onClick={handleDismiss}
               className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-              title={t('Dismiss')}
+              title={t('common.dismiss')}
             >
               <X size={16} className="text-white/60" />
             </button>
@@ -216,7 +216,7 @@ export const DiscordAnnouncement: React.FC<DiscordAnnouncementProps> = ({ onDism
                 title="Report a Bug"
               >
                 <Bug size={14} />
-                {t('Bug Report')}
+                {t('settings.aboutSettings.bugReport')}
               </button>
               <button
                 onClick={() => ipc.browser.open('https://buymeacoffee.com/hyprism')}
@@ -241,7 +241,7 @@ export const DiscordAnnouncement: React.FC<DiscordAnnouncementProps> = ({ onDism
                 {showAnnouncements && <Check size={14} className="text-white" />}
               </div>
               <span className="text-xs text-white/60">
-                {t('Show announcements')}
+                {t('discord.showAnnouncements')}
               </span>
             </label>
           </div>

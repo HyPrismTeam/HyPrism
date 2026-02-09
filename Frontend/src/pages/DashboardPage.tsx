@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Play, Square, Download, Loader2, X, GitBranch, ChevronDown, Check, RefreshCw, Copy, Edit3, User } from 'lucide-react';
+import { Play, Download, Loader2, X, GitBranch, ChevronDown, Check, RefreshCw, Copy, Edit3, User } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import { ipc } from '@/lib/ipc';
 import { GameBranch } from '../constants/enums';
@@ -119,16 +119,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     return translated !== stateKey ? translated : (props.launchState || t('launch.state.preparing'));
   };
 
+  // Check if selectors should be hidden (during download/launch or game running)
+  const shouldHideSelectors = props.isDownloading || props.isGameRunning;
+
   // Render the action section of the merged play button
   const renderActionButton = () => {
     if (props.isGameRunning) {
       return (
         <button
-          onClick={props.onExit}
-          className="h-full px-8 flex items-center gap-2 font-black text-base tracking-tight bg-gradient-to-r from-red-600 to-red-500 text-white rounded-r-2xl hover:brightness-110 active:scale-[0.98] transition-all"
+          disabled
+          className="h-full px-8 flex items-center gap-2 font-black text-base tracking-tight bg-gradient-to-r from-red-600 to-red-500 text-white rounded-r-2xl cursor-not-allowed opacity-90"
         >
-          <Square size={16} fill="currentColor" />
-          <span>{t('main.exit')}</span>
+          <Loader2 size={16} className="animate-spin" />
+          <span>{t('main.running')}</span>
         </button>
       );
     }
@@ -341,12 +344,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           className="flex flex-col items-center gap-3"
         >
           <img src={hytaleLogo} alt="Hytale" className="h-28 drop-shadow-2xl" />
-          <p className="text-white/35 text-xs">
-            {t('main.educational')}{' '}
-            <button onClick={() => ipc.browser.open('https://hytale.com')} className="font-semibold hover:underline cursor-pointer" style={{ color: accentColor }}>
-              {t('main.buyIt')}
-            </button>
-          </p>
         </motion.div>
 
         {/* Merged Branch/Version/Play Button */}
@@ -354,24 +351,98 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           initial={{ y: 16 }}
           animate={{ y: 0 }}
           transition={{ delay: 0.35, duration: 0.4, ease: 'easeOut' }}
-          className="relative"
+          className="flex flex-col items-center"
         >
-          <div
-            className="flex items-center h-14 rounded-2xl overflow-hidden glass-bar-dashboard"
-          >
-            {/* Branch Selector */}
-            <div ref={branchRef} className="relative h-full">
-              <button
-                onClick={() => { setIsBranchOpen(!isBranchOpen); setIsVersionOpen(false); }}
-                disabled={props.isLoadingVersions}
-                className="h-full px-4 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-              >
-                <GitBranch size={14} className="text-white/70" />
-                <span className="text-sm font-medium">{branchLabel}</span>
-                <ChevronDown size={11} className={`text-white/40 transition-transform ${isBranchOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {isBranchOpen && (
-                <div className="absolute bottom-full left-0 mb-2 z-[100] min-w-[140px] bg-[#1a1a1a] backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden p-1">
+          {/* Button bar with relative positioning for dropdowns */}
+          <div className="relative mt-7">
+            {/* Educational label */}
+            <AnimatePresence>
+              {!shouldHideSelectors && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute bottom-full flex w-full justify-center"
+                >
+                  <div className="bg-black/40 backdrop-blur-sm rounded-t-lg px-4 py-1.5 border-x border-t border-white/5">
+                    <p className="text-white/40 text-[11px] whitespace-nowrap text-center">
+                      {t('main.educational')}{' '}
+                      <button
+                        onClick={() => ipc.browser.open('https://hytale.com')}
+                        className="font-semibold hover:underline cursor-pointer"
+                        style={{ color: accentColor }}
+                      >
+                        {t('main.buyIt')}
+                      </button>
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div
+              className="flex items-center h-14 rounded-2xl overflow-hidden glass-bar-dashboard"
+            >
+              {/* Branch & Version Selectors - hidden during download/game running */}
+              <AnimatePresence mode="wait">
+                {!shouldHideSelectors && (
+                  <motion.div
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="flex items-center h-full overflow-hidden"
+                  >
+                    {/* Branch Selector Button */}
+                    <div ref={branchRef} className="h-full">
+                      <button
+                        onClick={() => { setIsBranchOpen(!isBranchOpen); setIsVersionOpen(false); }}
+                        disabled={props.isLoadingVersions}
+                        className="h-full px-4 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+                      >
+                        <GitBranch size={14} className="text-white/70" />
+                        <span className="text-sm font-medium">{branchLabel}</span>
+                        <ChevronDown size={11} className={`text-white/40 transition-transform ${isBranchOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+
+                    <div className="w-px h-7 bg-white/10" />
+
+                    {/* Version Selector Button */}
+                    <div ref={versionRef} className="h-full">
+                      <button
+                        onClick={() => { setIsVersionOpen(!isVersionOpen); setIsBranchOpen(false); }}
+                        disabled={props.isLoadingVersions}
+                        className="h-full px-4 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+                      >
+                        <span className="text-sm font-medium">
+                          {props.isLoadingVersions ? '...' : props.currentVersion === 0 ? t('main.latest') : `v${props.currentVersion}`}
+                        </span>
+                        <ChevronDown size={11} className={`text-white/40 transition-transform ${isVersionOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+
+                    <div className="w-px h-7 bg-white/10" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Action Button (Play/Download/Update/Exit) - fixed width to prevent jumping */}
+              <div className="min-w-[140px] h-full flex items-center justify-end">
+                {renderActionButton()}
+              </div>
+            </div>
+
+            {/* Dropdown Menus - positioned relative to the button bar */}
+            <AnimatePresence>
+              {!shouldHideSelectors && isBranchOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 mt-2 z-[100] min-w-[140px] bg-[#1a1a1a] backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden p-1"
+                >
                   {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
                     <button
                       key={branch}
@@ -387,26 +458,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                       </span>
                     </button>
                   ))}
-                </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
 
-            <div className="w-px h-7 bg-white/10" />
-
-            {/* Version Selector */}
-            <div ref={versionRef} className="relative h-full">
-              <button
-                onClick={() => { setIsVersionOpen(!isVersionOpen); setIsBranchOpen(false); }}
-                disabled={props.isLoadingVersions}
-                className="h-full px-4 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-              >
-                <span className="text-sm font-medium">
-                  {props.isLoadingVersions ? '...' : props.currentVersion === 0 ? t('main.latest') : `v${props.currentVersion}`}
-                </span>
-                <ChevronDown size={11} className={`text-white/40 transition-transform ${isVersionOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {isVersionOpen && (
-                <div className="absolute bottom-full right-0 mb-2 z-[100] min-w-[120px] max-h-60 overflow-y-auto bg-[#1a1a1a] backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/50 p-1">
+            <AnimatePresence>
+              {!shouldHideSelectors && isVersionOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 mt-2 z-[100] min-w-[140px] max-h-[168px] overflow-y-auto bg-[#1a1a1a] backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/50 p-1"
+                >
                   {props.availableVersions.length > 0 ? (
                     props.availableVersions.map((version) => {
                       const isInstalled = props.installedVersions.includes(version);
@@ -421,7 +485,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                           {isInstalled ? (
                             <Check size={14} className={isSelected ? '' : 'text-green-400'} style={isSelected ? { color: accentColor } : undefined} strokeWidth={3} />
                           ) : (
-                            <span className="w-[14px]" />
+                            <Download size={14} className="text-white/40" />
                           )}
                           <span>{version === 0 ? t('main.latest') : `v${version}`}</span>
                         </button>
@@ -430,42 +494,45 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   ) : (
                     <div className="px-3 py-2 text-sm text-white/40">{t('main.noVersions')}</div>
                   )}
-                </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
 
-            <div className="w-px h-7 bg-white/10" />
-
-            {/* Action Button (Play/Download/Update/Exit) - fixed width to prevent jumping */}
-            <div className="min-w-[140px] h-full flex items-center justify-end">
-              {renderActionButton()}
-            </div>
+            {/* Progress Bar - only show when downloading and NOT in complete state */}
+            <AnimatePresence>
+              {props.isDownloading && props.launchState !== 'complete' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full mt-2 w-full"
+                >
+                  <div className="bg-black/60 backdrop-blur-md rounded-xl px-3 py-2 border border-white/5">
+                    {/* Progress bar container */}
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: accentColor }}
+                      />
+                    </div>
+                    {/* Info row: launchDetail on left, bytes on right */}
+                    <div className="flex justify-between items-center mt-1.5 text-[10px]">
+                      <span className="text-white/60 truncate max-w-[250px]">
+                        {props.launchDetail ? (t(props.launchDetail) !== props.launchDetail ? t(props.launchDetail) : props.launchDetail) : getLaunchStateLabel()}
+                      </span>
+                      <span className="text-white/50 font-mono">
+                        {props.total > 0
+                          ? `${formatBytes(props.downloaded)} / ${formatBytes(props.total)}`
+                          : `${Math.min(Math.round(props.progress), 100)}%`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          {/* Progress Bar (shown when downloading) - absolute positioned */}
-          {props.isDownloading && (
-            <div className="absolute top-full left-0 right-0 mt-2 px-1">
-              {/* Progress bar container */}
-              <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: accentColor }}
-                />
-              </div>
-              {/* Info row: launchDetail on left, bytes on right */}
-              <div className="flex justify-between items-center mt-1.5 text-[10px]">
-                <span className="text-white/50 truncate max-w-[250px]">
-                  {props.launchDetail ? (t(props.launchDetail) !== props.launchDetail ? t(props.launchDetail) : props.launchDetail) : getLaunchStateLabel()}
-                </span>
-                <span className="text-white/40 font-mono">
-                  {props.total > 0 
-                    ? `${formatBytes(props.downloaded)} / ${formatBytes(props.total)}`
-                    : `${Math.min(Math.round(props.progress), 100)}%`
-                  }
-                </span>
-              </div>
-            </div>
-          )}
         </motion.div>
       </div>
 

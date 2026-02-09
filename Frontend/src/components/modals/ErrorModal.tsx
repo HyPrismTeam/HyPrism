@@ -89,7 +89,7 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
               <AlertTriangle size={20} className="text-red-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">{t('Error Occurred')}</h2>
+              <h2 className="text-lg font-bold text-white">{t('error.title')}</h2>
               <span className={`text-xs font-medium ${getErrorColor(error.type)}`}>
                 {error.type}
               </span>
@@ -119,7 +119,7 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
           <div className="flex items-center justify-between text-xs text-gray-500">
             {error.timestamp && (
               <p>
-                {t('Occurred at:')} {new Date(error.timestamp).toLocaleString()}
+                {t('error.occurredAt')} {new Date(error.timestamp).toLocaleString()}
               </p>
             )}
             {error.launcherVersion && (
@@ -138,14 +138,14 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 transition-colors text-sm"
             >
               <Copy size={14} />
-              {copied ? t('Copied!') : t('Copy Error')}
+              {copied ? t('common.copied') : t('error.copyError')}
             </button>
             <button
               onClick={reportIssue}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors text-sm"
             >
               <Bug size={14} />
-              {t('Report Issue')}
+              {t('error.reportIssue')}
             </button>
           </div>
 
@@ -155,13 +155,13 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 transition-colors text-sm"
             >
               <RefreshCw size={14} />
-              {t('Reload')}
+              {t('common.reload')}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors font-medium text-sm"
             >
-              {t('Dismiss')}
+              {t('common.dismiss')}
             </button>
           </div>
         </div>

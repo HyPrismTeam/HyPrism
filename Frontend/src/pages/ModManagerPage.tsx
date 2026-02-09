@@ -35,7 +35,7 @@ export const ModManagerPage: React.FC<ModManagerPageProps> = ({ currentBranch, c
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Package size={22} className="text-white/80" />
-          <h1 className="text-xl font-bold text-white">{t('Mod Manager')}</h1>
+          <h1 className="text-xl font-bold text-white">{t('modManager.title')}</h1>
         </div>
         {/* Portal target for ModManager action buttons */}
         <div ref={headerActionsRef} />

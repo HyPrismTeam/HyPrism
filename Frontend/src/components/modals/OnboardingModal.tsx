@@ -362,11 +362,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
     };
     
     const steps: { id: OnboardingStep; label: string; icon: React.ElementType }[] = [
-        { id: 'language', label: t('Language'), icon: Globe },
-        { id: 'profile', label: t('Profile'), icon: User },
-        { id: 'visual', label: t('Visual'), icon: Palette },
-        { id: 'location', label: t('Location'), icon: FolderOpen },
-        { id: 'about', label: t('About'), icon: Info },
+        { id: 'language', label: t('onboarding.language'), icon: Globe },
+        { id: 'profile', label: t('onboarding.profile'), icon: User },
+        { id: 'visual', label: t('onboarding.visual'), icon: Palette },
+        { id: 'location', label: t('onboarding.location'), icon: FolderOpen },
+        { id: 'about', label: t('onboarding.about'), icon: Info },
     ];
     
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
@@ -468,7 +468,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                             opacity: 0
                         }}
                     >
-                        {t('Unofficial Hytale Launcher')}
+                        {t('onboarding.unofficial')}
                     </p>
                     <p 
                         className="text-sm text-white/40"
@@ -492,7 +492,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                 animation: 'fadeIn 0.5s ease-out forwards'
                             }}
                         >
-                            {t('Get Started')}
+                            {t('onboarding.getStarted')}
                             <ArrowRight size={22} />
                         </button>
                     )}
@@ -504,7 +504,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                     className="absolute bottom-8 right-8 z-10 flex items-center gap-2 font-semibold text-sm text-white/60 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
                 >
                     <SkipForward size={16} />
-                    {t('Skip')}
+                    {t('onboarding.skip')}
                 </button>
                 
                 {/* CSS animations */}
@@ -556,8 +556,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                         <div className="flex items-center gap-4">
                             <img src={appIcon} alt="HyPrism" className="w-12 h-12 rounded-xl" />
                             <div>
-                                <h1 className="text-2xl font-bold text-white">{t('Welcome to HyPrism')}</h1>
-                                <p className="text-sm text-white/60">{t("Let's set up your launcher")}</p>
+                                <h1 className="text-2xl font-bold text-white">{t('onboarding.welcome')}</h1>
+                                <p className="text-sm text-white/60">{t('onboarding.letsSetUp')}</p>
                             </div>
                         </div>
                         <p className="text-xs text-white/40">v{launcherVersion}</p>
@@ -605,8 +605,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                     {currentStep === 'language' && (
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-xl font-semibold text-white mb-2">{t('Choose your language')}</h2>
-                                <p className="text-sm text-white/60">{t('Select your preferred language for the launcher interface')}</p>
+                                <h2 className="text-xl font-semibold text-white mb-2">{t('onboarding.chooseLanguage')}</h2>
+                                <p className="text-sm text-white/60">{t('onboarding.selectLanguageHint')}</p>
                             </div>
                             
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-2">
@@ -644,13 +644,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                     {currentStep === 'profile' && (
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-xl font-semibold text-white mb-2">{t('Set up your profile')}</h2>
-                                <p className="text-sm text-white/60">{t('Choose a username for the game')}</p>
+                                <h2 className="text-xl font-semibold text-white mb-2">{t('onboarding.setupProfile')}</h2>
+                                <p className="text-sm text-white/60">{t('onboarding.chooseUsername')}</p>
                             </div>
                             
                             {/* Username */}
                             <div>
-                                <label className="block text-sm text-white/60 mb-2">{t('Username')}</label>
+                                <label className="block text-sm text-white/60 mb-2">{t('onboarding.username')}</label>
                                 <div className="flex items-center gap-3">
                                     <div 
                                         className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" 
@@ -662,7 +662,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                         type="text"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value.slice(0, 16))}
-                                        placeholder={t('Enter your username')}
+                                        placeholder={t('onboarding.enterUsername')}
                                         className="flex-1 h-12 px-4 rounded-xl bg-[#1a1a1a]/80 border border-white/10 text-white text-sm focus:outline-none focus:border-white/30"
                                         maxLength={16}
                                     />
@@ -670,12 +670,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                         onClick={handleGenerateUsername}
                                         disabled={isGeneratingUsername}
                                         className="h-12 px-4 rounded-xl bg-[#1a1a1a]/80 border border-white/10 flex items-center gap-2 text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50"
-                                        title={t('Generate random username')}
+                                        title={t('onboarding.generateUsername')}
                                     >
                                         <RefreshCw size={18} className={isGeneratingUsername ? 'animate-spin' : ''} />
                                     </button>
                                 </div>
-                                <p className="text-xs text-white/40 mt-2">{t('1-16 characters')}</p>
+                                <p className="text-xs text-white/40 mt-2">{t('onboarding.usernameHint')}</p>
                             </div>
                         </div>
                     )}
@@ -684,15 +684,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                     {currentStep === 'visual' && (
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-xl font-semibold text-white mb-2">{t('Customize appearance')}</h2>
-                                <p className="text-sm text-white/60">{t('Choose your accent color and background')}</p>
+                                <h2 className="text-xl font-semibold text-white mb-2">{t('onboarding.customizeAppearance')}</h2>
+                                <p className="text-sm text-white/60">{t('onboarding.chooseAccentAndBg')}</p>
                             </div>
                             
                             {/* Accent Color - Circular */}
                             <div>
                                 <label className="block text-sm text-white/60 mb-3 flex items-center gap-2">
                                     <Palette size={14} />
-                                    {t('Accent Color')}
+                                    {t('onboarding.accentColor')}
                                 </label>
                                 <div className="flex flex-wrap gap-3">
                                     {ACCENT_COLORS.map((color) => (
@@ -724,7 +724,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                             <div>
                                 <label className="block text-sm text-white/60 mb-3 flex items-center gap-2">
                                     <Image size={14} />
-                                    {t('Background')}
+                                    {t('onboarding.background')}
                                 </label>
                                 
                                 {/* Slideshow option */}
@@ -746,14 +746,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                             )}
                                         </div>
                                         <div>
-                                            <span className="text-white text-sm font-medium">{t('Slideshow')}</span>
-                                            <p className="text-xs text-white/40">{t('Cycle through all backgrounds')}</p>
+                                            <span className="text-white text-sm font-medium">{t('onboarding.slideshow')}</span>
+                                            <p className="text-xs text-white/40">{t('onboarding.slideshowHint')}</p>
                                         </div>
                                     </div>
                                 </div>
                                 
                                 {/* Background grid */}
-                                <p className="text-xs text-white/40 mb-2">{t('Or choose a static background:')}</p>
+                                <p className="text-xs text-white/40 mb-2">{t('onboarding.staticBackground')}</p>
                                 <div className="grid grid-cols-4 gap-2">
                                     {backgroundImages.slice(0, 8).map((bg) => (
                                         <div
@@ -787,12 +787,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                     {currentStep === 'location' && (
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-xl font-semibold text-white mb-2">{t('Choose instance location')}</h2>
-                                <p className="text-sm text-white/60">{t('Select where to store your game instances. You can leave this as the default or choose a custom location.')}</p>
+                                <h2 className="text-xl font-semibold text-white mb-2">{t('onboarding.chooseLocation')}</h2>
+                                <p className="text-sm text-white/60">{t('onboarding.locationHint')}</p>
                             </div>
                             
                             <div className="p-4 rounded-xl bg-[#1a1a1a]/80 border border-white/10">
-                                <label className="block text-sm text-white/60 mb-3">{t('Instance Folder')}</label>
+                                <label className="block text-sm text-white/60 mb-3">{t('onboarding.instanceFolder')}</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -805,16 +805,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                         className="h-12 px-4 rounded-xl bg-[#0a0a0a]/80 border border-white/10 flex items-center gap-2 text-white/60 hover:text-white hover:border-white/20 transition-colors"
                                     >
                                         <FolderOpen size={18} />
-                                        <span className="text-sm">{t('Browse')}</span>
+                                        <span className="text-sm">{t('common.browse')}</span>
                                     </button>
                                 </div>
-                                <p className="text-xs text-white/40 mt-2">{t('This is where your game files will be stored')}</p>
+                                <p className="text-xs text-white/40 mt-2">{t('onboarding.filesStoredHere')}</p>
                             </div>
                             
                             {/* Quick info */}
                             <div className="p-4 rounded-xl bg-[#1a1a1a]/50 border border-white/5">
                                 <p className="text-xs text-white/40 leading-relaxed">
-                                    {t('You can change this location later in Settings > Data')}
+                                    {t('onboarding.changeInSettings')}
                                 </p>
                             </div>
                         </div>
@@ -824,8 +824,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                     {currentStep === 'about' && (
                         <div className="space-y-6">
                             <div>
-                                <h2 className="text-xl font-semibold text-white mb-2">{t('About HyPrism')}</h2>
-                                <p className="text-sm text-white/60">{t("You're all set! Here's some info about the launcher")}</p>
+                                <h2 className="text-xl font-semibold text-white mb-2">{t('onboarding.aboutHyPrism')}</h2>
+                                <p className="text-sm text-white/60">{t('onboarding.allSet')}</p>
                             </div>
                             
                             {/* App Icon and Info */}
@@ -836,7 +836,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                     className="w-16 h-16 mb-2"
                                 />
                                 <h3 className="text-xl font-bold text-white">HyPrism</h3>
-                                <p className="text-sm text-white/50">{t('Unofficial Hytale Launcher')}</p>
+                                <p className="text-sm text-white/50">{t('onboarding.unofficial')}</p>
                                 <p className="text-xs text-white/30 mt-1">v{launcherVersion}</p>
                             </div>
                             
@@ -859,7 +859,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                 <button
                                     onClick={openBugReport}
                                     className="opacity-80 hover:opacity-100 transition-opacity"
-                                    title={t('Bug Report')}
+                                    title={t('onboarding.bugReport')}
                                 >
                                     <Bug size={28} className="text-white" />
                                 </button>
@@ -887,7 +887,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                                     />
                                                     <div className="text-left">
                                                         <span className="text-white font-medium text-sm">{maintainer.login}</span>
-                                                        <p className="text-xs text-white/40">{t('Maintainer & Developer')}</p>
+                                                        <p className="text-xs text-white/40">{t('onboarding.maintainerRole')}</p>
                                                     </div>
                                                 </button>
                                             )}
@@ -902,7 +902,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                                 />
                                                 <div className="text-left">
                                                     <span className="text-white font-medium text-sm">sanasol</span>
-                                                    <p className="text-xs text-white/40">{t('Auth Server Creator')}</p>
+                                                    <p className="text-xs text-white/40">{t('onboarding.authServerCreator')}</p>
                                                 </div>
                                             </button>
                                         </div>
@@ -936,7 +936,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                             {/* Disclaimer */}
                             <div className="p-3 rounded-xl bg-[#1a1a1a]/80 border border-white/5">
                                 <p className="text-white/50 text-xs text-center">
-                                    {t('HyPrism is an unofficial launcher for Hytale. This project is not affiliated with Hypixel Studios.')}
+                                    {t('onboarding.disclaimer')}
                                 </p>
                             </div>
                         </div>
@@ -953,7 +953,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                     onClick={handlePrevStep}
                                     className="px-6 py-3 rounded-xl font-medium bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
                                 >
-                                    {t('Back')}
+                                    {t('common.back')}
                                 </button>
                             )}
                             
@@ -965,7 +965,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                     className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                     style={{ backgroundColor: accentColor, color: accentTextColor }}
                                 >
-                                    {t('Continue')}
+                                    {t('common.continue')}
                                     <ChevronRight size={18} />
                                 </button>
                             ) : (
@@ -980,7 +980,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                     ) : (
                                         <>
                                             <ArrowRight size={18} />
-                                            {t('Enter Launcher')}
+                                            {t('onboarding.enterLauncher')}
                                         </>
                                     )}
                                 </button>
@@ -997,7 +997,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                 className="absolute bottom-8 right-8 z-10 flex items-center gap-2 font-semibold text-sm text-white/60 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 <SkipForward size={16} />
-                {t('Skip')}
+                {t('onboarding.skip')}
             </button>
             
             {/* CSS animations */}

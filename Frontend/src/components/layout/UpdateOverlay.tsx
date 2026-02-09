@@ -35,11 +35,11 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
       </motion.div>
 
       <h1 className="text-5xl font-black mb-4 tracking-tight text-white">
-        {t('UPDATING LAUNCHER')}
+        {t('updateOverlay.title')}
       </h1>
 
       <p className="text-gray-400 mb-12 max-w-md text-lg font-medium">
-        {t('Please wait while we download and install the latest version of HyPrism.')}
+        {t('updateOverlay.message')}
       </p>
 
       {/* Progress bar */}
@@ -64,7 +64,7 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
       </div>
 
       <p className="text-xs text-gray-500 mt-8">
-        {t('The launcher will restart automatically when the update is complete.')}
+        {t('updateOverlay.autoRestart')}
       </p>
     </motion.div>
   );

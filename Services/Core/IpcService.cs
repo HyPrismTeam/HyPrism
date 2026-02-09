@@ -23,7 +23,7 @@ namespace HyPrism.Services.Core;
 /// </summary>
 /// 
 /// @type ProgressUpdate { state: string; progress: number; messageKey: string; args?: unknown[]; downloadedBytes: number; totalBytes: number; }
-/// @type GameState { state: 'starting' | 'running' | 'stopped'; exitCode: number; }
+/// @type GameState { state: 'starting' | 'started' | 'running' | 'stopped'; exitCode: number; }
 /// @type GameError { type: string; message: string; technical?: string; }
 /// @type NewsItem { title: string; excerpt?: string; url?: string; date?: string; publishedAt?: string; author?: string; imageUrl?: string; source?: string; }
 /// @type Profile { id: string; name: string; avatar?: string; }
@@ -32,7 +32,7 @@ namespace HyPrism.Services.Core;
 /// @type ModItem { id: string; name: string; description?: string; version?: string; author?: string; iconUrl?: string; isInstalled: boolean; featured?: boolean; downloads?: number; }
 /// @type ModSearchResult { items: ModItem[]; totalCount: number; }
 /// @type AppConfig { language: string; dataDirectory: string; [key: string]: unknown; }
-/// @type InstalledInstance { id: string; name: string; version: string; path: string; }
+/// @type InstalledInstance { branch: string; version: number; path: string; hasUserData: boolean; userDataSize: number; totalSize: number; }
 /// @type LanguageInfo { code: string; name: string; }
 public class IpcService
 {
@@ -152,6 +152,8 @@ public class IpcService
     // @ipc send hyprism:game:launch
     // @ipc send hyprism:game:cancel
     // @ipc invoke hyprism:game:instances -> InstalledInstance[]
+    // @ipc invoke hyprism:game:isRunning -> boolean
+    // @ipc invoke hyprism:game:versions -> number[]
     // @ipc event hyprism:game:progress -> ProgressUpdate
     // @ipc event hyprism:game:state -> GameState
     // @ipc event hyprism:game:error -> GameError
@@ -161,6 +163,9 @@ public class IpcService
         var gameSession = _services.GetRequiredService<IGameSessionService>();
         var progressService = _services.GetRequiredService<ProgressNotificationService>();
         var instanceService = _services.GetRequiredService<IInstanceService>();
+        var gameProcessService = _services.GetRequiredService<IGameProcessService>();
+        var versionService = _services.GetRequiredService<IVersionService>();
+        var configService = _services.GetRequiredService<IConfigService>();
 
         // Push events from .NET → React
         progressService.DownloadProgressChanged += (msg) =>
@@ -170,6 +175,7 @@ public class IpcService
 
         progressService.GameStateChanged += (state, exitCode) =>
         {
+            Logger.Info("IPC", $"Sending game-state event: state={state}, exitCode={exitCode}");
             try { Reply("hyprism:game:state", new { state, exitCode }); } catch { /* swallow */ }
         };
 
@@ -180,6 +186,13 @@ public class IpcService
 
         Electron.IpcMain.On("hyprism:game:launch", async (_) =>
         {
+            // First check if game is already running
+            if (gameProcessService.IsGameRunning())
+            {
+                Logger.Warning("IPC", "Game launch request ignored - game already running");
+                return;
+            }
+            
             Logger.Info("IPC", "Game launch requested");
             try { await gameSession.DownloadAndLaunchAsync(); }
             catch (Exception ex) { Logger.Error("IPC", $"Game launch failed: {ex.Message}"); }
@@ -195,11 +208,56 @@ public class IpcService
         {
             try
             {
-                Reply("hyprism:game:instances:reply", instanceService.GetInstalledInstances());
+                var instances = instanceService.GetInstalledInstances();
+                Logger.Info("IPC", $"Returning {instances.Count} installed instances");
+                Reply("hyprism:game:instances:reply", instances);
             }
             catch (Exception ex)
             {
                 Logger.Error("IPC", $"Failed to get instances: {ex.Message}");
+                Reply("hyprism:game:instances:reply", new List<object>());
+            }
+        });
+
+        Electron.IpcMain.On("hyprism:game:isRunning", (_) =>
+        {
+            try
+            {
+                var isRunning = gameProcessService.IsGameRunning();
+                Logger.Info("IPC", $"Game running check: {isRunning}");
+                Reply("hyprism:game:isRunning:reply", isRunning);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to check game running: {ex.Message}");
+                Reply("hyprism:game:isRunning:reply", false);
+            }
+        });
+
+        Electron.IpcMain.On("hyprism:game:versions", async (args) =>
+        {
+            try
+            {
+                // Parse branch from args, default to current config branch
+                string branch = configService.Configuration.VersionType ?? "release";
+                if (args != null)
+                {
+                    var json = ArgsToJson(args);
+                    var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOpts);
+                    if (data != null && data.TryGetValue("branch", out var b) && !string.IsNullOrEmpty(b))
+                    {
+                        branch = b;
+                    }
+                }
+                
+                var versions = await versionService.GetVersionListAsync(branch);
+                Logger.Info("IPC", $"Returning {versions.Count} available versions for branch {branch}");
+                Reply("hyprism:game:versions:reply", versions);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to get versions: {ex.Message}");
+                Reply("hyprism:game:versions:reply", new List<int>());
             }
         });
     }
@@ -346,6 +404,7 @@ public class IpcService
     private void RegisterLocalizationHandlers()
     {
         var localization = _services.GetRequiredService<LocalizationService>();
+        var settings = _services.GetRequiredService<ISettingsService>();
 
         Electron.IpcMain.On("hyprism:i18n:get", (args) =>
         {
@@ -362,8 +421,10 @@ public class IpcService
         {
             var lang = ArgsToString(args);
             if (string.IsNullOrEmpty(lang)) lang = "en-US";
-            localization.CurrentLanguage = lang;
-            Reply("hyprism:i18n:set:reply", new { success = true, language = lang });
+            Logger.Info("IPC", $"Language change requested: {lang}");
+            // Use SettingsService.SetLanguage which persists to config file
+            var success = settings.SetLanguage(lang);
+            Reply("hyprism:i18n:set:reply", new { success, language = success ? lang : localization.CurrentLanguage });
         });
 
         Electron.IpcMain.On("hyprism:i18n:languages", (_) =>

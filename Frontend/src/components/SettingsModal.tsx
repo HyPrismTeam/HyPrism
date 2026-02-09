@@ -269,15 +269,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         try {
             const exportPath = await ExportInstance(instance.branch, instance.version, instanceExportPath || undefined);
             if (exportPath) {
-                setExportMessage({ type: 'success', text: `${t('Exported to')}: ${exportPath.split('/').pop()}` });
+                setExportMessage({ type: 'success', text: `${t('settings.instanceSettings.exportedSuccess')}: ${exportPath.split('/').pop()}` });
                 setTimeout(() => setExportMessage(null), 5000);
             } else {
-                setExportMessage({ type: 'error', text: t('No UserData folder to export') });
+                setExportMessage({ type: 'error', text: t('settings.instanceSettings.noUserData') });
                 setTimeout(() => setExportMessage(null), 5000);
             }
         } catch (err) {
             console.error('Failed to export instance:', err);
-            setExportMessage({ type: 'error', text: t('Failed to export instance') });
+            setExportMessage({ type: 'error', text: t('settings.instanceSettings.exportFailed') });
             setTimeout(() => setExportMessage(null), 5000);
         }
         setExportingInstance(null);
@@ -532,13 +532,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         try {
             const success = await InstallOptimizationMods();
             if (success) {
-                setOptModsMessage({ type: 'success', text: t('Optimization mods installed!') });
+                setOptModsMessage({ type: 'success', text: t('settings.graphicsSettings.optModsInstalled') });
             } else {
-                setOptModsMessage({ type: 'error', text: t('Failed to install optimization mods') });
+                setOptModsMessage({ type: 'error', text: t('settings.graphicsSettings.optModsFailed') });
             }
         } catch (err) {
             console.error('Failed to install optimization mods:', err);
-            setOptModsMessage({ type: 'error', text: t('Failed to install optimization mods') });
+            setOptModsMessage({ type: 'error', text: t('settings.graphicsSettings.optModsFailed') });
         }
         setIsInstallingOptMods(false);
         
@@ -572,14 +572,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const currentLangConfig = LANGUAGE_CONFIG[i18n.language as Language] || LANGUAGE_CONFIG[Language.ENGLISH];
 
     const tabs = [
-        { id: 'general' as const, icon: Settings, label: t('General') },
-        { id: 'visual' as const, icon: Image, label: t('Visual') },
-        { id: 'graphics' as const, icon: Monitor, label: t('Graphics') },
-        { id: 'language' as const, icon: Languages, label: t('Language') },
-        { id: 'data' as const, icon: Database, label: t('Data') },
-        { id: 'instances' as const, icon: HardDrive, label: t('Instances') },
-        { id: 'about' as const, icon: Globe, label: t('About') },
-        ...(devModeEnabled ? [{ id: 'developer' as const, icon: Code, label: t('Developer') }] : []),
+        { id: 'general' as const, icon: Settings, label: t('settings.general') },
+        { id: 'visual' as const, icon: Image, label: t('settings.visual') },
+        { id: 'graphics' as const, icon: Monitor, label: t('settings.graphics') },
+        { id: 'language' as const, icon: Languages, label: t('settings.language') },
+        { id: 'data' as const, icon: Database, label: t('settings.data') },
+        { id: 'instances' as const, icon: HardDrive, label: t('settings.instances') },
+        { id: 'about' as const, icon: Globe, label: t('settings.about') },
+        ...(devModeEnabled ? [{ id: 'developer' as const, icon: Code, label: t('settings.developer') }] : []),
     ];
 
     // Profile helpers
@@ -656,7 +656,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className={`bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl flex overflow-hidden ${isPageMode ? 'w-full h-full' : 'mx-4'}`} style={isPageMode ? undefined : { width: '800px', height: '600px' }}>
                     {/* Sidebar */}
                     <div className="w-48 bg-[#151515] border-r border-white/5 flex flex-col py-4">
-                        <h2 className="text-lg font-bold text-white px-4 mb-4">{t('Settings')}</h2>
+                        <h2 className="text-lg font-bold text-white px-4 mb-4">{t('settings.title')}</h2>
                         <nav className="flex-1 space-y-1 px-2">
                             {tabs.map((tab) => (
                                 <button
@@ -682,7 +682,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             >
                                 <div className="flex items-center gap-2 text-white/40">
                                     <Code size={14} />
-                                    <span className="text-xs">{t('Dev Mode')}</span>
+                                    <span className="text-xs">{t('settings.devMode')}</span>
                                 </div>
                                 <div 
                                     className={`w-8 h-4 rounded-full flex items-center transition-colors`}
@@ -732,7 +732,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         style={{ color: accentColor }}
                                                     >
                                                         <ExternalLink size={12} />
-                                                        {t('Watch Tutorial')}
+                                                        {t('settings.generalSettings.watchTutorial')}
                                                     </button>
                                                 )}
                                             </div>
@@ -746,7 +746,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="space-y-6">
                                     {/* Language Selector */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-2">{t('Language')}</label>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.language')}</label>
                                         <div ref={languageDropdownRef} className="relative">
                                             <button
                                                 onClick={() => {
@@ -789,7 +789,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Launcher Branch Selector */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-2">{t('Update Channel')}</label>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.generalSettings.updateChannel')}</label>
                                         <div ref={branchDropdownRef} className="relative">
                                             <button
                                                 onClick={() => {
@@ -801,11 +801,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium">
-                                                        {selectedLauncherBranch === 'beta' ? t('Beta') : t('Stable')}
+                                                        {selectedLauncherBranch === 'beta' ? t('settings.generalSettings.updateChannelBeta') : t('settings.generalSettings.updateChannelStable')}
                                                     </span>
                                                     {selectedLauncherBranch === 'beta' && (
                                                         <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-500">
-                                                            {t('Experimental')}
+                                                            {t('settings.generalSettings.updateChannelExperimental')}
                                                         </span>
                                                     )}
                                                 </div>
@@ -824,8 +824,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     >
                                                         {selectedLauncherBranch === 'release' && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
                                                         <div className={`flex flex-col items-start ${selectedLauncherBranch === 'release' ? '' : 'ml-[22px]'}`}>
-                                                            <span className="font-medium">{t('Stable')}</span>
-                                                            <span className="text-xs opacity-50">{t('Recommended for most users')}</span>
+                                                            <span className="font-medium">{t('settings.generalSettings.updateChannelStable')}</span>
+                                                            <span className="text-xs opacity-50">{t('settings.generalSettings.updateChannelStableHint')}</span>
                                                         </div>
                                                     </button>
                                                     <button
@@ -838,8 +838,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     >
                                                         {selectedLauncherBranch === 'beta' && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
                                                         <div className={`flex flex-col items-start ${selectedLauncherBranch === 'beta' ? '' : 'ml-[22px]'}`}>
-                                                            <span className="font-medium">{t('Beta')}</span>
-                                                            <span className="text-xs opacity-50">{t('Get early access to new features')}</span>
+                                                            <span className="font-medium">{t('settings.generalSettings.updateChannelBeta')}</span>
+                                                            <span className="text-xs opacity-50">{t('settings.generalSettings.updateChannelBetaHint')}</span>
                                                         </div>
                                                     </button>
                                                 </div>
@@ -847,8 +847,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </div>
                                         <p className="mt-2 text-xs text-white/40">
                                             {selectedLauncherBranch === 'beta' 
-                                                ? t('You will receive beta updates which may be unstable.')
-                                                : t('You will receive stable releases only.')}
+                                                ? t('settings.generalSettings.updateChannelBetaWarning')
+                                                : t('settings.generalSettings.updateChannelHint')}
                                         </p>
                                     </div>
 
@@ -862,8 +862,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <div className="flex items-center gap-3">
                                                 <Power size={18} className="text-white/60" />
                                                 <div>
-                                                    <span className="text-white text-sm">{t('Close after launch')}</span>
-                                                    <p className="text-xs text-white/40">{t('Close launcher when game starts')}</p>
+                                                    <span className="text-white text-sm">{t('settings.generalSettings.closeLauncher')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.generalSettings.closeLauncherHint')}</p>
                                                 </div>
                                             </div>
                                             <div 
@@ -889,8 +889,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <div className="flex items-center gap-3">
                                                 <FlaskConical size={18} className="text-white/60" />
                                                 <div>
-                                                    <span className="text-white text-sm">{t('Show Alpha Mods')}</span>
-                                                    <p className="text-xs text-white/40">{t('Show mods with alpha release type in the mod manager')}</p>
+                                                    <span className="text-white text-sm">{t('settings.generalSettings.showAlphaMods')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.generalSettings.showAlphaModsHint')}</p>
                                                 </div>
                                             </div>
                                             <div 
@@ -916,8 +916,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <div className="flex items-center gap-3">
                                                 <Wifi size={18} className="text-white/60" />
                                                 <div>
-                                                    <span className="text-white text-sm">{t('Online Mode')}</span>
-                                                    <p className="text-xs text-white/40">{t('Connect to authentication servers when launching')}</p>
+                                                    <span className="text-white text-sm">{t('settings.generalSettings.onlineMode')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.generalSettings.onlineModeHint')}</p>
                                                 </div>
                                             </div>
                                             <div 
@@ -939,7 +939,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="space-y-6">
                                     {/* Accent Color Chooser */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-3">{t('Accent Color')}</label>
+                                        <label className="block text-sm text-white/60 mb-3">{t('settings.visualSettings.accentColor')}</label>
                                         <div className="flex flex-wrap gap-2">
                                             {ACCENT_COLORS.map((color) => (
                                                 <button
@@ -954,7 +954,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Background Chooser */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-3">{t('Background')}</label>
+                                        <label className="block text-sm text-white/60 mb-3">{t('settings.visualSettings.background')}</label>
                                         
                                         {/* Slideshow option */}
                                         <div 
@@ -973,14 +973,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     {backgroundMode === 'slideshow' && <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accentColor }} />}
                                                 </div>
                                                 <div>
-                                                    <span className="text-white text-sm font-medium">{t('Slideshow')}</span>
-                                                    <p className="text-xs text-white/40">{t('Cycle through all backgrounds')}</p>
+                                                    <span className="text-white text-sm font-medium">{t('settings.visualSettings.slideshow')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.visualSettings.slideshowHint')}</p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Background grid - show all backgrounds in scrollable container */}
-                                        <p className="text-xs text-white/40 mb-2">{t('Or choose a static background:')}</p>
+                                        <p className="text-xs text-white/40 mb-2">{t('settings.visualSettings.staticBackground')}</p>
                                         <div className="max-h-[280px] overflow-y-auto rounded-xl">
                                             <div className="grid grid-cols-4 gap-2 pr-1">
                                                 {backgroundImages.map((bg) => (
@@ -1010,7 +1010,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                         {/* Solid colors section */}
                                         <div className="mt-3 p-3 rounded-xl bg-[#0f0f0f] border border-white/5">
-                                            <p className="text-xs text-white/40 mb-2">{t('Solid Colors')}</p>
+                                            <p className="text-xs text-white/40 mb-2">{t('settings.visualSettings.solidColors')}</p>
                                             <div className="grid grid-cols-8 gap-2">
                                                 {SOLID_COLORS.map((color) => (
                                                     <div
@@ -1040,8 +1040,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <div className="flex items-center gap-3">
                                             <Globe size={18} className="text-white/60" />
                                             <div>
-                                                <span className="text-white text-sm">{t('Hide News')}</span>
-                                                <p className="text-xs text-white/40">{t('Completely hide the news panel')}</p>
+                                                <span className="text-white text-sm">{t('settings.visualSettings.hideNews')}</span>
+                                                <p className="text-xs text-white/40">{t('settings.visualSettings.hideNewsHint')}</p>
                                             </div>
                                         </div>
                                         <div 
@@ -1062,8 +1062,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="space-y-6">
                                     {/* Optimization Mods */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-2">{t('Optimization Mods')}</label>
-                                        <p className="text-xs text-white/40 mb-4">{t('Download and install optimization mods to improve game performance')}</p>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.graphicsSettings.optimizationMods')}</label>
+                                        <p className="text-xs text-white/40 mb-4">{t('settings.graphicsSettings.optimizationModsHint')}</p>
                                         <button
                                             onClick={handleInstallOptimizationMods}
                                             disabled={isInstallingOptMods}
@@ -1078,9 +1078,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     <Zap size={20} style={{ color: accentColor }} />
                                                 </div>
                                                 <div className="text-left">
-                                                    <div className="text-white font-medium">{t('Enable Optimization Mods')}</div>
+                                                    <div className="text-white font-medium">{t('settings.graphicsSettings.enableOptimizationMods')}</div>
                                                     <div className="text-xs text-white/40">
-                                                        {isInstallingOptMods ? t('Installing optimization mods...') : t('Install 8 performance mods to all profiles')}
+                                                        {isInstallingOptMods ? t('settings.graphicsSettings.installingOptMods') : t('settings.graphicsSettings.installOptModsAction')}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1107,8 +1107,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             {activeTab === 'language' && (
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-3">{t('Select Language')}</label>
-                                        <p className="text-xs text-white/40 mb-4">{t('Choose your preferred language for the launcher interface')}</p>
+                                        <label className="block text-sm text-white/60 mb-3">{t('settings.languageSettings.selectLanguage')}</label>
+                                        <p className="text-xs text-white/40 mb-4">{t('settings.languageSettings.interfaceLanguageHint')}</p>
                                         
                                         <div className="grid grid-cols-2 gap-2">
                                             {Object.values(LANGUAGE_CONFIG).map((lang) => (
@@ -1147,7 +1147,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="space-y-6">
                                     {/* Instance Folder */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-2">{t('Instance Folder')}</label>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.dataSettings.instanceFolder')}</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
@@ -1164,28 +1164,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <button
                                                     onClick={handleResetInstanceDir}
                                                     className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                                                    title={t('Reset to Default')}
+                                                    title={t('settings.dataSettings.resetToDefault')}
                                                 >
                                                     <RotateCcw size={18} />
-                                                    <span className="ml-2 text-sm">{t('Reset')}</span>
+                                                    <span className="ml-2 text-sm">{t('common.reset')}</span>
                                                 </button>
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={handleBrowseInstanceDir}
                                                     className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                                                    title={t('Browse')}
+                                                    title={t('common.browse')}
                                                 >
                                                     <FolderOpen size={18} />
-                                                    <span className="ml-2 text-sm">{t('Select')}</span>
+                                                    <span className="ml-2 text-sm">{t('common.select')}</span>
                                                 </button>
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={() => BrowserOpenURL(`file://${instanceDir}`)}
                                                     className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                                                    title={t('Open Folder')}
+                                                    title={t('common.openFolder')}
                                                 >
                                                     <ExternalLink size={18} />
-                                                    <span className="ml-2 text-sm">{t('Open')}</span>
+                                                    <span className="ml-2 text-sm">{t('settings.dataSettings.open')}</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -1193,7 +1193,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Launcher Data Folder */}
                                     <div>
-                                        <label className="block text-sm text-white/60 mb-2">{t('Launcher Data Folder')}</label>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.dataSettings.launcherDataFolder')}</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
@@ -1210,32 +1210,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <button
                                                     onClick={handleResetLauncherDataDir}
                                                     className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                                                    title={t('Reset to Default')}
+                                                    title={t('settings.dataSettings.resetToDefault')}
                                                 >
                                                     <RotateCcw size={18} />
-                                                    <span className="ml-2 text-sm">{t('Reset')}</span>
+                                                    <span className="ml-2 text-sm">{t('common.reset')}</span>
                                                 </button>
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={handleBrowseLauncherDataDir}
                                                     className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                                                    title={t('Browse')}
+                                                    title={t('common.browse')}
                                                 >
                                                     <FolderOpen size={18} />
-                                                    <span className="ml-2 text-sm">{t('Select')}</span>
+                                                    <span className="ml-2 text-sm">{t('common.select')}</span>
                                                 </button>
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={() => BrowserOpenURL(`file://${launcherDataDir}`)}
                                                     className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                                                    title={t('Open Folder')}
+                                                    title={t('common.openFolder')}
                                                 >
                                                     <ExternalLink size={18} />
-                                                    <span className="ml-2 text-sm">{t('Open')}</span>
+                                                    <span className="ml-2 text-sm">{t('settings.dataSettings.open')}</span>
                                                 </button>
                                             </div>
                                         </div>
-                                        <p className="mt-2 text-xs text-white/40">{t('Changes take effect after restart.')}</p>
+                                        <p className="mt-2 text-xs text-white/40">{t('settings.dataSettings.changesAfterRestart')}</p>
                                     </div>
 
                                     {/* Launcher Folder Actions */}
@@ -1245,7 +1245,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             className="w-full h-12 px-4 rounded-xl bg-[#151515] border border-white/10 flex items-center gap-3 text-white/70 hover:text-white hover:border-white/20 transition-colors"
                                         >
                                             <FolderOpen size={18} />
-                                            <span>{t('Open Launcher Folder')}</span>
+                                            <span>{t('settings.dataSettings.openLauncherFolder')}</span>
                                         </button>
 
                                         <button
@@ -1253,7 +1253,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             className="w-full h-12 px-4 rounded-xl bg-[#151515] border border-red-500/30 flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                                         >
                                             <Trash2 size={18} />
-                                            <span>{t('Delete All Launcher Data')}</span>
+                                            <span>{t('settings.dataSettings.deleteAllData')}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1282,7 +1282,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl border-2 border-dashed border-white/40">
                                             <div className="text-center">
                                                 <Download size={32} className="mx-auto mb-2 text-white/60" />
-                                                <p className="text-white/80">{t('Drop ZIP to import instance')}</p>
+                                                <p className="text-white/80">{t('settings.instanceSettings.dropZipImport')}</p>
                                             </div>
                                         </div>
                                     )}
@@ -1306,8 +1306,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     ) : installedInstances.length === 0 ? (
                                         <div className="py-12 text-center">
                                             <Box size={40} className="mx-auto mb-3 text-white/20" />
-                                            <p className="text-white/40 text-sm">{t('No instances installed')}</p>
-                                            <p className="text-white/30 text-xs mt-1">{t('Install Hytale to create an instance')}</p>
+                                            <p className="text-white/40 text-sm">{t('settings.instanceSettings.noInstances')}</p>
+                                            <p className="text-white/30 text-xs mt-1">{t('settings.instanceSettings.installHytale')}</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
@@ -1318,12 +1318,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 
                                                 // Display labels
                                                 const isLatest = instance.isLatestInstance;
-                                                const versionLabel = isLatest ? t('latest') : `v${instance.version}`;
+                                                const versionLabel = isLatest ? t('common.latest') : `v${instance.version}`;
                                                 
                                                 // Format playtime
                                                 const playTime = (instance.playTimeSeconds ?? 0) > 0 
                                                     ? instance.playTimeFormatted 
-                                                    : t('Not played');
+                                                    : t('settings.instanceSettings.notPlayed');
                                                 
                                                 // Format dates
                                                 const createdDate = instance.createdAt 
@@ -1331,7 +1331,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     : '-';
                                                 const lastPlayedDate = instance.lastPlayedAt 
                                                     ? new Date(instance.lastPlayedAt).toLocaleDateString() 
-                                                    : (instance.updatedAt ? new Date(instance.updatedAt).toLocaleDateString() : t('Never'));
+                                                    : (instance.updatedAt ? new Date(instance.updatedAt).toLocaleDateString() : t('common.never'));
                                                 const updatedDate = instance.updatedAt
                                                     ? new Date(instance.updatedAt).toLocaleDateString()
                                                     : '-';
@@ -1368,7 +1368,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                                     : 'bg-yellow-500/15 text-yellow-400'
                                                                             }`}
                                                                         >
-                                                                            {isReleaseBranch ? t('Release') : t('Pre-Release')}
+                                                                            {isReleaseBranch ? t('common.release') : t('common.preRelease')}
                                                                         </span>
                                                                     </div>
                                                                     <p className="text-xs text-white/40">v{instance.version}</p>
@@ -1380,7 +1380,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                 <button
                                                                     onClick={() => OpenInstanceFolder(instance.branch, isLatest ? 0 : (instance.version ?? 0))}
                                                                     className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                                                                    title={t('Open Folder')}
+                                                                    title={t('common.openFolder')}
                                                                 >
                                                                     <FolderOpen size={16} />
                                                                 </button>
@@ -1392,7 +1392,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                     }}
                                                                     disabled={isExporting}
                                                                     className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                                                                    title={t('Export Instance')}
+                                                                    title={t('settings.instanceSettings.exportInstance')}
                                                                 >
                                                                     {isExporting ? (
                                                                         <Loader2 size={16} className="animate-spin" />
@@ -1403,7 +1403,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                 <button
                                                                     onClick={() => setInstanceToDelete(instance)}
                                                                     className="p-2 rounded-lg hover:bg-red-500/15 text-white/40 hover:text-red-400 transition-colors"
-                                                                    title={t('Delete Instance')}
+                                                                    title={t('settings.instanceSettings.delete')}
                                                                 >
                                                                     <Trash2 size={16} />
                                                                 </button>
@@ -1413,23 +1413,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         {/* Stats Grid */}
                                                         <div className="grid grid-cols-5 gap-3">
                                                             <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('Playtime')}</p>
+                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.playtime')}</p>
                                                                 <p className="text-sm text-white/80">{playTime}</p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('Version')}</p>
+                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.version')}</p>
                                                                 <p className="text-sm text-white/80">v{instance.version}</p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('Created')}</p>
+                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.created')}</p>
                                                                 <p className="text-sm text-white/80">{createdDate}</p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('Updated')}</p>
+                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.updated')}</p>
                                                                 <p className="text-sm text-white/80">{updatedDate}</p>
                                                             </div>
                                                             <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('Last Played')}</p>
+                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.lastPlayed')}</p>
                                                                 <p className="text-sm text-white/80">{lastPlayedDate}</p>
                                                             </div>
                                                         </div>
@@ -1445,7 +1445,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             onClick={loadInstances}
                                             className="w-full text-center text-xs text-white/30 hover:text-white/50 py-2 transition-colors"
                                         >
-                                            {t('Click to refresh')}
+                                            {t('settings.instanceSettings.clickToRefresh')}
                                         </button>
                                     )}
                                 </div>
@@ -1462,7 +1462,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             className="w-20 h-20 mb-3"
                                         />
                                         <h3 className="text-xl font-bold text-white">HyPrism</h3>
-                                        <p className="text-sm text-white/50">{t('Unofficial Hytale Launcher')}</p>
+                                        <p className="text-sm text-white/50">{t('settings.aboutSettings.unofficial')}</p>
                                     </div>
 
                                     {/* Action Buttons - White icons like main menu */}
@@ -1484,7 +1484,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <button
                                             onClick={openBugReport}
                                             className="opacity-80 hover:opacity-100 transition-opacity"
-                                            title={t('Bug Report')}
+                                            title={t('settings.aboutSettings.bugReport')}
                                         >
                                             <Bug size={28} className="text-white" />
                                         </button>
@@ -1512,7 +1512,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                             />
                                                             <div className="text-left">
                                                                 <span className="text-white font-medium text-sm">{maintainer.login}</span>
-                                                                <p className="text-xs text-white/40">{t('Maintainer & Developer')}</p>
+                                                                <p className="text-xs text-white/40">{t('settings.aboutSettings.maintainerRole')}</p>
                                                             </div>
                                                         </button>
                                                     )}
@@ -1527,13 +1527,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         />
                                                         <div className="text-left">
                                                             <span className="text-white font-medium text-sm">sanasol</span>
-                                                            <p className="text-xs text-white/40">{t('Creator and Maintainer of the Auth Server')}</p>
+                                                            <p className="text-xs text-white/40">{t('settings.aboutSettings.authRole')}</p>
                                                         </div>
                                                     </button>
                                                 </div>
 
                                                 {/* Description */}
-                                                <p className="text-xs text-white/40 text-center">{t('Awesome people that helped in the creation of this launcher')}</p>
+                                                <p className="text-xs text-white/40 text-center">{t('settings.aboutSettings.contributorsDescription')}</p>
 
                                                 {/* Other Contributors - 5 per row, larger avatars */}
                                                 {otherContributors.length > 0 && (
@@ -1564,7 +1564,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     {/* Disclaimer */}
                                     <div className="p-4 rounded-xl bg-[#151515] border border-white/5">
                                         <p className="text-white/50 text-sm text-center">
-                                            {t('HyPrism is an unofficial launcher for Hytale. This project is not affiliated with Hypixel Studios.')}
+                                            {t('settings.aboutSettings.disclaimer')}
                                         </p>
                                     </div>
 
@@ -1576,7 +1576,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }}
                                         className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm"
                                     >
-                                        {t('Replay Introduction')}
+                                        {t('settings.aboutSettings.replayIntro')}
                                     </button>
                                 </div>
                             )}
@@ -1587,27 +1587,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
                                         <div className="flex items-center gap-2 text-yellow-500 text-sm font-medium">
                                             <AlertTriangle size={16} />
-                                            {t('Developer options are for testing only')}
+                                            {t('settings.developerSettings.warning')}
                                         </div>
                                     </div>
 
                                     {/* Show Intro on Next Launch */}
                                     <div className="p-4 rounded-xl bg-[#151515] border border-white/5 space-y-4">
-                                        <h3 className="text-white font-medium text-sm">{t('Onboarding')}</h3>
+                                        <h3 className="text-white font-medium text-sm">{t('settings.developerSettings.onboarding')}</h3>
                                         <button
                                             onClick={async () => {
                                                 await ResetOnboarding();
-                                                alert(t('Intro will show on next launch. Please restart the launcher.'));
+                                                alert(t('settings.developerSettings.introRestart'));
                                             }}
                                             className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm"
                                         >
-                                            {t('Show Intro on Next Launch')}
+                                            {t('settings.developerSettings.showIntro')}
                                         </button>
                                     </div>
 
                                     <div className="p-4 rounded-xl bg-[#151515] border border-white/5">
                                         <p className="text-white/40 text-xs">
-                                            {t('Debug info:')} Tab={activeTab}, Branch={selectedLauncherBranch}, Accent={accentColor}
+                                            {t('settings.developerSettings.debugInfo')} Tab={activeTab}, Branch={selectedLauncherBranch}, Accent={accentColor}
                                         </p>
                                     </div>
                                 </div>
@@ -1621,9 +1621,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {showTranslationConfirm && (
                 <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
-                        <h3 className="text-lg font-bold text-white mb-3">{t('Language Changed')}</h3>
+                        <h3 className="text-lg font-bold text-white mb-3">{t('settings.languageChanged.title')}</h3>
                         <p className="text-white/70 text-sm mb-4">
-                            {t('Would you like to search for translation mods for {{language}}?', { language: showTranslationConfirm.langName })}
+                            {t('settings.languageChanged.message', { language: showTranslationConfirm.langName })}
                         </p>
                         
                         <label className="flex items-center gap-2 mb-4 cursor-pointer">
@@ -1634,7 +1634,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 className="w-4 h-4 rounded"
                                 style={{ accentColor: accentColor }}
                             />
-                            <span className="text-sm text-white/60">{t("Don't ask me again")}</span>
+                            <span className="text-sm text-white/60">{t('settings.languageChanged.dontAskAgain')}</span>
                         </label>
 
                         <div className="flex gap-3">
@@ -1642,14 +1642,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 onClick={handleTranslationDismiss}
                                 className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
                             >
-                                {t('No thanks')}
+                                {t('settings.languageChanged.noThanks')}
                             </button>
                             <button
                                 onClick={handleTranslationConfirm}
                                 className="flex-1 h-10 rounded-xl font-medium transition-colors"
                                 style={{ backgroundColor: accentColor, color: accentTextColor }}
                             >
-                                {t('Search Mods')}
+                                {t('settings.languageChanged.searchMods')}
                             </button>
                         </div>
                     </div>
@@ -1664,23 +1664,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                                 <Trash2 size={20} className="text-red-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-white">{t('Delete All Data?')}</h3>
+                            <h3 className="text-lg font-bold text-white">{t('settings.deleteAllData.title')}</h3>
                         </div>
                         <p className="text-white/70 text-sm mb-6">
-                            {t('This will delete all launcher data including settings, cache, and downloaded files. This action cannot be undone.')}
+                            {t('settings.deleteAllData.message')}
                         </p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
                                 className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
                             >
-                                {t('Cancel')}
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={handleDeleteLauncherData}
                                 className="flex-1 h-10 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
                             >
-                                {t('Delete')}
+                                {t('common.delete')}
                             </button>
                         </div>
                     </div>
@@ -1695,25 +1695,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                                 <Trash2 size={20} className="text-red-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-white">{t('Delete Instance?')}</h3>
+                            <h3 className="text-lg font-bold text-white">{t('settings.deleteInstance.title')}</h3>
                         </div>
                         <p className="text-white/70 text-sm mb-6">
-                            {t('This will delete the {{branch}} {{version}} instance and all its data. This action cannot be undone.')
-                                .replace('{{branch}}', instanceToDelete.branch === 'release' ? t('Release') : t('Pre-Release'))
-                                .replace('{{version}}', instanceToDelete.version === 0 ? t('latest') : `v${instanceToDelete.version}`)}
+                            {t('settings.deleteInstance.message')
+                                .replace('{{branch}}', instanceToDelete.branch === 'release' ? t('common.release') : t('common.preRelease'))
+                                .replace('{{version}}', instanceToDelete.version === 0 ? t('common.latest') : `v${instanceToDelete.version}`)}
                         </p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setInstanceToDelete(null)}
                                 className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
                             >
-                                {t('Cancel')}
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={handleDeleteInstance}
                                 className="flex-1 h-10 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
                             >
-                                {t('Delete')}
+                                {t('common.delete')}
                             </button>
                         </div>
                     </div>
@@ -1725,7 +1725,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm">
                     <div className="bg-[#1a1a1a] rounded-2xl border border-white/10 p-6 w-full max-w-md mx-4">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-white">{t('Export Instance')}</h3>
+                            <h3 className="text-xl font-bold text-white">{t('settings.instanceSettings.exportInstance')}</h3>
                             <button
                                 onClick={() => setShowInstanceExportModal(null)}
                                 className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
@@ -1736,28 +1736,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                         {/* Export Type - ZIP Only */}
                         <div className="mb-4">
-                            <label className="block text-white/60 text-sm mb-2">{t('Export Type')}</label>
+                            <label className="block text-white/60 text-sm mb-2">{t('settings.exportInstance.exportType')}</label>
                             <div className="flex gap-2">
                                 <div
                                     className="flex-1 p-3 rounded-xl border-2 transition-colors"
                                     style={{ borderColor: accentColor, backgroundColor: `${accentColor}20` }}
                                 >
                                     <Package size={20} className="mx-auto mb-1" style={{ color: accentColor }} />
-                                    <div className="text-sm text-white font-medium text-center">{t('ZIP Archive')}</div>
-                                    <div className="text-xs text-white/40 text-center">{t('All instance data bundled')}</div>
+                                    <div className="text-sm text-white font-medium text-center">{t('settings.exportInstance.zipArchive')}</div>
+                                    <div className="text-xs text-white/40 text-center">{t('settings.exportInstance.zipArchiveHint')}</div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Export Folder */}
                         <div className="mb-6">
-                            <label className="block text-white/60 text-sm mb-2">{t('Export Folder')}</label>
+                            <label className="block text-white/60 text-sm mb-2">{t('settings.exportInstance.exportFolder')}</label>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
                                     value={instanceExportPath}
                                     onChange={(e) => setInstanceExportPath(e.target.value)}
-                                    placeholder={t('Select export folder...')}
+                                    placeholder={t('settings.exportInstance.selectExportFolder')}
                                     className="flex-1 px-4 py-2 bg-[#252525] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-white/30"
                                 />
                                 <button
@@ -1783,10 +1783,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             {exportingInstance !== null ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <Loader2 size={20} className="animate-spin" />
-                                    {t('Exporting...')}
+                                    {t('common.exporting')}
                                 </span>
                             ) : (
-                                t('Export')
+                                t('common.export')
                             )}
                         </button>
                     </div>
@@ -1801,18 +1801,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
                                 <Download size={20} style={{ color: accentColor }} />
                             </div>
-                            <h3 className="text-lg font-bold text-white">{t('Import Instance')}</h3>
+                            <h3 className="text-lg font-bold text-white">{t('settings.importInstance.title')}</h3>
                         </div>
                         <p className="text-white/70 text-sm mb-2">
-                            {t('Importing')}: <span className="text-white">{showImportModal.fileName}</span>
+                            {t('settings.importInstance.importing')}: <span className="text-white">{showImportModal.fileName}</span>
                         </p>
                         <p className="text-white/50 text-xs mb-4">
-                            {t('Select which instance to import the UserData into:')}
+                            {t('settings.importInstance.selectInstance')}
                         </p>
                         
                         <div className="space-y-3 mb-6">
                             <div>
-                                <label className="text-xs text-white/60 mb-1 block">{t('Branch')}</label>
+                                <label className="text-xs text-white/60 mb-1 block">{t('common.branch')}</label>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setImportTargetBranch('release')}
@@ -1823,7 +1823,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }`}
                                     >
                                         <Box size={14} />
-                                        {t('Release')}
+                                        {t('common.release')}
                                     </button>
                                     <button
                                         onClick={() => setImportTargetBranch('pre-release')}
@@ -1834,19 +1834,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }`}
                                     >
                                         <FlaskConical size={14} />
-                                        {t('Pre-Release')}
+                                        {t('common.preRelease')}
                                     </button>
                                 </div>
                             </div>
                             
                             <div>
-                                <label className="text-xs text-white/60 mb-1 block">{t('Version')}</label>
+                                <label className="text-xs text-white/60 mb-1 block">{t('settings.instanceSettings.version')}</label>
                                 <select
                                     value={importTargetVersion}
                                     onChange={(e) => setImportTargetVersion(parseInt(e.target.value))}
                                     className="w-full h-10 px-3 rounded-lg bg-[#151515] border border-white/10 text-white text-sm focus:outline-none"
                                 >
-                                    <option value={0}>{t('Latest')}</option>
+                                    <option value={0}>{t('common.Latest')}</option>
                                     {installedInstances
                                         .filter(i => i.branch === importTargetBranch && i.version !== 0)
                                         .map(i => (
@@ -1863,7 +1863,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 disabled={isImportingInstance}
                                 className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
                             >
-                                {t('Cancel')}
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={handleImportInstance}
@@ -1874,10 +1874,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 {isImportingInstance ? (
                                     <>
                                         <Loader2 size={16} className="animate-spin" />
-                                        {t('Importing...')}
+                                        {t('common.importing')}
                                     </>
                                 ) : (
-                                    t('Import')
+                                    t('common.import')
                                 )}
                             </button>
                         </div>
@@ -1890,7 +1890,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden">
                         <div className="flex items-center justify-between p-4 border-b border-white/5">
-                            <h3 className="text-lg font-bold text-white">{t('Choose Background')}</h3>
+                            <h3 className="text-lg font-bold text-white">{t('settings.visualSettings.chooseBackground')}</h3>
                             <button
                                 onClick={() => setShowAllBackgrounds(false)}
                                 className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
@@ -1916,14 +1916,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         {backgroundMode === 'slideshow' && <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accentColor }} />}
                                     </div>
                                     <div>
-                                        <span className="text-white text-sm font-medium">{t('Slideshow')}</span>
-                                        <p className="text-xs text-white/40">{t('Cycle through all backgrounds')}</p>
+                                        <span className="text-white text-sm font-medium">{t('settings.visualSettings.slideshow')}</span>
+                                        <p className="text-xs text-white/40">{t('settings.visualSettings.slideshowHint')}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Image backgrounds */}
-                            <p className="text-xs text-white/40 mb-2">{t('Images')}</p>
+                            <p className="text-xs text-white/40 mb-2">{t('settings.visualSettings.images')}</p>
                             <div className="grid grid-cols-4 gap-3 mb-6">
                                 {backgroundImages.map((bg) => (
                                     <div
@@ -1951,7 +1951,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                             {/* Solid colors */}
                             <div className="p-3 rounded-xl bg-[#0f0f0f] border border-white/5">
-                            <p className="text-xs text-white/40 mb-2">{t('Solid Colors')}</p>
+                            <p className="text-xs text-white/40 mb-2">{t('settings.visualSettings.solidColors')}</p>
                             <div className="grid grid-cols-6 gap-2">
                                 {SOLID_COLORS.map((color) => (
                                     <div

@@ -491,7 +491,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                 >
                     {/* Left Sidebar - Profiles List */}
                     <div className="w-48 bg-[#151515] border-r border-white/5 flex flex-col py-4 overflow-y-auto">
-                        {!isPageMode && <h2 className="text-lg font-bold text-white px-4 mb-4">{t('Saved Profiles')}</h2>}
+                        {!isPageMode && <h2 className="text-lg font-bold text-white px-4 mb-4">{t('profiles.savedProfiles')}</h2>}
                         
                         {/* Profile Navigation - All Profiles */}
                         <nav className="flex-1 space-y-1 px-2 overflow-y-auto">
@@ -556,7 +556,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                             <button
                                                 onClick={(e) => handleDuplicateProfile(profile.id, e)}
                                                 className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                                                title={t('Duplicate Profile')}
+                                                title={t('profiles.duplicateProfile')}
                                             >
                                                 <CopyPlus size={14} />
                                             </button>
@@ -564,7 +564,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                 <button
                                                     onClick={(e) => handleDeleteProfile(profile.id, e)}
                                                     className="p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/20 transition-all"
-                                                    title={t('Delete Profile')}
+                                                    title={t('profiles.deleteProfile')}
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -576,7 +576,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                             
                             {profiles.filter(p => p.name && p.name.trim() !== '').length === 0 && (
                                 <p className="text-center text-white/20 text-xs py-4 px-2">
-                                    {t('No saved profiles yet')}
+                                    {t('profiles.noProfiles')}
                                 </p>
                             )}
                         </nav>
@@ -588,7 +588,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/40 text-sm transition-colors"
                             >
                                 <Plus size={14} />
-                                <span>{t('Create New Profile')}</span>
+                                <span>{t('profiles.createNew')}</span>
                             </button>
                         </div>
                     </div>
@@ -598,7 +598,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                         {/* Header - only in modal mode */}
                         {!isPageMode && (
                             <div className="flex items-center justify-between p-4 border-b border-white/5">
-                                <h3 className="text-white font-medium">{t('Profile Editor')}</h3>
+                                <h3 className="text-white font-medium">{t('profiles.editor')}</h3>
                                 <button
                                     onClick={onClose}
                                     className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
@@ -622,7 +622,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                         <div 
                                             className="w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center"
                                             style={{ borderColor: accentColor, backgroundColor: localAvatar ? 'transparent' : `${accentColor}20` }}
-                                            title={t('Your player avatar')}
+                                            title={t('profiles.yourAvatar')}
                                         >
                                             {localAvatar ? (
                                                 <img
@@ -646,7 +646,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         onKeyDown={handleUsernameKeyDown}
                                                         maxLength={16}
                                                         autoFocus
-                                                        placeholder={isCreatingNewProfile ? t('Enter profile name...') : ''}
+                                                        placeholder={isCreatingNewProfile ? t('profiles.enterName') : ''}
                                                         className="bg-[#151515] text-white text-xl font-bold px-3 py-1 rounded-lg border outline-none w-48 text-center"
                                                         style={{ borderColor: accentColor }}
                                                     />
@@ -655,7 +655,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         whileTap={{ scale: 0.9 }}
                                                         onClick={() => setEditUsername(generateRandomName())}
                                                         className="p-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
-                                                        title={t('Generate Random Name')}
+                                                        title={t('profiles.generateName')}
                                                     >
                                                         <Dices size={16} />
                                                     </motion.button>
@@ -683,7 +683,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                             onProfileUpdate?.();
                                                         }}
                                                         className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5"
-                                                        title={t('Generate Random Name')}
+                                                        title={t('profiles.generateName')}
                                                     >
                                                         <Dices size={14} />
                                                     </motion.button>
@@ -695,7 +695,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                             setIsEditingUsername(true);
                                                         }}
                                                         className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5"
-                                                        title={t('Edit Username')}
+                                                        title={t('profiles.editUsername')}
                                                     >
                                                         <Edit3 size={14} />
                                                     </motion.button>
@@ -706,7 +706,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                         {/* New profile hint */}
                                         {isCreatingNewProfile && isEditingUsername && (
                                             <p className="text-xs text-white/40 text-center">
-                                                {t('Enter a name for your new profile or press Escape for a random one')}
+                                                {t('profiles.enterNewName')}
                                             </p>
                                         )}
                                     </div>
@@ -714,14 +714,14 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                     {/* UUID Section */}
                                     <div className="p-4 rounded-xl bg-[#151515] border border-white/10">
                                         <div className="flex items-center justify-between mb-2">
-                                            <label className="text-sm text-white/60">{t('Player UUID')}</label>
+                                            <label className="text-sm text-white/60">{t('profiles.playerUuid')}</label>
                                             <div className="flex items-center gap-1">
                                                 <motion.button
                                                     whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={handleCopyUuid}
                                                     className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10"
-                                                    title={t('Copy UUID')}
+                                                    title={t('profiles.copyUuid')}
                                                 >
                                                     {copiedUuid ? <CheckCircle size={14} className="text-green-400" /> : <Copy size={14} />}
                                                 </motion.button>
@@ -736,7 +736,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         onProfileUpdate?.();
                                                     }}
                                                     className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10"
-                                                    title={t('Generate Random UUID')}
+                                                    title={t('profiles.randomUuid')}
                                                 >
                                                     <Dices size={14} />
                                                 </motion.button>
@@ -748,7 +748,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         setIsEditingUuid(true);
                                                     }}
                                                     className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10"
-                                                    title={t('Edit UUID')}
+                                                    title={t('profiles.editUuid')}
                                                 >
                                                     <Edit3 size={14} />
                                                 </motion.button>
@@ -771,7 +771,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={handleRandomizeUuid}
                                                     className="p-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
-                                                    title={t('Generate Random UUID')}
+                                                    title={t('profiles.randomUuid')}
                                                 >
                                                     <Dices size={16} />
                                                 </motion.button>
@@ -781,7 +781,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                     onClick={handleSaveUuid}
                                                     className="p-2 rounded-lg"
                                                     style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
-                                                    title={t('Save UUID')}
+                                                    title={t('profiles.saveUuid')}
                                                 >
                                                     <Check size={16} />
                                                 </motion.button>
@@ -799,7 +799,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                         className="w-full p-3 rounded-xl bg-[#151515] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2 text-white/60 hover:text-white transition-colors"
                                     >
                                         <FolderOpen size={18} />
-                                        <span className="text-sm">{t('Open Profile Folder')}</span>
+                                        <span className="text-sm">{t('profiles.openFolder')}</span>
                                     </motion.button>
 
                                     {/* Save Status */}
@@ -811,7 +811,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                             className="flex items-center justify-center gap-2 text-green-400 text-sm"
                                         >
                                             <CheckCircle size={16} />
-                                            {t('Profile saved!')}
+                                            {t('profiles.saved')}
                                         </motion.div>
                                     )}
                                 </div>

@@ -122,7 +122,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
               onClick={onOpenProfileEditor}
               className="w-14 h-14 rounded-full overflow-hidden border-2 flex items-center justify-center"
               style={{ borderColor: accentColor, backgroundColor: localAvatar ? 'transparent' : `${accentColor}20` }}
-              title={t('Edit Profile')}
+              title={t('main.editProfile')}
             >
               {localAvatar ? (
                 <img
@@ -140,7 +140,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
               whileTap={{ scale: 0.9 }}
               onClick={() => onEditToggle(true)}
               className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5"
-              title={t('Edit Username')}
+              title={t('profiles.editUsername')}
             >
               <Edit3 size={14} />
             </motion.button>
@@ -158,7 +158,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = memo(({
           style={{ color: accentColor }}
         >
           <Download size={12} />
-          {t('Update Available')}
+          {t('main.updateAvailable')}
         </motion.button>
       )}
 

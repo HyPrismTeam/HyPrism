@@ -13,12 +13,12 @@ interface DockItem {
 }
 
 const dockItems: DockItem[] = [
-  { id: 'dashboard', icon: Home, labelKey: 'Dashboard' },
-  { id: 'news', icon: Newspaper, labelKey: 'News' },
-  { id: 'mods', icon: Package, labelKey: 'Mods' },
-  { id: 'profiles', icon: Users, labelKey: 'Profiles' },
-  { id: 'instances', icon: HardDrive, labelKey: 'Instances' },
-  { id: 'settings', icon: Settings, labelKey: 'Settings' },
+  { id: 'dashboard', icon: Home, labelKey: 'dock.dashboard' },
+  { id: 'news', icon: Newspaper, labelKey: 'dock.news' },
+  { id: 'mods', icon: Package, labelKey: 'dock.mods' },
+  { id: 'profiles', icon: Users, labelKey: 'dock.profiles' },
+  { id: 'instances', icon: HardDrive, labelKey: 'dock.instances' },
+  { id: 'settings', icon: Settings, labelKey: 'dock.settings' },
 ];
 
 interface DockMenuProps {

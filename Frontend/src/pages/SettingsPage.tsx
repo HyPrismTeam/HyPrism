@@ -38,7 +38,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = (props) => {
       <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Settings size={22} className="text-white/80" />
-          <h1 className="text-xl font-bold text-white">{t('Settings')}</h1>
+          <h1 className="text-xl font-bold text-white">{t('settings.title')}</h1>
         </div>
       </div>
 

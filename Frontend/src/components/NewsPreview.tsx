@@ -101,7 +101,7 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
             <div className='flex justify-between items-center'>
                 <div className='flex items-center gap-2'>
                     <Newspaper size={18} className='text-white' />
-                    <h2 className='text-sm font-bold text-white'>{t('News')}</h2>
+                    <h2 className='text-sm font-bold text-white'>{t('news.title')}</h2>
                 </div>
                 <div className='flex gap-2 sm:gap-3 items-center ml-2 sm:ml-4'>
                     {!isMinimized && (
@@ -115,7 +115,7 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                                 }`}
                                 style={filter === 'all' ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
                             >
-                                {t('All')}
+                                {t('news.all')}
                             </button>
                             <button
                                 onClick={() => setFilter('hytale')}
@@ -126,7 +126,7 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                                 }`}
                                 style={filter === 'hytale' ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
                             >
-                                {t('Hytale')}
+                                {t('news.hytale')}
                             </button>
                             <button
                                 onClick={() => setFilter('hyprism')}
@@ -137,14 +137,14 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                                 }`}
                                 style={filter === 'hyprism' ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
                             >
-                                {t('HyPrism')}
+                                {t('news.hyprism')}
                             </button>
                         </>
                     )}
                     <button
                         onClick={() => setIsMinimized(!isMinimized)}
                         className='p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all'
-                        title={isMinimized ? t('Expand') : t('Minimize')}
+                        title={isMinimized ? t('news.expand') : t('news.minimize')}
                     >
                         {isMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                     </button>
@@ -164,7 +164,7 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                                 onClick={() => fetchNews(limit, true)}
                                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm"
                             >
-                                {t('Try Again')}
+                                {t('news.tryAgain')}
                             </button>
                         </div>
                     </div>
@@ -210,12 +210,12 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                             onClick={() => openLink("https://hytale.com/news")}
                             className='w-full font-semibold hover:underline cursor-pointer text-xs mt-0.5'
                             style={{ color: accentColor }}>
-                            {t('Read more on hytale.com')} →
+                            {t('news.readMore')} →
                         </button>
                     </div>
                 ) : (
                     <div className="flex items-center justify-center py-4">
-                        <p className="text-white/50 text-sm">{t('No news found')}</p>
+                        <p className="text-white/50 text-sm">{t('news.noNewsFound')}</p>
                     </div>
                 )
             )}

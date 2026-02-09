@@ -71,6 +71,7 @@ export async function initI18n(): Promise<void> {
     try {
         // Get language from settings (persisted config)
         const settings = await ipc.settings.get();
+        console.log('[i18n] Settings from backend:', { language: settings?.language });
         currentLang = settings?.language || Language.ENGLISH;
         
         // Validate language exists
@@ -82,6 +83,7 @@ export async function initI18n(): Promise<void> {
         console.warn('[i18n] Failed to get settings, using English:', err);
     }
 
+    console.log('[i18n] Initializing with language:', currentLang);
     const translations = getTranslations(currentLang);
     console.log('[i18n] Loaded', Object.keys(translations).length, 'translations for', currentLang);
 
@@ -116,15 +118,22 @@ export async function changeLanguage(langCode: string): Promise<void> {
         return;
     }
 
+    console.log(`[i18n] Changing language to: ${langCode}`);
+
     // Tell the backend to persist the language setting
     try {
-        await ipc.settings.set('language', langCode);
+        const result = await ipc.i18n.set(langCode);
+        console.log(`[i18n] Backend response:`, result);
+        if (!result?.success) {
+            console.warn('[i18n] Backend failed to set language');
+        }
     } catch (err) {
         console.warn('[i18n] Failed to persist language setting:', err);
     }
 
     // Switch i18next to the new language
     await i18n.changeLanguage(langCode);
+    console.log(`[i18n] i18next language switched to: ${i18n.language}`);
 }
 
 /**

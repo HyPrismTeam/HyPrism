@@ -39,7 +39,7 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
             <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
               <Trash2 size={20} className="text-red-400" />
             </div>
-            <h2 className="text-lg font-bold text-white">{t('Delete Profile?')}</h2>
+            <h2 className="text-lg font-bold text-white">{t('deleteProfile.title')}</h2>
           </div>
           <button
             onClick={onCancel}
@@ -52,7 +52,7 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
         {/* Content */}
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-white/60">{t('Profile:')}</span>
+            <span className="text-white/60">{t('deleteProfile.profile')}</span>
             <span className="text-white font-medium" style={{ color: accentColor }}>{profileName}</span>
           </div>
           
@@ -61,16 +61,16 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
               <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm text-gray-300">
-                  {t('This will permanently delete all profile data, including:')}
+                  {t('deleteProfile.warning')}
                 </p>
                 <ul className="mt-2 text-xs text-gray-400 space-y-1 list-disc list-inside">
-                  <li>{t('Profile settings and preferences')}</li>
-                  <li>{t('Installed mods')}</li>
-                  <li>{t('Saved game data')}</li>
-                  <li>{t('Skin and avatar')}</li>
+                  <li>{t('deleteProfile.profileSettings')}</li>
+                  <li>{t('deleteProfile.installedMods')}</li>
+                  <li>{t('deleteProfile.savedGameData')}</li>
+                  <li>{t('deleteProfile.skinAndAvatar')}</li>
                 </ul>
                 <p className="mt-3 text-xs text-red-400/80 font-medium">
-                  {t('This action cannot be undone.')}
+                  {t('deleteProfile.cannotUndo')}
                 </p>
               </div>
             </div>
@@ -83,7 +83,7 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
             onClick={onCancel}
             className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-gray-300 hover:bg-white/10 transition-colors font-medium"
           >
-            {t('Cancel')}
+            {t('deleteProfile.cancel')}
           </button>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -92,7 +92,7 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
           >
             <Trash2 size={16} />
-            {t('Delete Profile')}
+            {t('deleteProfile.delete')}
           </motion.button>
         </div>
       </motion.div>
