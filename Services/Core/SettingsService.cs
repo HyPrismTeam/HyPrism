@@ -26,9 +26,11 @@ public class SettingsService : ISettingsService
         
         // Apply initial language override from config
         var savedLang = _configService.Configuration.Language;
+        Logger.Info("Settings", $"SettingsService init - Config language: '{savedLang}', LocalizationService current: '{_localizationService.CurrentLanguage}'");
         if (!string.IsNullOrEmpty(savedLang))
         {
             _localizationService.CurrentLanguage = savedLang;
+            Logger.Info("Settings", $"Applied language to LocalizationService: '{_localizationService.CurrentLanguage}'");
         }
     }
     
@@ -282,6 +284,40 @@ public class SettingsService : ISettingsService
         _configService.Configuration.AuthDomain = domain;
         _configService.SaveConfig();
         Logger.Info("Config", $"Auth domain set to: {domain}");
+        return true;
+    }
+
+    // ========== GPU Preference Settings ==========
+    
+    /// <inheritdoc/>
+    public string GetGpuPreference() => _configService.Configuration.GpuPreference;
+    
+    /// <inheritdoc/>
+    public bool SetGpuPreference(string preference)
+    {
+        var normalized = preference?.ToLowerInvariant() ?? "dedicated";
+        if (normalized != "dedicated" && normalized != "integrated" && normalized != "auto")
+        {
+            normalized = "dedicated";
+        }
+        
+        _configService.Configuration.GpuPreference = normalized;
+        _configService.SaveConfig();
+        Logger.Info("Config", $"GPU preference set to: {normalized}");
+        return true;
+    }
+
+    // ========== Animated Glass Effects Settings ==========
+    
+    /// <inheritdoc/>
+    public bool GetAnimatedGlassEffects() => _configService.Configuration.AnimatedGlassEffects;
+    
+    /// <inheritdoc/>
+    public bool SetAnimatedGlassEffects(bool enabled)
+    {
+        _configService.Configuration.AnimatedGlassEffects = enabled;
+        _configService.SaveConfig();
+        Logger.Info("Config", $"Animated glass effects set to: {enabled}");
         return true;
     }
 

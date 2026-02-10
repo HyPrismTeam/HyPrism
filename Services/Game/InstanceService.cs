@@ -1057,6 +1057,9 @@ public class InstanceService : IInstanceService
                             catch { }
                         }
 
+                        // Perform deep validation
+                        var validationResult = ValidateGameIntegrity(folder);
+
                         results.Add(new InstalledInstance
                         {
                             Branch = branch,
@@ -1065,6 +1068,9 @@ public class InstanceService : IInstanceService
                             HasUserData = hasUserData,
                             UserDataSize = size,
                             TotalSize = totalSize,
+                            IsValid = validationResult.Status == InstanceValidationStatus.Valid,
+                            ValidationStatus = validationResult.Status,
+                            ValidationDetails = validationResult.Details,
                             CustomName = customName
                         });
                     }
@@ -1077,6 +1083,230 @@ public class InstanceService : IInstanceService
         }
 
         return results.OrderByDescending(x => x.Version).ToList();
+    }
+
+    /// <summary>
+    /// Performs deep validation of a game instance, checking all critical components.
+    /// Returns detailed information about what's present and what's missing.
+    /// </summary>
+    public (InstanceValidationStatus Status, InstanceValidationDetails Details) ValidateGameIntegrity(string folder)
+    {
+        var details = new InstanceValidationDetails();
+        var missingComponents = new List<string>();
+        
+        try
+        {
+            // 1. Check if the folder exists at all
+            if (!Directory.Exists(folder))
+            {
+                details.ErrorMessage = "Instance directory does not exist";
+                return (InstanceValidationStatus.NotInstalled, details);
+            }
+
+            // 2. Check for the executable (most critical)
+            details.HasExecutable = CheckExecutablePresent(folder);
+            if (!details.HasExecutable)
+            {
+                missingComponents.Add("Game executable");
+            }
+
+            // 3. Check for assets folder
+            details.HasAssets = CheckAssetsPresent(folder);
+            if (!details.HasAssets)
+            {
+                missingComponents.Add("Game assets");
+            }
+
+            // 4. Check for libraries/dependencies
+            details.HasLibraries = CheckLibrariesPresent(folder);
+            if (!details.HasLibraries)
+            {
+                missingComponents.Add("Game libraries");
+            }
+
+            // 5. Check for essential config files
+            details.HasConfig = CheckConfigPresent(folder);
+            if (!details.HasConfig)
+            {
+                // Config missing is not critical, just a warning
+            }
+
+            details.MissingComponents = missingComponents;
+
+            // Determine overall status based on what's present
+            if (details.HasExecutable && details.HasAssets && details.HasLibraries)
+            {
+                return (InstanceValidationStatus.Valid, details);
+            }
+            else if (!details.HasExecutable && !details.HasAssets && !details.HasLibraries)
+            {
+                // Nothing is there - not installed
+                return (InstanceValidationStatus.NotInstalled, details);
+            }
+            else if (!details.HasExecutable)
+            {
+                // Has some files but no executable - corrupted
+                details.ErrorMessage = "Game executable is missing or corrupted";
+                return (InstanceValidationStatus.Corrupted, details);
+            }
+            else
+            {
+                // Has executable but missing other components - incomplete
+                details.ErrorMessage = $"Missing: {string.Join(", ", missingComponents)}";
+                return (InstanceValidationStatus.Incomplete, details);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("InstanceService", $"Error validating instance {folder}: {ex.Message}");
+            details.ErrorMessage = ex.Message;
+            return (InstanceValidationStatus.Unknown, details);
+        }
+    }
+
+    /// <summary>
+    /// Checks if the game executable is present at the specified path.
+    /// </summary>
+    private bool CheckExecutablePresent(string folder)
+    {
+        string clientPath;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            clientPath = Path.Combine(folder, "Client", "Hytale.app", "Contents", "MacOS", "HytaleClient");
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            clientPath = Path.Combine(folder, "Client", "HytaleClient.exe");
+        }
+        else
+        {
+            clientPath = Path.Combine(folder, "Client", "HytaleClient");
+        }
+        return File.Exists(clientPath);
+    }
+
+    /// <summary>
+    /// Checks if game assets are present and contain actual files.
+    /// </summary>
+    private bool CheckAssetsPresent(string folder)
+    {
+        string assetsPath;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            assetsPath = Path.Combine(folder, "Client", "Hytale.app", "Contents", "Assets");
+        }
+        else
+        {
+            assetsPath = Path.Combine(folder, "Client", "Assets");
+        }
+
+        if (!Directory.Exists(assetsPath))
+        {
+            return false;
+        }
+
+        // Check that assets folder is not empty and contains expected subfolders
+        try
+        {
+            var entries = Directory.GetFileSystemEntries(assetsPath);
+            if (entries.Length == 0)
+            {
+                return false;
+            }
+
+            // Check for at least some expected asset folders/files
+            // This is a basic sanity check
+            return entries.Length >= 3; // Should have multiple folders
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks if required libraries/dependencies are present.
+    /// </summary>
+    private bool CheckLibrariesPresent(string folder)
+    {
+        // On macOS, libraries are bundled in the app bundle
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            var frameworksPath = Path.Combine(folder, "Client", "Hytale.app", "Contents", "Frameworks");
+            if (Directory.Exists(frameworksPath))
+            {
+                return Directory.EnumerateFileSystemEntries(frameworksPath).Any();
+            }
+            // Also check MonoBleedingEdge if using Mono runtime
+            var monoPath = Path.Combine(folder, "Client", "Hytale.app", "Contents", "MonoBleedingEdge");
+            return Directory.Exists(monoPath) && Directory.EnumerateFileSystemEntries(monoPath).Any();
+        }
+        
+        // On Windows/Linux, check for typical library locations
+        var clientFolder = Path.Combine(folder, "Client");
+        if (!Directory.Exists(clientFolder))
+        {
+            return false;
+        }
+
+        // Check for DLLs on Windows or .so files on Linux
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // Check for any DLL files or Mono runtime
+            var monoPath = Path.Combine(clientFolder, "MonoBleedingEdge");
+            var hasMono = Directory.Exists(monoPath);
+            var hasDlls = Directory.EnumerateFiles(clientFolder, "*.dll", SearchOption.TopDirectoryOnly).Any();
+            return hasMono || hasDlls;
+        }
+        else
+        {
+            // Linux - check for .so files or Mono
+            var monoPath = Path.Combine(clientFolder, "MonoBleedingEdge");
+            var hasMono = Directory.Exists(monoPath);
+            var hasSo = Directory.EnumerateFiles(clientFolder, "*.so*", SearchOption.TopDirectoryOnly).Any();
+            return hasMono || hasSo;
+        }
+    }
+
+    /// <summary>
+    /// Checks if essential config files are present.
+    /// </summary>
+    private bool CheckConfigPresent(string folder)
+    {
+        // Check for common config files
+        var configFiles = new[]
+        {
+            Path.Combine(folder, "Client", "boot.config"),
+            Path.Combine(folder, "Client", "globalgamemanagers"),
+            Path.Combine(folder, "Client", "level0"),
+        };
+
+        // On macOS, config is inside the app bundle
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            var dataPath = Path.Combine(folder, "Client", "Hytale.app", "Contents", "Data");
+            return Directory.Exists(dataPath);
+        }
+
+        // At least one config file should exist
+        return configFiles.Any(File.Exists) || 
+               Directory.Exists(Path.Combine(folder, "Client", "HytaleClient_Data"));
+    }
+
+    private bool CheckInstanceValidity(string folder)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return File.Exists(Path.Combine(folder, "Client", "Hytale.app", "Contents", "MacOS", "HytaleClient"));
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return File.Exists(Path.Combine(folder, "Client", "HytaleClient.exe"));
+        }
+        else
+        {
+            return File.Exists(Path.Combine(folder, "Client", "HytaleClient"));
+        }
     }
 
     public void SetInstanceCustomName(string branch, int version, string? customName)

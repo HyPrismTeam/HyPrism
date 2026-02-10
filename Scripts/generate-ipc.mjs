@@ -171,7 +171,7 @@ for (const [domain, chs] of Object.entries(domains)) {
     const resp = ch.responseType || 'void';
 
     if (ch.type === 'invoke') {
-      const noData = ['get', 'current', 'list', 'instances', 'languages'].includes(action);
+      const noData = ['get', 'current', 'list', 'instances', 'languages', 'gpuAdapters'].includes(action);
       if (noData) {
         L.push(`  ${action}: () => invoke<${resp}>('${ch.channel}'),`);
       } else {

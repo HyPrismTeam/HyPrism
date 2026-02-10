@@ -1,13 +1,5 @@
-export { Titlebar } from './Titlebar';
-export { BackgroundImage } from './BackgroundImage';
-export { ProfileSection } from './ProfileSection';
-export { ControlSection } from './ControlSection';
-export { MusicPlayer } from './MusicPlayer';
-export { UpdateOverlay } from './UpdateOverlay';
-export { ErrorModal } from './ErrorModal';
-export { DeleteConfirmationModal } from './DeleteConfirmationModal';
-export { ModManager } from './ModManager';
-export { LogsModal } from './LogsModal';
 export { SettingsModal } from './SettingsModal';
-export { UpdateConfirmationModal } from './UpdateConfirmationModal';
+export { ModManager } from './ModManager';
 export { ProfileEditor } from './ProfileEditor';
+export { BrowseModsModal } from './BrowseModsModal';
+export { NewsPreview } from './NewsPreview';

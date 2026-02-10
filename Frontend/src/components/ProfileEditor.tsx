@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, RefreshCw, Check, User, Edit3, Copy, CheckCircle, Plus, Trash2, Dices, FolderOpen, CopyPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccentColor } from '../contexts/AccentColorContext';
+import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
 import { ipc, Profile, ProfileSnapshot } from '@/lib/ipc';
 import { DeleteProfileConfirmationModal } from './modals/DeleteProfileConfirmationModal';
 
@@ -93,6 +94,7 @@ function generateRandomName(): string {
 export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, onProfileUpdate, pageMode: isPageMode = false }) => {
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
+    const { animatedGlass } = useAnimatedGlass();
     const [uuid, setUuid] = useState<string>('');
     const [username, setUsernameState] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
@@ -479,7 +481,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                 exit={{ opacity: 0 }}
                 className={isPageMode
                     ? "w-full h-full"
-                    : "fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                    : `fixed inset-0 z-[200] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`
                 }
                 onClick={(e) => !isPageMode && e.target === e.currentTarget && onClose()}
             >
@@ -487,10 +489,10 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className={`bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex ${isPageMode ? 'w-full h-full' : 'w-full max-w-3xl mx-4 max-h-[80vh]'}`}
+                    className={`bg-[#1c1c1e] border border-white/[0.06] rounded-2xl shadow-2xl overflow-hidden flex ${isPageMode ? 'w-full h-full' : 'w-full max-w-3xl mx-4 max-h-[80vh]'}`}
                 >
                     {/* Left Sidebar - Profiles List */}
-                    <div className="w-48 bg-[#151515] border-r border-white/5 flex flex-col py-4 overflow-y-auto">
+                    <div className="w-48 bg-[#2c2c2e] border-r border-white/[0.04] flex flex-col py-4 overflow-y-auto">
                         {!isPageMode && <h2 className="text-lg font-bold text-white px-4 mb-4">{t('profiles.savedProfiles')}</h2>}
                         
                         {/* Profile Navigation - All Profiles */}
@@ -582,7 +584,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                         </nav>
                         
                         {/* Create New Profile Button at Bottom */}
-                        <div className="px-2 pt-4 border-t border-white/5 mx-2">
+                        <div className="px-2 pt-4 border-t border-white/[0.04] mx-2">
                             <button
                                 onClick={handleCreateProfile}
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/40 text-sm transition-colors"
@@ -597,7 +599,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                     <div className="flex-1 flex flex-col min-w-0">
                         {/* Header - only in modal mode */}
                         {!isPageMode && (
-                            <div className="flex items-center justify-between p-4 border-b border-white/5">
+                            <div className="flex items-center justify-between p-4 border-b border-white/[0.04]">
                                 <h3 className="text-white font-medium">{t('profiles.editor')}</h3>
                                 <button
                                     onClick={onClose}
@@ -647,7 +649,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         maxLength={16}
                                                         autoFocus
                                                         placeholder={isCreatingNewProfile ? t('profiles.enterName') : ''}
-                                                        className="bg-[#151515] text-white text-xl font-bold px-3 py-1 rounded-lg border outline-none w-48 text-center"
+                                                        className="bg-[#2c2c2e] text-white text-xl font-bold px-3 py-1 rounded-lg border outline-none w-48 text-center"
                                                         style={{ borderColor: accentColor }}
                                                     />
                                                     <motion.button
@@ -712,7 +714,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                     </div>
 
                                     {/* UUID Section */}
-                                    <div className="p-4 rounded-xl bg-[#151515] border border-white/10">
+                                    <div className="p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06]">
                                         <div className="flex items-center justify-between mb-2">
                                             <label className="text-sm text-white/60">{t('profiles.playerUuid')}</label>
                                             <div className="flex items-center gap-1">
@@ -763,7 +765,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                     onChange={(e) => setEditUuid(e.target.value)}
                                                     onKeyDown={handleUuidKeyDown}
                                                     autoFocus
-                                                    className="flex-1 bg-[#0a0a0a] text-white font-mono text-sm px-3 py-2 rounded-lg border outline-none"
+                                                    className="flex-1 bg-[#1c1c1e] text-white font-mono text-sm px-3 py-2 rounded-lg border outline-none"
                                                     style={{ borderColor: accentColor }}
                                                 />
                                                 <motion.button
@@ -796,7 +798,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => OpenCurrentProfileFolder()}
-                                        className="w-full p-3 rounded-xl bg-[#151515] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2 text-white/60 hover:text-white transition-colors"
+                                        className="w-full p-3 rounded-xl bg-[#2c2c2e] border border-white/[0.06] hover:border-white/20 flex items-center justify-center gap-2 text-white/60 hover:text-white transition-colors"
                                     >
                                         <FolderOpen size={18} />
                                         <span className="text-sm">{t('profiles.openFolder')}</span>

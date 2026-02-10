@@ -18,7 +18,10 @@ public class ModService : IModService
     private readonly HttpClient _httpClient;
     private readonly string _appDir;
     
-    // CF Base URL
+    // CurseForge API base URL
+    private const string CfApiBaseUrl = "https://api.curseforge.com";
+    
+    // CF Website Base URL
     private const string CfBaseUrl = "https://www.curseforge.com";
 
     // Lock for mod manifest operations to prevent concurrent writes
@@ -27,6 +30,11 @@ public class ModService : IModService
     private readonly ConfigService _configService;
     private readonly InstanceService _instanceService;
     private readonly ProgressNotificationService _progressNotificationService;
+    
+    /// <summary>
+    /// Gets the CurseForge API key from configuration.
+    /// </summary>
+    private string CurseForgeApiKey => _configService.Configuration.CurseForgeKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ModService"/> class.
@@ -48,6 +56,20 @@ public class ModService : IModService
         _configService = configService;
         _instanceService = instanceService;
         _progressNotificationService = progressNotificationService;
+    }
+    
+    /// <summary>
+    /// Creates an HttpRequestMessage for CurseForge API with proper headers.
+    /// </summary>
+    /// <param name="method">The HTTP method.</param>
+    /// <param name="endpoint">The API endpoint (without base URL).</param>
+    /// <returns>Configured HttpRequestMessage with API key header.</returns>
+    private HttpRequestMessage CreateCurseForgeRequest(HttpMethod method, string endpoint)
+    {
+        var request = new HttpRequestMessage(method, $"{CfApiBaseUrl}{endpoint}");
+        request.Headers.Add("x-api-key", CurseForgeApiKey);
+        request.Headers.Add("Accept", "application/json");
+        return request;
     }
     
     /// <inheritdoc/>

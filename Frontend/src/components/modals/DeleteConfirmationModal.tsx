@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ModalOverlay } from './ModalOverlay';
 
 interface DeleteConfirmationModalProps {
   onConfirm: () => void;
@@ -14,13 +15,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 }) => {
   const { t } = useTranslation();
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-8"
-      onClick={onCancel}
-    >
+    <ModalOverlay zClass="z-50" onClick={onCancel}>
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -77,6 +72,6 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
           </motion.button>
         </div>
       </motion.div>
-    </motion.div>
+    </ModalOverlay>
   );
 };

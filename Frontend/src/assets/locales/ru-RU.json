@@ -32,7 +32,9 @@
     "never": "Никогда",
     "exporting": "Экспорт...",
     "importing": "Импорт...",
-    "Latest": "Последняя"
+    "Latest": "Последняя",
+    "refresh": "Refresh",
+    "unknown": "Unknown"
   },
   "app": {
     "title": "HyPrism",
@@ -81,7 +83,8 @@
     "buyMeA": "Угости меня",
     "modManager": "Менеджер модов",
     "openInstanceFolder": "Открыть папку экземпляра",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "stop": "СТОП"
   },
   "settings": {
     "title": "Настройки",
@@ -94,6 +97,7 @@
     "data": "Данные",
     "instances": "Игры",
     "about": "О нас",
+    "network": "Сеть",
     "developer": "Разработчик",
     "close": "Закрыть",
     "browse": "Обзор",
@@ -126,11 +130,7 @@
       "closeLauncher": "Закрывать после запуска",
       "closeLauncherHint": "Закрывать лаунчер при запуске игры",
       "showAlphaMods": "Показывать альфа-моды",
-      "showAlphaModsHint": "Показывать моды с типом альфа-релиза в менеджере модов",
-      "onlineMode": "Онлайн-режим",
-      "onlineModeHint": "Подключаться к серверам авторизации при запуске",
-      "disableNews": "Скрыть новости",
-      "disableNewsHint": "Убрать новости с главного экрана."
+      "showAlphaModsHint": "Показывать моды с типом альфа-релиза в менеджере модов"
     },
     "visualSettings": {
       "title": "Визуальные настройки",
@@ -145,10 +145,33 @@
       "hideNews": "Скрыть новости",
       "hideNewsHint": "Полностью скрыть панель новостей",
       "chooseBackground": "Выбор фона",
-      "images": "Изображения"
+      "images": "Изображения",
+      "animatedGlass": "Анимация стеклянных эффектов",
+      "animatedGlassHint": "Плавные анимации появления панелей и меню. Отключите для повышения производительности."
+    },
+    "networkSettings": {
+      "onlineMode": "Онлайн-режим",
+      "onlineModeHint": "Подключение к серверам авторизации для мультиплеера.",
+      "authServer": "Сервер авторизации",
+      "authServerHint": "Выберите сервер авторизации для онлайн-игры.",
+      "authDefault": "По умолчанию",
+      "authOfficial": "Официальный",
+      "authOfficialHint": "Серверы Hytale ",
+      "authCustom": "Кастомный",
+      "authCustomHint": "Введите адрес своего сервера авторизации",
+      "currentServer": "Текущий сервер"
     },
     "graphicsSettings": {
       "title": "Настройки графики",
+      "gpuPreference": "Выбор видеокарты",
+      "gpuPreferenceHint": "Выберите, какая видеокарта будет использоваться для запуска игры. Полезно для ноутбуков с интегрированной и дискретной графикой.",
+      "gpu_dedicated": "Дискретная",
+      "gpu_dedicatedHint": "Использовать дискретный GPU (NVIDIA/AMD)",
+      "gpu_integrated": "Встроенная",
+      "gpu_integratedHint": "Использовать встроенный GPU (Intel/AMD)",
+      "gpu_auto": "Авто",
+      "gpu_autoHint": "Система выберет автоматически",
+      "singleGpuNotice": "Обнаружена только одна видеокарта — выбор зафиксирован в режиме Авто.",
       "optimizationMods": "Моды оптимизации",
       "optimizationModsHint": "Скачать и установить моды оптимизации для улучшения производительности",
       "enableOptimizationMods": "Включить моды оптимизации",
@@ -276,6 +299,7 @@
     "import": "Импорт",
     "storage": "Хранилище",
     "noInstances": "Нет установленных экземпляров",
+    "addInstance": "Добавить экземпляр",
     "downloadFromDashboard": "Скачайте версию игры с главной страницы",
     "exportedSuccess": "Экземпляр успешно экспортирован",
     "exportFailed": "Не удалось экспортировать экземпляр",
@@ -284,7 +308,28 @@
     "importedSuccess": "Экземпляр успешно импортирован",
     "importFailed": "Не удалось импортировать экземпляр",
     "deleteTitle": "Удалить экземпляр",
-    "deleteConfirm": "Вы уверены, что хотите удалить"
+    "deleteConfirm": "Вы уверены, что хотите удалить",
+    "selectInstance": "Выберите экземпляр",
+    "selectInstanceHint": "Выберите экземпляр слева для просмотра и управления",
+    "lastPlayed": "Последний запуск",
+    "installContent": "Установить контент",
+    "rename": "Переименовать",
+    "status": {
+      "ready": "Готово",
+      "incomplete": "Неполная",
+      "notInstalled": "Не установлено",
+      "corrupted": "Повреждён",
+      "unknown": "Неизвестно"
+    },
+    "tab": {
+      "content": "Контент",
+      "worlds": "Миры",
+      "logs": "Логи"
+    },
+    "saves": "Сохранения",
+    "noSaves": "Сохранений не найдено",
+    "noSavesHint": "Сыграйте в игру, чтобы создать первое сохранение",
+    "logsComingSoon": "Просмотр логов скоро появится"
   },
   "profiles": {
     "title": "Профили",
@@ -538,7 +583,23 @@
       "zipArchiveHint": "Все файлы модов в архиве",
       "exportFolder": "Папка экспорта",
       "selectFolder": "Выберите папку для экспорта..."
-    }
+    },
+    "searchMods": "Search mods...",
+    "mods": "Mods",
+    "name": "Name",
+    "version": "Version",
+    "enabled": "Enabled",
+    "modsInstalled": "mods installed",
+    "updatesAvailableShort": "updates",
+    "clickInstallContent": "Click 'Install content' to add mods",
+    "unknownAuthor": "Unknown Author",
+    "updateBadge": "Update",
+    "deleteSelected": "Delete Selected",
+    "deleteFailed": "Failed to delete mod",
+    "deleteModTitle": "Delete Mod",
+    "deleteModConfirm": "Are you sure you want to delete this mod?",
+    "modDeleted": "Mod deleted successfully",
+    "modsDeleted": "Mods deleted successfully"
   },
   "onboarding": {
     "language": "Язык",

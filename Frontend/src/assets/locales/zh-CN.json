@@ -32,7 +32,9 @@
     "never": "从未",
     "exporting": "导出中...",
     "importing": "导入中...",
-    "Latest": "最新"
+    "Latest": "最新",
+    "refresh": "Refresh",
+    "unknown": "Unknown"
   },
   "app": {
     "title": "HyPrism",
@@ -81,7 +83,8 @@
     "buyMeA": "购买",
     "modManager": "模组管理",
     "openInstanceFolder": "打开实例文件夹",
-    "settings": "设置"
+    "settings": "设置",
+    "stop": "停止"
   },
   "settings": {
     "title": "设置",
@@ -126,11 +129,7 @@
       "closeLauncher": "关闭启动器",
       "closeLauncherHint": "游戏启动时自动关闭。",
       "showAlphaMods": "Show Alpha Mods",
-      "showAlphaModsHint": "Show mods with alpha release type in the mod manager",
-      "onlineMode": "Online Mode",
-      "onlineModeHint": "Connect to authentication servers when launching",
-      "disableNews": "禁用新闻",
-      "disableNewsHint": "隐藏主菜单新闻。"
+      "showAlphaModsHint": "Show mods with alpha release type in the mod manager"
     },
     "visualSettings": {
       "title": "外观设置",
@@ -146,8 +145,8 @@
       "hideNewsHint": "Completely hide the news panel",
       "chooseBackground": "Choose Background",
       "images": "Images",
-      "accentColorHint": "即将推出",
-      "backgroundHint": "即将推出"
+      "animatedGlass": "Animated Glass Effects",
+      "animatedGlassHint": "Enable smooth entrance animations for panels and menus. Disable for better performance."
     },
     "graphicsSettings": {
       "title": "Graphics Settings",
@@ -157,7 +156,16 @@
       "installingOptMods": "Installing optimization mods...",
       "installOptModsAction": "Install 8 performance mods to all profiles",
       "optModsInstalled": "Optimization mods installed!",
-      "optModsFailed": "Failed to install optimization mods"
+      "optModsFailed": "Failed to install optimization mods",
+      "gpuPreference": "GPU Preference",
+      "gpuPreferenceHint": "Choose which GPU to use for launching the game. Useful for laptops with both integrated and dedicated graphics.",
+      "gpu_dedicated": "Dedicated",
+      "gpu_dedicatedHint": "Use discrete GPU (NVIDIA/AMD)",
+      "gpu_integrated": "Integrated",
+      "gpu_integratedHint": "Use built-in GPU (Intel/AMD)",
+      "gpu_auto": "Auto",
+      "gpu_autoHint": "Let the system decide",
+      "singleGpuNotice": "Only one GPU detected — selection is locked to Auto mode."
     },
     "languageSettings": {
       "title": "语言设置",
@@ -257,6 +265,19 @@
       "dontAskAgain": "Don't ask me again",
       "noThanks": "No thanks",
       "searchMods": "Search Mods"
+    },
+    "network": "网络",
+    "networkSettings": {
+      "onlineMode": "Online Mode",
+      "onlineModeHint": "Connect to authentication servers for multiplayer.",
+      "authServer": "Auth Server",
+      "authServerHint": "Select the authentication server used for online play.",
+      "authDefault": "Default",
+      "authOfficial": "Official",
+      "authOfficialHint": "Hytale 服务器",
+      "authCustom": "Custom",
+      "authCustomHint": "Enter your own auth server address",
+      "currentServer": "Current server"
     }
   },
   "news": {
@@ -286,7 +307,29 @@
     "importedSuccess": "Instance imported successfully",
     "importFailed": "Failed to import instance",
     "deleteTitle": "Delete Instance",
-    "deleteConfirm": "Are you sure you want to delete"
+    "deleteConfirm": "Are you sure you want to delete",
+    "addInstance": "Add Instance",
+    "selectInstance": "Select an Instance",
+    "selectInstanceHint": "Choose an instance from the left to view and manage its content",
+    "lastPlayed": "Last played",
+    "installContent": "Install content",
+    "rename": "Rename",
+    "status": {
+      "ready": "Ready",
+      "incomplete": "Incomplete",
+      "notInstalled": "Not Installed",
+      "corrupted": "Corrupted",
+      "unknown": "Unknown"
+    },
+    "tab": {
+      "content": "Content",
+      "worlds": "Worlds",
+      "logs": "Logs"
+    },
+    "saves": "Saves",
+    "noSaves": "No saves found",
+    "noSavesHint": "Play the game to create your first save",
+    "logsComingSoon": "Logs viewer coming soon"
   },
   "profiles": {
     "title": "Profiles",
@@ -433,13 +476,7 @@
     "loading": "Loading logs...",
     "noLogs": "没有日志",
     "autoRefresh": "Auto-refreshing every 3 seconds",
-    "download": "Download",
-    "gameLogs": "游戏日志：",
-    "lines": "行",
-    "autoScroll": "自动滚动",
-    "copyAll": "复制全部",
-    "downloadLogs": "下载日志",
-    "clear": "清除"
+    "download": "Download"
   },
   "update": {
     "downloading": "下载中...",
@@ -546,7 +583,23 @@
       "zipArchiveHint": "All mod files bundled",
       "exportFolder": "Export Folder",
       "selectFolder": "Select export folder..."
-    }
+    },
+    "searchMods": "Search mods...",
+    "mods": "Mods",
+    "name": "Name",
+    "version": "Version",
+    "enabled": "Enabled",
+    "modsInstalled": "mods installed",
+    "updatesAvailableShort": "updates",
+    "clickInstallContent": "Click 'Install content' to add mods",
+    "unknownAuthor": "Unknown Author",
+    "updateBadge": "Update",
+    "deleteSelected": "Delete Selected",
+    "deleteFailed": "Failed to delete mod",
+    "deleteModTitle": "Delete Mod",
+    "deleteModConfirm": "Are you sure you want to delete this mod?",
+    "modDeleted": "Mod deleted successfully",
+    "modsDeleted": "Mods deleted successfully"
   },
   "onboarding": {
     "language": "语言",
@@ -610,12 +663,6 @@
     "mutedWhilePlaying": "Music muted while game is running",
     "unmute": "Unmute",
     "mute": "Mute",
-    "nowPlaying": "正在播放",
-    "play": "播放",
-    "pause": "暂停",
-    "next": "下一首",
-    "previous": "上一首",
-    "volume": "音量",
     "on": "音乐"
   }
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Terminal, Loader2, Download, Copy, Check } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { ModalOverlay } from './ModalOverlay';
 
 interface LogsModalProps {
   onClose: () => void;
@@ -79,12 +80,7 @@ export const LogsModal: React.FC<LogsModalProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-8"
-    >
+    <ModalOverlay zClass="z-50">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -161,6 +157,6 @@ export const LogsModal: React.FC<LogsModalProps> = ({
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </ModalOverlay>
   );
 };

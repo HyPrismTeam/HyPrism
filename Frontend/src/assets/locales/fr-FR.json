@@ -32,7 +32,9 @@
     "never": "Jamais",
     "exporting": "Export...",
     "importing": "Import...",
-    "Latest": "Dernière"
+    "Latest": "Dernière",
+    "refresh": "Refresh",
+    "unknown": "Unknown"
   },
   "app": {
     "title": "HyPrism",
@@ -81,7 +83,8 @@
     "buyMeA": "ACHETEZ-LE",
     "modManager": "Gestionnaire de mods",
     "openInstanceFolder": "Ouvrir le dossier d'instance",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "stop": "ARRÊTER"
   },
   "settings": {
     "title": "Paramètres",
@@ -126,11 +129,7 @@
       "closeLauncher": "Fermer le lanceur",
       "closeLauncherHint": "Fermer au lancement du jeu.",
       "showAlphaMods": "Show Alpha Mods",
-      "showAlphaModsHint": "Show mods with alpha release type in the mod manager",
-      "onlineMode": "Online Mode",
-      "onlineModeHint": "Connect to authentication servers when launching",
-      "disableNews": "Désactiver les news",
-      "disableNewsHint": "Masquer les actualités."
+      "showAlphaModsHint": "Show mods with alpha release type in the mod manager"
     },
     "visualSettings": {
       "title": "Apparence",
@@ -145,7 +144,9 @@
       "hideNews": "Hide News",
       "hideNewsHint": "Completely hide the news panel",
       "chooseBackground": "Choose Background",
-      "images": "Images"
+      "images": "Images",
+      "animatedGlass": "Animated Glass Effects",
+      "animatedGlassHint": "Enable smooth entrance animations for panels and menus. Disable for better performance."
     },
     "graphicsSettings": {
       "title": "Graphics Settings",
@@ -155,7 +156,16 @@
       "installingOptMods": "Installing optimization mods...",
       "installOptModsAction": "Install 8 performance mods to all profiles",
       "optModsInstalled": "Optimization mods installed!",
-      "optModsFailed": "Failed to install optimization mods"
+      "optModsFailed": "Failed to install optimization mods",
+      "gpuPreference": "GPU Preference",
+      "gpuPreferenceHint": "Choose which GPU to use for launching the game. Useful for laptops with both integrated and dedicated graphics.",
+      "gpu_dedicated": "Dedicated",
+      "gpu_dedicatedHint": "Use discrete GPU (NVIDIA/AMD)",
+      "gpu_integrated": "Integrated",
+      "gpu_integratedHint": "Use built-in GPU (Intel/AMD)",
+      "gpu_auto": "Auto",
+      "gpu_autoHint": "Let the system decide",
+      "singleGpuNotice": "Only one GPU detected — selection is locked to Auto mode."
     },
     "languageSettings": {
       "title": "Langue",
@@ -255,6 +265,19 @@
       "dontAskAgain": "Don't ask me again",
       "noThanks": "No thanks",
       "searchMods": "Search Mods"
+    },
+    "network": "Réseau",
+    "networkSettings": {
+      "onlineMode": "Online Mode",
+      "onlineModeHint": "Connect to authentication servers for multiplayer.",
+      "authServer": "Auth Server",
+      "authServerHint": "Select the authentication server used for online play.",
+      "authDefault": "Default",
+      "authOfficial": "Official",
+      "authOfficialHint": "Hytale servers",
+      "authCustom": "Custom",
+      "authCustomHint": "Enter your own auth server address",
+      "currentServer": "Current server"
     }
   },
   "news": {
@@ -284,7 +307,29 @@
     "importedSuccess": "Instance imported successfully",
     "importFailed": "Failed to import instance",
     "deleteTitle": "Delete Instance",
-    "deleteConfirm": "Are you sure you want to delete"
+    "deleteConfirm": "Are you sure you want to delete",
+    "addInstance": "Add Instance",
+    "selectInstance": "Select an Instance",
+    "selectInstanceHint": "Choose an instance from the left to view and manage its content",
+    "lastPlayed": "Last played",
+    "installContent": "Install content",
+    "rename": "Rename",
+    "status": {
+      "ready": "Ready",
+      "incomplete": "Incomplete",
+      "notInstalled": "Not Installed",
+      "corrupted": "Corrupted",
+      "unknown": "Unknown"
+    },
+    "tab": {
+      "content": "Content",
+      "worlds": "Worlds",
+      "logs": "Logs"
+    },
+    "saves": "Saves",
+    "noSaves": "No saves found",
+    "noSavesHint": "Play the game to create your first save",
+    "logsComingSoon": "Logs viewer coming soon"
   },
   "profiles": {
     "title": "Profiles",
@@ -431,13 +476,7 @@
     "loading": "Loading logs...",
     "noLogs": "Aucun journal",
     "autoRefresh": "Auto-refreshing every 3 seconds",
-    "download": "Download",
-    "gameLogs": "Journaux :",
-    "lines": "lignes",
-    "autoScroll": "Défilement auto",
-    "copyAll": "Tout copier",
-    "downloadLogs": "Télécharger les journaux",
-    "clear": "Effacer"
+    "download": "Download"
   },
   "update": {
     "downloading": "Téléchargement...",
@@ -544,7 +583,23 @@
       "zipArchiveHint": "All mod files bundled",
       "exportFolder": "Export Folder",
       "selectFolder": "Select export folder..."
-    }
+    },
+    "searchMods": "Search mods...",
+    "mods": "Mods",
+    "name": "Name",
+    "version": "Version",
+    "enabled": "Enabled",
+    "modsInstalled": "mods installed",
+    "updatesAvailableShort": "updates",
+    "clickInstallContent": "Click 'Install content' to add mods",
+    "unknownAuthor": "Unknown Author",
+    "updateBadge": "Update",
+    "deleteSelected": "Delete Selected",
+    "deleteFailed": "Failed to delete mod",
+    "deleteModTitle": "Delete Mod",
+    "deleteModConfirm": "Are you sure you want to delete this mod?",
+    "modDeleted": "Mod deleted successfully",
+    "modsDeleted": "Mods deleted successfully"
   },
   "onboarding": {
     "language": "Langue",
@@ -608,9 +663,6 @@
     "mutedWhilePlaying": "Music muted while game is running",
     "unmute": "Unmute",
     "mute": "Mute",
-    "nowPlaying": "En lecture",
-    "play": "Lecture",
-    "pause": "Pause",
     "on": "Musique"
   }
 }

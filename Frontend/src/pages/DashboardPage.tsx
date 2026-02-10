@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Play, Download, Loader2, X, GitBranch, ChevronDown, Check, RefreshCw, Copy, Edit3, User } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
+import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
 import { ipc } from '@/lib/ipc';
 import { GameBranch } from '../constants/enums';
 import { DiscordIcon } from '../components/icons/DiscordIcon';
@@ -44,7 +45,7 @@ interface DashboardPageProps {
   currentBranch: string;
   currentVersion: number;
   availableVersions: number[];
-  installedVersions: number[];
+  installedVersions: { version: number; isValid: boolean }[];
   isLoadingVersions: boolean;
   onBranchChange: (branch: string) => void;
   onVersionChange: (version: number) => void;
@@ -66,6 +67,7 @@ const pageVariants = {
 export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
   const { t } = useTranslation();
   const { accentColor, accentTextColor } = useAccentColor();
+  const { animatedGlass } = useAnimatedGlass();
   const [editValue, setEditValue] = useState(props.username);
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   const [isBranchOpen, setIsBranchOpen] = useState(false);
@@ -122,16 +124,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
   // Check if selectors should be hidden (during download/launch or game running)
   const shouldHideSelectors = props.isDownloading || props.isGameRunning;
 
-  // Get the appropriate border radius class for action button based on whether selectors are visible
-  const actionButtonRounding = shouldHideSelectors ? 'rounded-2xl' : 'rounded-r-2xl';
-
-  // Render the action section of the play button pill
+  // Render the action section of the merged play button
   const renderActionButton = () => {
     if (props.isGameRunning) {
       return (
         <button
           disabled
-          className={`h-full px-8 flex items-center gap-2 font-black text-base tracking-tight bg-gradient-to-r from-red-600 to-red-500 text-white ${actionButtonRounding} cursor-not-allowed opacity-90`}
+          className="h-full px-8 flex items-center gap-2 font-black text-base tracking-tight bg-gradient-to-r from-red-600 to-red-500 text-white rounded-r-2xl cursor-not-allowed opacity-90"
         >
           <Loader2 size={16} className="animate-spin" />
           <span>{t('main.running')}</span>
@@ -142,7 +141,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     if (props.isDownloading) {
       return (
         <div
-          className={`h-full px-6 flex items-center justify-center relative overflow-hidden min-w-[160px] ${actionButtonRounding} ${props.canCancel ? 'cursor-pointer' : 'cursor-default'}`}
+          className={`h-full px-6 flex items-center justify-center relative overflow-hidden w-[160px] rounded-r-2xl ${props.canCancel ? 'cursor-pointer' : 'cursor-default'}`}
           style={{ background: 'rgba(255,255,255,0.05)' }}
           onMouseEnter={() => props.canCancel && setShowCancelButton(true)}
           onMouseLeave={() => setShowCancelButton(false)}
@@ -155,12 +154,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           {showCancelButton && props.canCancel ? (
             <div className="relative z-10 flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
               <X size={16} />
-              <span className="text-xs font-bold">{t('main.cancel')}</span>
+              <span className="text-xs font-bold uppercase">{t('main.cancel')}</span>
             </div>
           ) : (
             <div className="relative z-10 flex items-center gap-2">
               <Loader2 size={14} className="animate-spin text-white" />
-              <span className="text-sm font-bold text-white uppercase">{getLaunchStateLabel()}</span>
+              <span className="text-sm font-bold text-white">{getLaunchStateLabel()}</span>
             </div>
           )}
         </div>
@@ -169,7 +168,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
 
     if (props.isCheckingInstalled) {
       return (
-        <button disabled className={`h-full px-8 flex items-center gap-2 font-black text-base bg-white/10 text-white/50 cursor-not-allowed ${actionButtonRounding}`}>
+        <button disabled className="h-full px-8 flex items-center gap-2 font-black text-base bg-white/10 text-white/50 cursor-not-allowed rounded-r-2xl">
           <Loader2 size={16} className="animate-spin" />
           <span>{t('main.checking')}</span>
         </button>
@@ -190,7 +189,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           <div className="w-px h-6 bg-white/10" />
           <button
             onClick={props.onPlay}
-            className={`h-full px-6 flex items-center gap-2 font-black text-base ${actionButtonRounding} hover:brightness-110 active:scale-[0.98] transition-all`}
+            className="h-full px-6 flex items-center gap-2 font-black text-base rounded-r-2xl hover:brightness-110 active:scale-[0.98] transition-all"
             style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, color: accentTextColor }}
           >
             <Play size={16} fill="currentColor" />
@@ -205,7 +204,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
       return (
         <button
           onClick={props.onPlay}
-          className={`h-full px-8 flex items-center gap-2 font-black text-lg ${actionButtonRounding} hover:brightness-110 active:scale-[0.98] transition-all`}
+          className="h-full px-8 flex items-center gap-2 font-black text-lg rounded-r-2xl hover:brightness-110 active:scale-[0.98] transition-all"
           style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`, color: accentTextColor }}
         >
           <Play size={18} fill="currentColor" />
@@ -219,7 +218,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
       return (
         <button
           onClick={props.onDuplicate}
-          className={`h-full px-6 flex items-center gap-2 font-black text-base ${actionButtonRounding} bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] transition-all`}
+          className="h-full px-6 flex items-center gap-2 font-black text-base rounded-r-2xl bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:brightness-110 active:scale-[0.98] transition-all"
         >
           <Copy size={16} />
           <span>{t('main.duplicate')}</span>
@@ -231,7 +230,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     return (
       <button
         onClick={props.onDownload}
-        className={`h-full px-8 flex items-center gap-2 font-black text-base ${actionButtonRounding} bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:brightness-110 active:scale-[0.98] transition-all`}
+        className="h-full px-8 flex items-center gap-2 font-black text-base rounded-r-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:brightness-110 active:scale-[0.98] transition-all"
       >
         <Download size={16} />
         <span>{t('main.download')}</span>
@@ -362,191 +361,204 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           </div>
         </motion.div>
 
-        {/* Separated Branch/Version Selector + Play Button */}
+        {/* Merged Branch/Version/Play Button */}
         <motion.div
           initial={{ y: 16 }}
           animate={{ y: 0 }}
           transition={{ delay: 0.35, duration: 0.4, ease: 'easeOut' }}
           className="flex flex-col items-center"
         >
-          {/* Educational label */}
-          <AnimatePresence>
-            {!shouldHideSelectors && (
-              <motion.div
-                initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 12, scale: 0.95 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="mb-3"
-              >
-                <p className="text-white/40 text-[11px] whitespace-nowrap text-center">
-                  {t('main.educational')}{' '}
-                  <button
-                    onClick={() => ipc.browser.open('https://hytale.com')}
-                    className="font-semibold hover:underline cursor-pointer"
-                    style={{ color: accentColor }}
-                  >
-                    {t('main.buyIt')}
-                  </button>
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Button bar with relative positioning for dropdowns */}
-          <div className="relative flex items-center gap-0">
-            {/* Branch & Version Selector Pill */}
-            <AnimatePresence mode="wait">
+          <div className="relative mt-7">
+            {/* Educational label */}
+            <AnimatePresence>
               {!shouldHideSelectors && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.95 }}
                   transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="flex items-center h-14 rounded-l-2xl overflow-hidden bg-[#1a1a1a]/80 backdrop-blur-xl border border-white/10 border-r-0"
+                  className="absolute bottom-full flex w-full justify-center"
                 >
-                  {/* Branch Selector Button */}
-                  <div ref={branchRef} className="h-full">
-                    <button
-                      onClick={() => { setIsBranchOpen(!isBranchOpen); setIsVersionOpen(false); }}
-                      disabled={props.isLoadingVersions}
-                      className="h-full px-5 flex items-center gap-2 text-white/80 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-                    >
-                      <GitBranch size={14} className="text-white/60" />
-                      <span className="text-sm font-semibold whitespace-nowrap">{branchLabel}</span>
-                      <ChevronDown size={11} className={`text-white/40 transition-transform ${isBranchOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                  </div>
-
-                  <div className="w-px h-7 bg-white/15" />
-
-                  {/* Version Selector Button */}
-                  <div ref={versionRef} className="h-full">
-                    <button
-                      onClick={() => { 
-                        if (versionRef.current) setVersionDropdownLeft(versionRef.current.offsetLeft);
-                        setIsVersionOpen(!isVersionOpen); 
-                        setIsBranchOpen(false); 
-                      }}
-                      disabled={props.isLoadingVersions}
-                      className="h-full px-5 flex items-center gap-2 text-white/80 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
-                    >
-                      <span className="text-sm font-semibold whitespace-nowrap">
-                        {props.isLoadingVersions ? '...' : props.currentVersion === 0 ? t('main.latest') : `v${props.currentVersion}`}
-                      </span>
-                      <ChevronDown size={11} className={`text-white/40 transition-transform ${isVersionOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                  <div className={`${animatedGlass ? 'bg-black/40 backdrop-blur-sm' : 'bg-[#1a1a1a]/90'} rounded-t-lg px-4 py-1.5 border-x border-t border-white/5`}>
+                    <p className="text-white/40 text-[11px] whitespace-nowrap text-center">
+                      {t('main.educational')}{' '}
+                      <button
+                        onClick={() => ipc.browser.open('https://hytale.com')}
+                        className="font-semibold hover:underline cursor-pointer"
+                        style={{ color: accentColor }}
+                      >
+                        {t('main.buyIt')}
+                      </button>
+                    </p>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Play Button Pill */}
-            <div className={`h-14 flex items-center ${shouldHideSelectors ? 'rounded-2xl' : 'rounded-r-2xl'}`}>
-              {renderActionButton()}
-            </div>
-          </div>
-
-          {/* Dropdown Menus - positioned relative to the button bar */}
-          <AnimatePresence>
-            {!shouldHideSelectors && isBranchOpen && (
-              <motion.div 
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-                className="absolute top-full left-0 mt-2 z-[100] min-w-[140px] bg-[#1a1a1a] backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden p-1"
-              >
-                {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
-                  <button
-                    key={branch}
-                    onClick={() => { props.onBranchChange(branch); setIsBranchOpen(false); }}
-                    className="w-full px-3 py-2 flex items-center gap-2 text-sm rounded-lg transition-colors"
-                    style={props.currentBranch === branch ? { backgroundColor: `${accentColor}33`, color: 'white' } : undefined}
-                    onMouseEnter={(e) => { if (props.currentBranch !== branch) { e.currentTarget.style.backgroundColor = `${accentColor}1a`; e.currentTarget.style.color = accentColor; } }}
-                    onMouseLeave={(e) => { if (props.currentBranch !== branch) { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = ''; } }}
+            <div
+              className={`flex items-center h-14 rounded-2xl overflow-hidden ${animatedGlass ? 'glass-bar-dashboard' : 'glass-bar-dashboard-solid'}`}
+            >
+              {/* Branch & Version Selectors - hidden during download/game running */}
+              <AnimatePresence mode="wait">
+                {!shouldHideSelectors && (
+                  <motion.div
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="flex items-center h-full overflow-hidden"
                   >
-                    {props.currentBranch === branch && <Check size={14} className="text-white" strokeWidth={3} />}
-                    <span className={props.currentBranch === branch ? '' : 'ml-[22px]'}>
-                      {branch === GameBranch.RELEASE ? t('main.release') : t('main.preRelease')}
-                    </span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {!shouldHideSelectors && isVersionOpen && (
-              <motion.div 
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-                className="absolute top-full mt-2 z-[100] min-w-[140px] max-h-[168px] overflow-y-auto bg-[#1a1a1a] backdrop-blur-xl border border-white/10 rounded-xl shadow-xl shadow-black/50 p-1"
-                style={{ left: versionDropdownLeft }}
-              >
-                {props.availableVersions.length > 0 ? (
-                  props.availableVersions.map((version) => {
-                    const isInstalled = props.installedVersions.includes(version);
-                    const isSelected = props.currentVersion === version;
-                    return (
+                    {/* Branch Selector Button */}
+                    <div ref={branchRef} className="h-full">
                       <button
-                        key={version}
-                        onClick={() => { props.onVersionChange(version); setIsVersionOpen(false); }}
-                        className={`w-full px-3 py-2 flex items-center gap-2 text-sm rounded-lg ${isSelected ? '' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-                        style={isSelected ? { backgroundColor: `${accentColor}33`, color: accentColor } : undefined}
+                        onClick={() => { setIsBranchOpen(!isBranchOpen); setIsVersionOpen(false); }}
+                        disabled={props.isLoadingVersions}
+                        className="h-full px-4 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
                       >
-                        {isInstalled ? (
-                          <Check size={14} className={isSelected ? '' : 'text-green-400'} style={isSelected ? { color: accentColor } : undefined} strokeWidth={3} />
-                        ) : (
-                          <Download size={14} className="text-white/40" />
-                        )}
-                        <span>{version === 0 ? t('main.latest') : `v${version}`}</span>
+                        <GitBranch size={14} className="text-white/70" />
+                        <span className="text-sm font-medium whitespace-nowrap">{branchLabel}</span>
+                        <ChevronDown size={11} className={`text-white/40 transition-transform ${isBranchOpen ? 'rotate-180' : ''}`} />
                       </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-3 py-2 text-sm text-white/40">{t('main.noVersions')}</div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    </div>
 
-          {/* Progress Bar - only show when downloading and NOT in complete state */}
-          <AnimatePresence>
-            {props.isDownloading && props.launchState !== 'complete' && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.2 }}
-                className="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-[350px]"
-              >
-                <div className="bg-black/60 backdrop-blur-md rounded-xl px-3 py-2 border border-white/5">
-                  {/* Progress bar container */}
-                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: accentColor }}
-                    />
+                    <div className="w-px h-7 bg-white/10" />
+
+                    {/* Version Selector Button */}
+                    <div ref={versionRef} className="h-full">
+                      <button
+                        onClick={() => { 
+                          if (versionRef.current) setVersionDropdownLeft(versionRef.current.offsetLeft);
+                          setIsVersionOpen(!isVersionOpen); 
+                          setIsBranchOpen(false); 
+                        }}
+                        disabled={props.isLoadingVersions}
+                        className="h-full px-4 flex items-center gap-2 text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all"
+                      >
+                        <span className="text-sm font-medium whitespace-nowrap">
+                          {props.isLoadingVersions ? '...' : props.currentVersion === 0 ? t('main.latest') : `v${props.currentVersion}`}
+                        </span>
+                        <ChevronDown size={11} className={`text-white/40 transition-transform ${isVersionOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+
+                    <div className="w-px h-7 bg-white/10" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Action Button (Play/Download/Update/Exit) - fixed width to prevent jumping */}
+              <div className="min-w-[140px] h-full flex items-center justify-end">
+                {renderActionButton()}
+              </div>
+            </div>
+
+            {/* Dropdown Menus - positioned relative to the button bar */}
+            <AnimatePresence>
+              {!shouldHideSelectors && isBranchOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className={`absolute top-full left-0 mt-2 z-[100] min-w-[140px] bg-[#1a1a1a] ${animatedGlass ? 'backdrop-blur-xl' : ''} border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden p-1`}
+                >
+                  {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
+                    <button
+                      key={branch}
+                      onClick={() => { props.onBranchChange(branch); setIsBranchOpen(false); }}
+                      className="w-full px-3 py-2 flex items-center gap-2 text-sm rounded-lg transition-colors"
+                      style={props.currentBranch === branch ? { backgroundColor: `${accentColor}33`, color: 'white' } : undefined}
+                      onMouseEnter={(e) => { if (props.currentBranch !== branch) { e.currentTarget.style.backgroundColor = `${accentColor}1a`; e.currentTarget.style.color = accentColor; } }}
+                      onMouseLeave={(e) => { if (props.currentBranch !== branch) { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = ''; } }}
+                    >
+                      {props.currentBranch === branch && <Check size={14} className="text-white" strokeWidth={3} />}
+                      <span className={props.currentBranch === branch ? '' : 'ml-[22px]'}>
+                        {branch === GameBranch.RELEASE ? t('main.release') : t('main.preRelease')}
+                      </span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {!shouldHideSelectors && isVersionOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                  className={`absolute top-full mt-2 z-[100] min-w-[140px] max-h-[168px] overflow-y-auto bg-[#1a1a1a] ${animatedGlass ? 'backdrop-blur-xl' : ''} border border-white/10 rounded-xl shadow-xl shadow-black/50 p-1`}
+                  style={{ left: versionDropdownLeft }}
+                >
+                  {props.availableVersions.length > 0 ? (
+                    props.availableVersions.map((version) => {
+                      const installedInfo = props.installedVersions.find(v => v.version === version);
+                      const isInstalled = !!installedInfo;
+                      const isValid = installedInfo?.isValid ?? false;
+                      const isSelected = props.currentVersion === version;
+                      return (
+                        <button
+                          key={version}
+                          onClick={() => { props.onVersionChange(version); setIsVersionOpen(false); }}
+                          className={`w-full px-3 py-2 flex items-center gap-2 text-sm rounded-lg ${isSelected ? '' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+                          style={isSelected ? { backgroundColor: `${accentColor}33`, color: accentColor } : undefined}
+                        >
+                          {isInstalled && isValid ? (
+                            <Check size={14} className={isSelected ? '' : 'text-green-400'} style={isSelected ? { color: accentColor } : undefined} strokeWidth={3} />
+                          ) : isInstalled ? (
+                            <Download size={14} className="text-yellow-500" />
+                          ) : (
+                            <Download size={14} className="text-white/40" />
+                          )}
+                          <span>{version === 0 ? t('main.latest') : `v${version}`}</span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-white/40">{t('main.noVersions')}</div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Progress Bar - only show when downloading and NOT in complete state */}
+            <AnimatePresence>
+              {props.isDownloading && props.launchState !== 'complete' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, x: '-50%' }}
+                  animate={{ opacity: 1, y: 0, x: '-50%' }}
+                  exit={{ opacity: 0, y: 8, x: '-50%' }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full mt-2 w-[350px] left-1/2"
+                >
+                  <div className={`${animatedGlass ? 'bg-black/60 backdrop-blur-md' : 'bg-[#1a1a1a]/95'} rounded-xl px-3 py-2 border border-white/5`}>
+                    {/* Progress bar container */}
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: accentColor }}
+                      />
+                    </div>
+                    {/* Info row: launchDetail on left, bytes on right */}
+                    <div className="flex justify-between items-center mt-1.5 text-[10px]">
+                      <span className="text-white/60 truncate max-w-[250px]">
+                        {props.launchDetail ? (t(props.launchDetail) !== props.launchDetail 
+                        ? t(props.launchDetail).replace('{0}', `${Math.min(Math.round(props.progress), 100)}`) : props.launchDetail) 
+                        : getLaunchStateLabel()}
+                      </span>
+                      <span className="text-white/50 font-mono">
+                        {props.total > 0
+                          ? `${formatBytes(props.downloaded)} / ${formatBytes(props.total)}`
+                          : `${Math.min(Math.round(props.progress), 100)}%`
+                        }
+                      </span>
+                    </div>
                   </div>
-                  {/* Info row: launchDetail on left, bytes on right */}
-                  <div className="flex justify-between items-center mt-1.5 text-[10px]">
-                    <span className="text-white/60 truncate max-w-[250px]">
-                      {props.launchDetail ? (t(props.launchDetail) !== props.launchDetail ? t(props.launchDetail) : props.launchDetail) : getLaunchStateLabel()}
-                    </span>
-                    <span className="text-white/50 font-mono">
-                      {props.total > 0
-                        ? `${formatBytes(props.downloaded)} / ${formatBytes(props.total)}`
-                        : `${Math.min(Math.round(props.progress), 100)}%`
-                      }
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
       </div>
 

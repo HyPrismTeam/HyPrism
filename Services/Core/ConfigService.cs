@@ -42,6 +42,8 @@ public class ConfigService : IConfigService
                 var json = File.ReadAllText(_configPath);
                 config = JsonSerializer.Deserialize<Config>(json) ?? new Config();
                 
+                Logger.Info("Config", $"Loaded config - Language: '{config.Language}'");
+                
                 // Apply migrations
                 bool needsSave = false;
                 

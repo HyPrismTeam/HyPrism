@@ -108,4 +108,16 @@ public class Config
     /// Keys are case-insensitive for lookup but preserve original casing.
     /// </summary>
     public Dictionary<string, string> UserUuids { get; set; } = new();
+    
+    /// <summary>
+    /// GPU preference for game launch: "dedicated" (default), "integrated", or "auto".
+    /// On laptops with dual GPUs, this controls which GPU the game uses via environment variables.
+    /// </summary>
+    public string GpuPreference { get; set; } = "dedicated";
+    
+    /// <summary>
+    /// CurseForge API key for mod manager functionality.
+    /// Automatically fetched on first launch if not set.
+    /// </summary>
+    public string CurseForgeKey { get; set; } = "";
 }

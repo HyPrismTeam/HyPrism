@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DownloadCloud } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { useAnimatedGlass } from '../../contexts/AnimatedGlassContext';
 import { formatBytes } from '../../utils/format';
 
 interface UpdateOverlayProps {
@@ -14,11 +15,12 @@ interface UpdateOverlayProps {
 export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, downloaded, total }) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { animatedGlass } = useAnimatedGlass();
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="absolute inset-0 z-[100] bg-[#090909]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-20 text-center"
+      className={`absolute inset-0 z-[100] bg-[#090909]/95 ${animatedGlass ? 'backdrop-blur-2xl' : ''} flex flex-col items-center justify-center p-20 text-center`}
     >
       <motion.div
         animate={{

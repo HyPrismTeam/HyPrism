@@ -71,6 +71,9 @@ class Program
 
             // Initialize DI container
             var services = Bootstrapper.Initialize();
+            
+            // Perform async initialization (fetch CurseForge key if needed)
+            await Bootstrapper.InitializeAsync(services);
 
             // Start Electron runtime and wait for socket bridge
             Logger.Info("Boot", "Starting Electron runtime...");
@@ -105,6 +108,11 @@ class Program
     {
         var wwwroot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot");
 
+        // Register IPC handlers BEFORE creating window to ensure they're ready
+        // when the frontend starts making IPC calls during initialization
+        var ipcService = services.GetRequiredService<IpcService>();
+        ipcService.RegisterAll();
+
         var mainWindow = await Electron.WindowManager.CreateWindowAsync(
             new BrowserWindowOptions
             {
@@ -121,10 +129,6 @@ class Program
             },
             $"file://{Path.Combine(wwwroot, "index.html")}"
         );
-
-        // Register IPC bridge (DI service)
-        var ipcService = services.GetRequiredService<IpcService>();
-        ipcService.RegisterAll();
 
         // Quit when all windows closed
         Electron.App.WindowAllClosed += () => Electron.App.Quit();

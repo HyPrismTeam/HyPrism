@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { ModalOverlay } from './ModalOverlay';
 
 interface DeleteProfileConfirmationModalProps {
   profileName: string;
@@ -19,13 +20,7 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
   const { accentColor } = useAccentColor();
   
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm p-8"
-      onClick={onCancel}
-    >
+    <ModalOverlay zClass="z-[250]" onClick={onCancel}>
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -96,7 +91,7 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
           </motion.button>
         </div>
       </motion.div>
-    </motion.div>
+    </ModalOverlay>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, Languages, FlaskConical, RotateCcw, Monitor, Zap, Download, HardDrive, Package, RefreshCw, Pin, Box, Wifi, Sparkles } from 'lucide-react';
+import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, Languages, FlaskConical, RotateCcw, Monitor, Zap, Download, HardDrive, Package, RefreshCw, Pin, Box, Wifi, Sparkles, Server, Edit3 } from 'lucide-react';
 import { ipc } from '@/lib/ipc';
 import { changeLanguage } from '../i18n';
 
@@ -27,8 +27,6 @@ async function GetCloseAfterLaunch(): Promise<boolean> { return (await ipc.setti
 async function SetCloseAfterLaunch(v: boolean): Promise<void> { await ipc.settings.update({ closeAfterLaunch: v }); }
 async function GetDisableNews(): Promise<boolean> { return (await ipc.settings.get()).disableNews ?? false; }
 async function SetDisableNews(v: boolean): Promise<void> { await ipc.settings.update({ disableNews: v }); }
-async function GetAnimatedGlassEffects(): Promise<boolean> { return (await ipc.settings.get()).animatedGlassEffects ?? true; }
-async function SetAnimatedGlassEffects(v: boolean): Promise<void> { await ipc.settings.update({ animatedGlassEffects: v }); }
 async function GetBackgroundMode(): Promise<string> { return (await ipc.settings.get()).backgroundMode ?? 'image'; }
 async function SetBackgroundMode(v: string): Promise<void> { await ipc.settings.update({ backgroundMode: v }); }
 async function GetCustomInstanceDir(): Promise<string> { return (await ipc.settings.get()).dataDirectory ?? ''; }
@@ -103,7 +101,7 @@ interface SettingsModalProps {
     pageMode?: boolean;
 }
 
-type SettingsTab = 'general' | 'visual' | 'graphics' | 'language' | 'data' | 'instances' | 'about' | 'developer';
+type SettingsTab = 'general' | 'visual' | 'network' | 'graphics' | 'language' | 'data' | 'instances' | 'about' | 'developer';
 
 // Auth server base URL for avatar/skin head
 const DEFAULT_AUTH_DOMAIN = 'sessions.sanasol.ws';
@@ -133,7 +131,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [devModeEnabled, setDevModeEnabled] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [disableNews, setDisableNews] = useState(false);
-    const [animatedGlassEffects, setAnimatedGlassEffects] = useState(true);
     const [showAlphaMods, setShowAlphaModsState] = useState(false);
     const [onlineMode, setOnlineMode] = useState(true);
     const [backgroundMode, setBackgroundModeState] = useState('slideshow');
@@ -141,8 +138,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [launcherDataDir, setLauncherDataDir] = useState('');
     const [isInstallingOptMods, setIsInstallingOptMods] = useState(false);
     const [optModsMessage, setOptModsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [gpuPreference, setGpuPreferenceState] = useState<string>('dedicated');
+    const [gpuAdapters, setGpuAdapters] = useState<Array<{ name: string; vendor: string; type: string }>>([]);
+    const [hasSingleGpu, setHasSingleGpu] = useState(false);
     const { accentColor, accentTextColor, setAccentColor: setAccentColorContext } = useAccentColor();
-    const { animatedGlass: animatedGlassContext, setAnimatedGlass: setAnimatedGlassContext } = useAnimatedGlass();
+    const { animatedGlass, setAnimatedGlass: setAnimatedGlassContext } = useAnimatedGlass();
     const [contributors, setContributors] = useState<Contributor[]>([]);
     const [isLoadingContributors, setIsLoadingContributors] = useState(false);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
@@ -171,6 +171,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [editUuidValue, setEditUuidValue] = useState('');
     const [copiedUuid, setCopiedUuid] = useState(false);
     const [authDomain, setAuthDomain] = useState('sessions.sanasol.ws');
+    const [authMode, setAuthModeState] = useState<'default' | 'official' | 'custom'>('default');
+    const [customAuthDomain, setCustomAuthDomain] = useState('');
     const [localAvatar, setLocalAvatar] = useState<string | null>(null);
 
     useEffect(() => {
@@ -188,9 +190,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 const newsDisabled = await GetDisableNews();
                 setDisableNews(newsDisabled);
                 
-                // Sync local state with context
-                setAnimatedGlassEffects(animatedGlassContext);
-                
                 const showAlpha = await GetShowAlphaMods();
                 setShowAlphaModsState(showAlpha);
 
@@ -202,6 +201,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 
                 const dataDir = await GetLauncherDataDirectory();
                 setLauncherDataDir(dataDir || folderPath); // Show real path
+                
+                // Load GPU preference and adapters
+                const gpu = (await ipc.settings.get()).gpuPreference ?? 'dedicated';
+                setGpuPreferenceState(gpu);
+                
+                try {
+                    const adapters = await ipc.system.gpuAdapters();
+                    setGpuAdapters(adapters || []);
+                    const singleGpu = !adapters || adapters.length <= 1;
+                    setHasSingleGpu(singleGpu);
+                    // If only one GPU, force "auto" mode
+                    if (singleGpu && gpu !== 'auto') {
+                        setGpuPreferenceState('auto');
+                        await ipc.settings.update({ gpuPreference: 'auto' });
+                    }
+                } catch (err) {
+                    console.error('Failed to load GPU adapters:', err);
+                }
                 
                 // Load profile data
                 const username = await GetNick();
@@ -216,7 +233,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 
                 // Load auth domain for profile pictures
                 const domain = await GetAuthDomain();
-                if (domain) setAuthDomain(domain);
+                if (domain) {
+                    setAuthDomain(domain);
+                    // Derive auth mode from domain value
+                    if (domain === 'sessionserver.mojang.com' || domain === 'official') {
+                        setAuthModeState('official');
+                    } else if (domain === 'sessions.sanasol.ws' || domain === '' || !domain) {
+                        setAuthModeState('default');
+                    } else {
+                        setAuthModeState('custom');
+                        setCustomAuthDomain(domain);
+                    }
+                }
                 
                 // Load local avatar preview
                 try {
@@ -234,11 +262,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         };
         loadSettings();
     }, []);
-
-    // Sync animated glass effects state with context
-    useEffect(() => {
-        setAnimatedGlassEffects(animatedGlassContext);
-    }, [animatedGlassContext]);
 
     // Load contributors when About tab is active
     useEffect(() => {
@@ -499,7 +522,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     const handleAnimatedGlassChange = async (enabled: boolean) => {
-        setAnimatedGlassEffects(enabled);
         try {
             await setAnimatedGlassContext(enabled);
         } catch (err) {
@@ -568,14 +590,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setTimeout(() => setOptModsMessage(null), 3000);
     };
 
+    const handleGpuPreferenceChange = async (preference: string) => {
+        setGpuPreferenceState(preference);
+        try {
+            await ipc.settings.update({ gpuPreference: preference });
+        } catch (err) {
+            console.error('Failed to update GPU preference:', err);
+        }
+    };
+
     const handleAccentColorChange = async (color: string) => {
         // Update the global context (which also saves to backend)
         await setAccentColorContext(color);
         onAccentColorChange?.(color);
-    };
-
-    const handleLanguageChange = (langCode: Language) => {
-        i18n.changeLanguage(langCode);
     };
 
     const handleDevModeToggle = () => {
@@ -596,10 +623,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const tabs = [
         { id: 'general' as const, icon: Settings, label: t('settings.general') },
         { id: 'visual' as const, icon: Image, label: t('settings.visual') },
+        { id: 'network' as const, icon: Wifi, label: t('settings.network') },
         { id: 'graphics' as const, icon: Monitor, label: t('settings.graphics') },
-        { id: 'language' as const, icon: Languages, label: t('settings.language') },
         { id: 'data' as const, icon: Database, label: t('settings.data') },
-        { id: 'instances' as const, icon: HardDrive, label: t('settings.instances') },
         { id: 'about' as const, icon: Globe, label: t('settings.about') },
         ...(devModeEnabled ? [{ id: 'developer' as const, icon: Code, label: t('settings.developer') }] : []),
     ];
@@ -673,11 +699,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <>
             <div className={isPageMode
                 ? "w-full h-full"
-                : "fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                : `fixed inset-0 z-[200] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`
             }>
-                <div className={`bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl flex overflow-hidden ${isPageMode ? 'w-full h-full' : 'mx-4'}`} style={isPageMode ? undefined : { width: '800px', height: '600px' }}>
-                    {/* Sidebar */}
-                    <div className="w-48 bg-[#151515] border-r border-white/5 flex flex-col py-4">
+                <div className={`bg-[#1c1c1e] border border-white/[0.06] rounded-2xl shadow-2xl flex overflow-hidden ${isPageMode ? 'w-full h-full' : 'mx-4'}`} style={isPageMode ? undefined : { width: '800px', height: '600px' }}>
+                    {/* Sidebar  */}
+                    <div className={`w-52 border-r border-white/[0.06] flex flex-col py-4 ${animatedGlass ? 'bg-[#1c1c1e]/80 backdrop-blur-xl' : 'bg-[#1c1c1e]'}`}>
                         <h2 className="text-lg font-bold text-white px-4 mb-4">{t('settings.title')}</h2>
                         <nav className="flex-1 space-y-1 px-2">
                             {tabs.map((tab) => (
@@ -697,7 +723,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             ))}
                         </nav>
                         {/* Dev Mode Toggle at bottom */}
-                        <div className="px-2 pt-4 border-t border-white/5 mx-2">
+                        <div className="px-2 pt-4 border-t border-white/[0.06] mx-2">
                             <div 
                                 className="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors"
                                 onClick={handleDevModeToggle}
@@ -722,7 +748,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {/* Content */}
                     <div className="flex-1 flex flex-col min-w-0">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-white/5">
+                        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
                             <h3 className="text-white font-medium">{tabs.find(t => t.id === activeTab)?.label}</h3>
                             {!isPageMode && (
                                 <button
@@ -775,7 +801,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     setIsLanguageOpen(!isLanguageOpen);
                                                     setIsBranchOpen(false);
                                                 }}
-                                                className="w-full h-12 px-4 rounded-xl bg-[#151515] border border-white/10 flex items-center justify-between text-white transition-colors"
+                                                className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] flex items-center justify-between text-white transition-colors hover:border-white/[0.12]"
                                                 style={{ borderColor: isLanguageOpen ? `${accentColor}50` : undefined }}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -786,7 +812,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </button>
 
                                             {isLanguageOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 z-10 max-h-60 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl shadow-black/50">
+                                                <div className="absolute top-full left-0 right-0 mt-2 z-10 max-h-60 overflow-y-auto bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50">
                                                     {Object.values(LANGUAGE_CONFIG).map((lang) => (
                                                         <button
                                                             key={lang.code}
@@ -818,7 +844,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     setIsBranchOpen(!isBranchOpen);
                                                     setIsLanguageOpen(false);
                                                 }}
-                                                className="w-full h-12 px-4 rounded-xl bg-[#151515] border border-white/10 flex items-center justify-between text-white transition-colors"
+                                                className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] flex items-center justify-between text-white transition-colors hover:border-white/[0.12]"
                                                 style={{ borderColor: isBranchOpen ? `${accentColor}50` : undefined }}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -835,7 +861,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </button>
 
                                             {isBranchOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 z-10 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden">
+                                                <div className="absolute top-full left-0 right-0 mt-2 z-10 bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50 overflow-hidden">
                                                     <button
                                                         onClick={() => handleLauncherBranchChange('release')}
                                                         className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${selectedLauncherBranch === 'release'
@@ -874,26 +900,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </p>
                                     </div>
 
-                                    {/* Toggle Settings */}
+                                    {/* Toggle Settings - macOS Tahoe style */}
                                     <div className="space-y-3">
                                         {/* Close After Launch */}
                                         <div 
-                                            className="flex items-center justify-between p-3 rounded-xl bg-[#151515] border border-white/10 cursor-pointer hover:border-white/20 transition-colors"
+                                            className="flex items-center justify-between p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
                                             onClick={handleCloseAfterLaunchChange}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <Power size={18} className="text-white/60" />
+                                                <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                                    <Power size={16} className="text-white/70" />
+                                                </div>
                                                 <div>
-                                                    <span className="text-white text-sm">{t('settings.generalSettings.closeLauncher')}</span>
+                                                    <span className="text-white text-sm font-medium">{t('settings.generalSettings.closeLauncher')}</span>
                                                     <p className="text-xs text-white/40">{t('settings.generalSettings.closeLauncherHint')}</p>
                                                 </div>
                                             </div>
                                             <div 
-                                                className="w-10 h-6 rounded-full flex items-center transition-colors"
-                                                style={{ backgroundColor: closeAfterLaunch ? accentColor : 'rgba(255,255,255,0.2)' }}
+                                                className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
+                                                style={{ backgroundColor: closeAfterLaunch ? accentColor : 'rgba(255,255,255,0.15)' }}
                                             >
                                                 <div 
-                                                    className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${closeAfterLaunch ? 'translate-x-5' : 'translate-x-1'}`}
+                                                    className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${closeAfterLaunch ? 'translate-x-6' : 'translate-x-1'}`}
                                                     style={{ backgroundColor: closeAfterLaunch ? accentTextColor : 'white' }}
                                                 />
                                             </div>
@@ -901,7 +929,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                         {/* Show Alpha Mods Toggle */}
                                         <div 
-                                            className="flex items-center justify-between p-3 rounded-xl bg-[#151515] border border-white/10 cursor-pointer hover:border-white/20 transition-colors"
+                                            className="flex items-center justify-between p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
                                             onClick={async () => {
                                                 const newValue = !showAlphaMods;
                                                 setShowAlphaModsState(newValue);
@@ -909,49 +937,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             }}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <FlaskConical size={18} className="text-white/60" />
+                                                <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                                    <FlaskConical size={16} className="text-white/70" />
+                                                </div>
                                                 <div>
-                                                    <span className="text-white text-sm">{t('settings.generalSettings.showAlphaMods')}</span>
+                                                    <span className="text-white text-sm font-medium">{t('settings.generalSettings.showAlphaMods')}</span>
                                                     <p className="text-xs text-white/40">{t('settings.generalSettings.showAlphaModsHint')}</p>
                                                 </div>
                                             </div>
                                             <div 
-                                                className="w-10 h-6 rounded-full flex items-center transition-colors"
-                                                style={{ backgroundColor: showAlphaMods ? accentColor : 'rgba(255,255,255,0.2)' }}
+                                                className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
+                                                style={{ backgroundColor: showAlphaMods ? accentColor : 'rgba(255,255,255,0.15)' }}
                                             >
                                                 <div 
-                                                    className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${showAlphaMods ? 'translate-x-5' : 'translate-x-1'}`}
+                                                    className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${showAlphaMods ? 'translate-x-6' : 'translate-x-1'}`}
                                                     style={{ backgroundColor: showAlphaMods ? accentTextColor : 'white' }}
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Online Mode Toggle */}
-                                        <div 
-                                            className="flex items-center justify-between p-3 rounded-xl bg-[#151515] border border-white/10 cursor-pointer hover:border-white/20 transition-colors"
-                                            onClick={async () => {
-                                                const newValue = !onlineMode;
-                                                setOnlineMode(newValue);
-                                                await ipc.settings.update({ onlineMode: newValue });
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Wifi size={18} className="text-white/60" />
-                                                <div>
-                                                    <span className="text-white text-sm">{t('settings.generalSettings.onlineMode')}</span>
-                                                    <p className="text-xs text-white/40">{t('settings.generalSettings.onlineModeHint')}</p>
-                                                </div>
-                                            </div>
-                                            <div 
-                                                className="w-10 h-6 rounded-full flex items-center transition-colors"
-                                                style={{ backgroundColor: onlineMode ? accentColor : 'rgba(255,255,255,0.2)' }}
-                                            >
-                                                <div 
-                                                    className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${onlineMode ? 'translate-x-5' : 'translate-x-1'}`}
-                                                    style={{ backgroundColor: onlineMode ? accentTextColor : 'white' }}
-                                                />
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1056,22 +1060,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Disable News Toggle */}
                                     <div 
-                                        className="flex items-center justify-between p-3 rounded-xl bg-[#151515] border border-white/10 cursor-pointer hover:border-white/20 transition-colors"
+                                        className="flex items-center justify-between p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
                                         onClick={() => handleDisableNewsChange(!disableNews)}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <Globe size={18} className="text-white/60" />
+                                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                                <Globe size={16} className="text-white/70" />
+                                            </div>
                                             <div>
-                                                <span className="text-white text-sm">{t('settings.visualSettings.hideNews')}</span>
+                                                <span className="text-white text-sm font-medium">{t('settings.visualSettings.hideNews')}</span>
                                                 <p className="text-xs text-white/40">{t('settings.visualSettings.hideNewsHint')}</p>
                                             </div>
                                         </div>
                                         <div 
-                                            className="w-10 h-6 rounded-full flex items-center transition-colors"
-                                            style={{ backgroundColor: disableNews ? accentColor : 'rgba(255,255,255,0.2)' }}
+                                            className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
+                                            style={{ backgroundColor: disableNews ? accentColor : 'rgba(255,255,255,0.15)' }}
                                         >
                                             <div 
-                                                className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${disableNews ? 'translate-x-5' : 'translate-x-1'}`}
+                                                className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${disableNews ? 'translate-x-6' : 'translate-x-1'}`}
                                                 style={{ backgroundColor: disableNews ? accentTextColor : 'white' }}
                                             />
                                         </div>
@@ -1079,32 +1085,268 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Animated Glass Effects Toggle */}
                                     <div 
-                                        className="flex items-center justify-between p-3 rounded-xl bg-[#151515] border border-white/10 cursor-pointer hover:border-white/20 transition-colors"
-                                        onClick={() => handleAnimatedGlassChange(!animatedGlassEffects)}
+                                        className="flex items-center justify-between p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
+                                        onClick={() => handleAnimatedGlassChange(!animatedGlass)}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <Sparkles size={18} className="text-white/60" />
+                                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                                <Sparkles size={16} className="text-white/70" />
+                                            </div>
                                             <div>
-                                                <span className="text-white text-sm">{t('settings.visualSettings.animatedGlass')}</span>
+                                                <span className="text-white text-sm font-medium">{t('settings.visualSettings.animatedGlass')}</span>
                                                 <p className="text-xs text-white/40">{t('settings.visualSettings.animatedGlassHint')}</p>
                                             </div>
                                         </div>
                                         <div 
-                                            className="w-10 h-6 rounded-full flex items-center transition-colors"
-                                            style={{ backgroundColor: animatedGlassEffects ? accentColor : 'rgba(255,255,255,0.2)' }}
+                                            className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
+                                            style={{ backgroundColor: animatedGlass ? accentColor : 'rgba(255,255,255,0.15)' }}
                                         >
                                             <div 
-                                                className={`w-4 h-4 rounded-full shadow-md transform transition-transform ${animatedGlassEffects ? 'translate-x-5' : 'translate-x-1'}`}
-                                                style={{ backgroundColor: animatedGlassEffects ? accentTextColor : 'white' }}
+                                                className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${animatedGlass ? 'translate-x-6' : 'translate-x-1'}`}
+                                                style={{ backgroundColor: animatedGlass ? accentTextColor : 'white' }}
                                             />
                                         </div>
                                     </div>
                                 </div>
                             )}
 
+                            {/* Network Tab */}
+                            {activeTab === 'network' && (
+                                <div className="space-y-6">
+                                    {/* Online Mode Toggle */}
+                                    <div className="space-y-3">
+                                        <div 
+                                            className="flex items-center justify-between p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
+                                            onClick={async () => {
+                                                const newValue = !onlineMode;
+                                                setOnlineMode(newValue);
+                                                await ipc.settings.update({ onlineMode: newValue });
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                                    <Wifi size={16} className="text-white/70" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-white text-sm font-medium">{t('settings.networkSettings.onlineMode')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.networkSettings.onlineModeHint')}</p>
+                                                </div>
+                                            </div>
+                                            <div 
+                                                className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
+                                                style={{ backgroundColor: onlineMode ? accentColor : 'rgba(255,255,255,0.15)' }}
+                                            >
+                                                <div 
+                                                    className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${onlineMode ? 'translate-x-6' : 'translate-x-1'}`}
+                                                    style={{ backgroundColor: onlineMode ? accentTextColor : 'white' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Auth Server Selector */}
+                                    {onlineMode && (
+                                        <div>
+                                            <label className="block text-sm text-white/60 mb-2">{t('settings.networkSettings.authServer')}</label>
+                                            <p className="text-xs text-white/40 mb-4">{t('settings.networkSettings.authServerHint')}</p>
+                                            
+                                            <div className="space-y-2">
+                                                {/* Default (sessions.sanasol.ws) */}
+                                                <div
+                                                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                                                        authMode === 'default' 
+                                                            ? 'border-white/20' 
+                                                            : 'border-white/[0.06] hover:border-white/[0.12]'
+                                                    }`}
+                                                    style={authMode === 'default' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : { backgroundColor: '#2c2c2e' }}
+                                                    onClick={async () => {
+                                                        setAuthModeState('default');
+                                                        setAuthDomain('sessions.sanasol.ws');
+                                                        await ipc.settings.update({ authDomain: 'sessions.sanasol.ws' });
+                                                    }}
+                                                >
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: authMode === 'default' ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}>
+                                                        <Server size={16} className={authMode === 'default' ? '' : 'text-white/70'} style={authMode === 'default' ? { color: accentColor } : undefined} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <span className="text-white text-sm font-medium">{t('settings.networkSettings.authDefault')}</span>
+                                                        <p className="text-xs text-white/40">sessions.sanasol.ws</p>
+                                                    </div>
+                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${authMode === 'default' ? '' : 'border-white/30'}`} style={authMode === 'default' ? { borderColor: accentColor, backgroundColor: accentColor } : undefined}>
+                                                        {authMode === 'default' && <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />}
+                                                    </div>
+                                                </div>
+
+                                                {/* Official (Mojang) */}
+                                                <div
+                                                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                                                        authMode === 'official' 
+                                                            ? 'border-white/20' 
+                                                            : 'border-white/[0.06] hover:border-white/[0.12]'
+                                                    }`}
+                                                    style={authMode === 'official' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : { backgroundColor: '#2c2c2e' }}
+                                                    onClick={async () => {
+                                                        setAuthModeState('official');
+                                                        setAuthDomain('sessionserver.mojang.com');
+                                                        await ipc.settings.update({ authDomain: 'sessionserver.mojang.com' });
+                                                    }}
+                                                >
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: authMode === 'official' ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}>
+                                                        <Globe size={16} className={authMode === 'official' ? '' : 'text-white/70'} style={authMode === 'official' ? { color: accentColor } : undefined} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <span className="text-white text-sm font-medium">{t('settings.networkSettings.authOfficial')}</span>
+                                                        <p className="text-xs text-white/40">{t('settings.networkSettings.authOfficialHint')}</p>
+                                                    </div>
+                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${authMode === 'official' ? '' : 'border-white/30'}`} style={authMode === 'official' ? { borderColor: accentColor, backgroundColor: accentColor } : undefined}>
+                                                        {authMode === 'official' && <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />}
+                                                    </div>
+                                                </div>
+
+                                                {/* Custom */}
+                                                <div
+                                                    className={`rounded-xl border transition-all ${
+                                                        authMode === 'custom' 
+                                                            ? 'border-white/20' 
+                                                            : 'border-white/[0.06] hover:border-white/[0.12]'
+                                                    }`}
+                                                    style={authMode === 'custom' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : { backgroundColor: '#2c2c2e' }}
+                                                >
+                                                    <div
+                                                        className="flex items-center gap-3 p-4 cursor-pointer"
+                                                        onClick={() => {
+                                                            if (authMode !== 'custom') {
+                                                                setAuthModeState('custom');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: authMode === 'custom' ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}>
+                                                            <Edit3 size={16} className={authMode === 'custom' ? '' : 'text-white/70'} style={authMode === 'custom' ? { color: accentColor } : undefined} />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <span className="text-white text-sm font-medium">{t('settings.networkSettings.authCustom')}</span>
+                                                            <p className="text-xs text-white/40">{t('settings.networkSettings.authCustomHint')}</p>
+                                                        </div>
+                                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${authMode === 'custom' ? '' : 'border-white/30'}`} style={authMode === 'custom' ? { borderColor: accentColor, backgroundColor: accentColor } : undefined}>
+                                                            {authMode === 'custom' && <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Custom domain input */}
+                                                    {authMode === 'custom' && (
+                                                        <div className="px-4 pb-4">
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    value={customAuthDomain}
+                                                                    onChange={(e) => setCustomAuthDomain(e.target.value)}
+                                                                    onKeyDown={async (e) => {
+                                                                        if (e.key === 'Enter' && customAuthDomain.trim()) {
+                                                                            setAuthDomain(customAuthDomain.trim());
+                                                                            await ipc.settings.update({ authDomain: customAuthDomain.trim() });
+                                                                        }
+                                                                    }}
+                                                                    placeholder="auth.example.com"
+                                                                    className="flex-1 h-10 px-3 rounded-lg bg-black/30 border border-white/[0.08] text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors"
+                                                                />
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (customAuthDomain.trim()) {
+                                                                            setAuthDomain(customAuthDomain.trim());
+                                                                            await ipc.settings.update({ authDomain: customAuthDomain.trim() });
+                                                                        }
+                                                                    }}
+                                                                    disabled={!customAuthDomain.trim()}
+                                                                    className="px-4 h-10 rounded-lg text-sm font-medium transition-all disabled:opacity-40"
+                                                                    style={{ backgroundColor: accentColor, color: accentTextColor }}
+                                                                >
+                                                                    {t('common.save')}
+                                                                </button>
+                                                            </div>
+                                                            {authDomain && authDomain !== 'sessions.sanasol.ws' && authDomain !== 'sessionserver.mojang.com' && (
+                                                                <p className="text-xs text-white/30 mt-2">
+                                                                    {t('settings.networkSettings.currentServer')}: <span className="text-white/50">{authDomain}</span>
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Graphics Tab */}
                             {activeTab === 'graphics' && (
                                 <div className="space-y-6">
+                                    {/* GPU Preference */}
+                                    <div>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.graphicsSettings.gpuPreference')}</label>
+                                        <p className="text-xs text-white/40 mb-4">{t('settings.graphicsSettings.gpuPreferenceHint')}</p>
+                                        {hasSingleGpu && (
+                                            <div className="mb-3 p-2.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 flex items-center gap-2">
+                                                <Settings size={14} className="flex-shrink-0 text-white/40" />
+                                                {t('settings.graphicsSettings.singleGpuNotice')}
+                                            </div>
+                                        )}
+                                        <div className="space-y-2">
+                                            {(['dedicated', 'integrated', 'auto'] as const).map((option) => {
+                                                const icons: Record<string, React.ReactNode> = {
+                                                    dedicated: <Monitor size={18} />,
+                                                    integrated: <HardDrive size={18} />,
+                                                    auto: <Settings size={18} />,
+                                                };
+                                                const isSelected = gpuPreference === option;
+                                                const isDisabled = hasSingleGpu && option !== 'auto';
+                                                // Find GPU model name for this type
+                                                const matchingGpu = gpuAdapters.find(g => g.type === option);
+                                                const gpuModelName = option === 'auto'
+                                                    ? (gpuAdapters.length > 0 ? gpuAdapters.map(g => g.name).join(' / ') : undefined)
+                                                    : matchingGpu?.name;
+                                                return (
+                                                    <button
+                                                        key={option}
+                                                        onClick={() => !isDisabled && handleGpuPreferenceChange(option)}
+                                                        disabled={isDisabled}
+                                                        className={`w-full p-3 rounded-xl border transition-all text-left ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                        style={{
+                                                            backgroundColor: isSelected ? `${accentColor}15` : '#151515',
+                                                            borderColor: isSelected ? `${accentColor}50` : 'rgba(255,255,255,0.08)'
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div
+                                                                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                                                                    style={{ backgroundColor: isSelected ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}
+                                                                >
+                                                                    <span style={{ color: isSelected ? accentColor : 'rgba(255,255,255,0.5)' }}>{icons[option]}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-white text-sm font-medium">{t(`settings.graphicsSettings.gpu_${option}`)}</div>
+                                                                    {gpuModelName ? (
+                                                                        <div className="text-[11px] text-white/40 mt-0.5">{gpuModelName}</div>
+                                                                    ) : (
+                                                                        <div className="text-[11px] text-white/30 mt-0.5">{t(`settings.graphicsSettings.gpu_${option}Hint`)}</div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div
+                                                                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                                                                    style={{ backgroundColor: accentColor }}
+                                                                >
+                                                                    <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
                                     {/* Optimization Mods */}
                                     <div>
                                         <label className="block text-sm text-white/60 mb-2">{t('settings.graphicsSettings.optimizationMods')}</label>
@@ -1148,45 +1390,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Language Tab */}
-                            {activeTab === 'language' && (
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm text-white/60 mb-3">{t('settings.languageSettings.selectLanguage')}</label>
-                                        <p className="text-xs text-white/40 mb-4">{t('settings.languageSettings.interfaceLanguageHint')}</p>
-                                        
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {Object.values(LANGUAGE_CONFIG).map((lang) => (
-                                                <button
-                                                    key={lang.code}
-                                                    onClick={() => handleLanguageChange(lang.code)}
-                                                    className="p-3 rounded-xl border transition-all text-left"
-                                                    style={{
-                                                        backgroundColor: i18n.language === lang.code ? `${accentColor}20` : '#151515',
-                                                        borderColor: i18n.language === lang.code ? `${accentColor}50` : 'rgba(255,255,255,0.1)'
-                                                    }}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        {i18n.language === lang.code && (
-                                                            <div 
-                                                                className="w-5 h-5 rounded-full flex items-center justify-center"
-                                                                style={{ backgroundColor: accentColor }}
-                                                            >
-                                                                <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />
-                                                            </div>
-                                                        )}
-                                                        <div className={i18n.language !== lang.code ? 'ml-8' : ''}>
-                                                            <span className="text-white text-sm font-medium block">{lang.nativeName}</span>
-                                                            <span className="text-xs text-white/40">{lang.name}</span>
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
                             {/* Data Tab */}
                             {activeTab === 'data' && (
                                 <div className="space-y-6">
@@ -1203,12 +1406,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         await SetInstanceDirectory(instanceDir.trim());
                                                     }
                                                 }}
-                                                className="flex-1 h-12 px-4 rounded-xl bg-[#151515] border border-white/10 text-white text-sm focus:outline-none focus:border-white/30"
+                                                className="flex-1 h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] text-white text-sm focus:outline-none focus:border-white/30"
                                             />
                                             <div className="flex rounded-full overflow-hidden border border-white/10">
                                                 <button
                                                     onClick={handleResetInstanceDir}
-                                                    className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                                                     title={t('settings.dataSettings.resetToDefault')}
                                                 >
                                                     <RotateCcw size={18} />
@@ -1217,7 +1420,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={handleBrowseInstanceDir}
-                                                    className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                                                     title={t('common.browse')}
                                                 >
                                                     <FolderOpen size={18} />
@@ -1226,7 +1429,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={() => BrowserOpenURL(`file://${instanceDir}`)}
-                                                    className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                                                     title={t('common.openFolder')}
                                                 >
                                                     <ExternalLink size={18} />
@@ -1249,12 +1452,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         await SetLauncherDataDirectory(launcherDataDir.trim());
                                                     }
                                                 }}
-                                                className="flex-1 h-12 px-4 rounded-xl bg-[#151515] border border-white/10 text-white text-sm focus:outline-none focus:border-white/30"
+                                                className="flex-1 h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] text-white text-sm focus:outline-none focus:border-white/30"
                                             />
                                             <div className="flex rounded-full overflow-hidden border border-white/10">
                                                 <button
                                                     onClick={handleResetLauncherDataDir}
-                                                    className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                                                     title={t('settings.dataSettings.resetToDefault')}
                                                 >
                                                     <RotateCcw size={18} />
@@ -1263,7 +1466,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={handleBrowseLauncherDataDir}
-                                                    className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                                                     title={t('common.browse')}
                                                 >
                                                     <FolderOpen size={18} />
@@ -1272,7 +1475,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={() => BrowserOpenURL(`file://${launcherDataDir}`)}
-                                                    className="h-12 px-4 bg-[#151515] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                                                     title={t('common.openFolder')}
                                                 >
                                                     <ExternalLink size={18} />
@@ -1287,7 +1490,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <div className="space-y-3">
                                         <button
                                             onClick={handleOpenLauncherFolder}
-                                            className="w-full h-12 px-4 rounded-xl bg-[#151515] border border-white/10 flex items-center gap-3 text-white/70 hover:text-white hover:border-white/20 transition-colors"
+                                            className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] flex items-center gap-3 text-white/70 hover:text-white hover:border-white/20 transition-colors"
                                         >
                                             <FolderOpen size={18} />
                                             <span>{t('settings.dataSettings.openLauncherFolder')}</span>
@@ -1295,204 +1498,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
-                                            className="w-full h-12 px-4 rounded-xl bg-[#151515] border border-red-500/30 flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                            className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-red-500/30 flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                                         >
                                             <Trash2 size={18} />
                                             <span>{t('settings.dataSettings.deleteAllData')}</span>
                                         </button>
                                     </div>
-                                </div>
-                            )}
-                            
-                            {/* Instances Tab */}
-                            {activeTab === 'instances' && (
-                                <div 
-                                    className="space-y-4 relative"
-                                    onDragOver={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (e.dataTransfer.types.includes('Files')) {
-                                            setIsDraggingZip(true);
-                                        }
-                                    }}
-                                    onDragLeave={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setIsDraggingZip(false);
-                                    }}
-                                    onDrop={handleInstanceZipDrop}
-                                >
-                                    {/* Drag overlay */}
-                                    {isDraggingZip && (
-                                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl border-2 border-dashed border-white/40">
-                                            <div className="text-center">
-                                                <Download size={32} className="mx-auto mb-2 text-white/60" />
-                                                <p className="text-white/80">{t('settings.instanceSettings.dropZipImport')}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Export/Import message */}
-                                    {exportMessage && (
-                                        <div className={`p-3 rounded-xl text-sm flex items-center gap-2 ${
-                                            exportMessage.type === 'success' 
-                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                        }`}>
-                                            {exportMessage.type === 'success' ? '✓' : '✕'} {exportMessage.text}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Instance List */}
-                                    {isLoadingInstances ? (
-                                        <div className="flex items-center justify-center py-12">
-                                            <Loader2 size={28} className="animate-spin" style={{ color: accentColor }} />
-                                        </div>
-                                    ) : installedInstances.length === 0 ? (
-                                        <div className="py-12 text-center">
-                                            <Box size={40} className="mx-auto mb-3 text-white/20" />
-                                            <p className="text-white/40 text-sm">{t('settings.instanceSettings.noInstances')}</p>
-                                            <p className="text-white/30 text-xs mt-1">{t('settings.instanceSettings.installHytale')}</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {installedInstances.map((instance) => {
-                                                const key = `${instance.branch}-${instance.version}`;
-                                                const isReleaseBranch = instance.branch?.toLowerCase() === 'release';
-                                                const isExporting = exportingInstance === key;
-                                                
-                                                // Display labels
-                                                const isLatest = instance.isLatestInstance;
-                                                const versionLabel = isLatest ? t('common.latest') : `v${instance.version}`;
-                                                
-                                                // Format playtime
-                                                const playTime = (instance.playTimeSeconds ?? 0) > 0 
-                                                    ? instance.playTimeFormatted 
-                                                    : t('settings.instanceSettings.notPlayed');
-                                                
-                                                // Format dates
-                                                const createdDate = instance.createdAt 
-                                                    ? new Date(instance.createdAt).toLocaleDateString() 
-                                                    : '-';
-                                                const lastPlayedDate = instance.lastPlayedAt 
-                                                    ? new Date(instance.lastPlayedAt).toLocaleDateString() 
-                                                    : (instance.updatedAt ? new Date(instance.updatedAt).toLocaleDateString() : t('common.never'));
-                                                const updatedDate = instance.updatedAt
-                                                    ? new Date(instance.updatedAt).toLocaleDateString()
-                                                    : '-';
-                                                
-                                                return (
-                                                    <div 
-                                                        key={key} 
-                                                        className="p-4 rounded-xl bg-[#151515] border border-white/10 hover:border-white/20 transition-colors"
-                                                    >
-                                                        {/* Header: Branch Icon + Version + Actions */}
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <div className="flex items-center gap-3">
-                                                                {/* Branch Icon */}
-                                                                <div 
-                                                                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                                                        isReleaseBranch 
-                                                                            ? 'bg-green-500/15' 
-                                                                            : 'bg-yellow-500/15'
-                                                                    }`}
-                                                                >
-                                                                    {isLatest ? (
-                                                                        <RefreshCw size={20} className={isReleaseBranch ? 'text-green-400' : 'text-yellow-400'} />
-                                                                    ) : (
-                                                                        <Pin size={20} className={isReleaseBranch ? 'text-green-400' : 'text-yellow-400'} />
-                                                                    )}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-white font-medium">{versionLabel}</span>
-                                                                        <span 
-                                                                            className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                                                                                isReleaseBranch 
-                                                                                    ? 'bg-green-500/15 text-green-400' 
-                                                                                    : 'bg-yellow-500/15 text-yellow-400'
-                                                                            }`}
-                                                                        >
-                                                                            {isReleaseBranch ? t('common.release') : t('common.preRelease')}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-xs text-white/40">v{instance.version}</p>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            {/* Actions */}
-                                                            <div className="flex items-center gap-1">
-                                                                <button
-                                                                    onClick={() => OpenInstanceFolder(instance.branch, isLatest ? 0 : (instance.version ?? 0))}
-                                                                    className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                                                                    title={t('common.openFolder')}
-                                                                >
-                                                                    <FolderOpen size={16} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        setShowInstanceExportModal(instance);
-                                                                        const lastPath = await GetLastExportPath();
-                                                                        setInstanceExportPath(lastPath || '');
-                                                                    }}
-                                                                    disabled={isExporting}
-                                                                    className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                                                                    title={t('settings.instanceSettings.exportInstance')}
-                                                                >
-                                                                    {isExporting ? (
-                                                                        <Loader2 size={16} className="animate-spin" />
-                                                                    ) : (
-                                                                        <Download size={16} />
-                                                                    )}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setInstanceToDelete(instance)}
-                                                                    className="p-2 rounded-lg hover:bg-red-500/15 text-white/40 hover:text-red-400 transition-colors"
-                                                                    title={t('settings.instanceSettings.delete')}
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {/* Stats Grid */}
-                                                        <div className="grid grid-cols-5 gap-3">
-                                                            <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.playtime')}</p>
-                                                                <p className="text-sm text-white/80">{playTime}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.version')}</p>
-                                                                <p className="text-sm text-white/80">v{instance.version}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.created')}</p>
-                                                                <p className="text-sm text-white/80">{createdDate}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.updated')}</p>
-                                                                <p className="text-sm text-white/80">{updatedDate}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-white/40 mb-1">{t('settings.instanceSettings.lastPlayed')}</p>
-                                                                <p className="text-sm text-white/80">{lastPlayedDate}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Refresh hint */}
-                                    {installedInstances.length > 0 && (
-                                        <button
-                                            onClick={loadInstances}
-                                            className="w-full text-center text-xs text-white/30 hover:text-white/50 py-2 transition-colors"
-                                        >
-                                            {t('settings.instanceSettings.clickToRefresh')}
-                                        </button>
-                                    )}
                                 </div>
                             )}
 
@@ -1607,7 +1618,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
 
                                     {/* Disclaimer */}
-                                    <div className="p-4 rounded-xl bg-[#151515] border border-white/5">
+                                    <div className="p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.04]">
                                         <p className="text-white/50 text-sm text-center">
                                             {t('settings.aboutSettings.disclaimer')}
                                         </p>
@@ -1637,7 +1648,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
 
                                     {/* Show Intro on Next Launch */}
-                                    <div className="p-4 rounded-xl bg-[#151515] border border-white/5 space-y-4">
+                                    <div className="p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.04] space-y-4">
                                         <h3 className="text-white font-medium text-sm">{t('settings.developerSettings.onboarding')}</h3>
                                         <button
                                             onClick={async () => {
@@ -1650,7 +1661,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </button>
                                     </div>
 
-                                    <div className="p-4 rounded-xl bg-[#151515] border border-white/5">
+                                    <div className="p-4 rounded-xl bg-[#2c2c2e] border border-white/[0.04]">
                                         <p className="text-white/40 text-xs">
                                             {t('settings.developerSettings.debugInfo')} Tab={activeTab}, Branch={selectedLauncherBranch}, Accent={accentColor}
                                         </p>
@@ -1664,8 +1675,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Translation Confirmation Modal */}
             {showTranslationConfirm && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
+                    <div className="bg-[#1c1c1e] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-bold text-white mb-3">{t('settings.languageChanged.title')}</h3>
                         <p className="text-white/70 text-sm mb-4">
                             {t('settings.languageChanged.message', { language: showTranslationConfirm.langName })}
@@ -1703,8 +1714,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
+                    <div className="bg-[#1c1c1e] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                                 <Trash2 size={20} className="text-red-400" />
@@ -1734,8 +1745,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* Delete Instance Confirmation Modal */}
             {instanceToDelete && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
+                    <div className="bg-[#1c1c1e] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                                 <Trash2 size={20} className="text-red-400" />
@@ -1767,8 +1778,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Export Instance Modal */}
             {showInstanceExportModal && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] rounded-2xl border border-white/10 p-6 w-full max-w-md mx-4">
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/80 modal-overlay-glass' : 'bg-[#0a0a0a]/95'}`}>
+                    <div className="bg-[#1c1c1e] rounded-2xl border border-white/10 p-6 w-full max-w-md mx-4">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-white">{t('settings.instanceSettings.exportInstance')}</h3>
                             <button
@@ -1840,8 +1851,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Import Instance Modal */}
             {showImportModal && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
+                    <div className="bg-[#1c1c1e] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
                                 <Download size={20} style={{ color: accentColor }} />
@@ -1889,7 +1900,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <select
                                     value={importTargetVersion}
                                     onChange={(e) => setImportTargetVersion(parseInt(e.target.value))}
-                                    className="w-full h-10 px-3 rounded-lg bg-[#151515] border border-white/10 text-white text-sm focus:outline-none"
+                                    className="w-full h-10 px-3 rounded-lg bg-[#2c2c2e] border border-white/[0.06] text-white text-sm focus:outline-none"
                                 >
                                     <option value={0}>{t('common.Latest')}</option>
                                     {installedInstances
@@ -1932,8 +1943,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* All Backgrounds Modal - Now includes solid colors */}
             {showAllBackgrounds && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden">
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
+                    <div className="bg-[#1c1c1e] border border-white/10 rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden">
                         <div className="flex items-center justify-between p-4 border-b border-white/5">
                             <h3 className="text-lg font-bold text-white">{t('settings.visualSettings.chooseBackground')}</h3>
                             <button

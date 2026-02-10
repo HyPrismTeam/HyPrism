@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Home, Newspaper, Users, HardDrive, Settings, Volume2, VolumeX, type LucideIcon } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { useAnimatedGlass } from '../../contexts/AnimatedGlassContext';
 import { useTranslation } from 'react-i18next';
 
 export type PageType = 'dashboard' | 'news' | 'profiles' | 'instances' | 'settings';
@@ -29,7 +30,22 @@ interface DockMenuProps {
 
 export const DockMenu: React.FC<DockMenuProps> = ({ activePage, onPageChange, isMuted = false, onToggleMute }) => {
   const { accentColor } = useAccentColor();
+  const { animatedGlass } = useAnimatedGlass();
   const { t } = useTranslation();
+
+  const dockStyle: React.CSSProperties = animatedGlass
+    ? {
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
+        backdropFilter: 'blur(40px) saturate(200%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
+      }
+    : {
+        background: 'rgba(28, 28, 30, 0.98)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      };
 
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3">
@@ -39,13 +55,7 @@ export const DockMenu: React.FC<DockMenuProps> = ({ activePage, onPageChange, is
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', damping: 22, stiffness: 180, delay: 0.3 }}
         className="flex items-center gap-0.5 px-2 py-1.5 rounded-2xl"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
-          backdropFilter: 'blur(40px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
-        }}
+        style={dockStyle}
       >
         {dockItems.map((item) => {
           const isActive = activePage === item.id;
@@ -100,13 +110,7 @@ export const DockMenu: React.FC<DockMenuProps> = ({ activePage, onPageChange, is
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: 'spring', damping: 22, stiffness: 180, delay: 0.4 }}
           className="flex items-center px-1.5 py-1.5 rounded-2xl"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
-            backdropFilter: 'blur(40px) saturate(200%)',
-            WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08)',
-          }}
+          style={dockStyle}
         >
           <button
             onClick={onToggleMute}

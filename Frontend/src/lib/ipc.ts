@@ -114,11 +114,12 @@ export interface SettingsSnapshot {
   backgroundMode: string;
   availableBackgrounds: string[];
   accentColor: string;
-  animatedGlassEffects: boolean;
   hasCompletedOnboarding: boolean;
   onlineMode: boolean;
   authDomain: string;
   dataDirectory: string;
+  gpuPreference?: string;
+  animatedGlassEffects?: boolean;
   launchOnStartup?: boolean;
   minimizeToTray?: boolean;
   animations?: boolean;
@@ -163,12 +164,18 @@ export interface InstalledInstance {
   hasUserData: boolean;
   userDataSize: number;
   totalSize: number;
-  customName?: string;
+  isValid: boolean;
 }
 
 export interface LanguageInfo {
   code: string;
   name: string;
+}
+
+export interface GpuAdapterInfo {
+  name: string;
+  vendor: string;
+  type: string;
 }
 
 // #endregion
@@ -239,6 +246,10 @@ const _mods = {
   search: (data?: unknown) => invoke<ModSearchResult>('hyprism:mods:search', data),
 };
 
+const _system = {
+  gpuAdapters: () => invoke<GpuAdapterInfo[]>('hyprism:system:gpuAdapters'),
+};
+
 const _console = {
   log: (msg: string) => send('hyprism:console:log', msg),
   warn: (msg: string) => send('hyprism:console:warn', msg),
@@ -260,6 +271,7 @@ export const ipc = {
   windowCtl: _window,
   browser: _browser,
   mods: _mods,
+  system: _system,
   consoleCtl: _console,
 };
 

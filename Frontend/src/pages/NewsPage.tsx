@@ -130,8 +130,8 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
                 color: accentTextColor,
                 boxShadow: `0 2px 12px ${accentColor}40`,
               } : {
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.06)',
               }}
             >
               {f === 'all' ? t('news.all') : f === 'hytale' ? t('news.hytale') : t('news.hyprism')}
@@ -177,13 +177,13 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews, newsDisabled }
                   className="relative group rounded-2xl overflow-hidden text-left cursor-pointer"
                   style={{
                     aspectRatio: '16/10',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
                   {/* Background Image or Placeholder */}
                   {item.source === 'hyprism' ? (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#2c2c2e] to-[#1c1c1e] flex items-center justify-center">
                       <Github size={64} className="text-white/10" />
                     </div>
                   ) : item.imageUrl ? (

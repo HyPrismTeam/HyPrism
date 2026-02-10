@@ -5,11 +5,12 @@ import {
   HardDrive, FolderOpen, Trash2, Upload, RefreshCw, 
   Clock, Box, Loader2, AlertTriangle, Check, Plus,
   Search, Package, MoreVertical, ToggleLeft, ToggleRight,
-  ChevronRight, FileText, Gamepad2, Image, Map, Globe, Play, X, Edit2, Save
+  ChevronRight, FileText, Image, Map, Globe, Play, X, Edit2,
+  Download, AlertCircle
 } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
-import { ipc, InstalledInstance, invoke, send } from '@/lib/ipc';
+import { ipc, InstalledInstance, invoke, send, InstanceValidationStatus, InstanceValidationDetails, SaveInfo } from '@/lib/ipc';
 import { formatBytes } from '../utils/format';
 import { GameBranch } from '@/constants/enums';
 
@@ -134,13 +135,7 @@ interface ModInfo {
   latestFileId?: number;
 }
 
-interface SaveInfo {
-  name: string;
-  path: string;
-  previewPath?: string;
-  lastModified?: string;
-  sizeBytes?: number;
-}
+// SaveInfo is imported from @/lib/ipc
 
 // Convert InstalledInstance to InstalledVersionInfo
 const toVersionInfo = (inst: InstalledInstance): InstalledVersionInfo => ({
@@ -152,6 +147,8 @@ const toVersionInfo = (inst: InstalledInstance): InstalledVersionInfo => ({
   isLatestInstance: inst.version === 0,
   iconPath: undefined,
   customName: inst.customName,
+  validationStatus: inst.validationStatus || 'Unknown',
+  validationDetails: inst.validationDetails,
 });
 
 export interface InstalledVersionInfo {
@@ -168,6 +165,10 @@ export interface InstalledVersionInfo {
   updatedAt?: string;
   iconPath?: string;
   customName?: string;
+  /** Validation status of the instance */
+  validationStatus?: InstanceValidationStatus;
+  /** Detailed validation information */
+  validationDetails?: InstanceValidationDetails;
 }
 
 const pageVariants = {
@@ -499,6 +500,60 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     return `${branchLabel} v${inst.version}`;
   };
 
+  // Get validation status info for display
+  const getValidationInfo = (inst: InstalledVersionInfo): { 
+    status: 'valid' | 'warning' | 'error'; 
+    label: string; 
+    color: string;
+    bgColor: string;
+    icon: React.ReactNode;
+  } => {
+    const status = inst.validationStatus || 'Unknown';
+    
+    switch (status) {
+      case 'Valid':
+        return {
+          status: 'valid',
+          label: t('instances.status.ready'),
+          color: '#22c55e',
+          bgColor: 'rgba(34, 197, 94, 0.1)',
+          icon: <Check size={12} />
+        };
+      case 'Incomplete':
+        return {
+          status: 'warning',
+          label: t('instances.status.incomplete'),
+          color: '#f59e0b',
+          bgColor: 'rgba(245, 158, 11, 0.1)',
+          icon: <Download size={12} />
+        };
+      case 'NotInstalled':
+        return {
+          status: 'error',
+          label: t('instances.status.notInstalled'),
+          color: '#ef4444',
+          bgColor: 'rgba(239, 68, 68, 0.1)',
+          icon: <AlertCircle size={12} />
+        };
+      case 'Corrupted':
+        return {
+          status: 'error',
+          label: t('instances.status.corrupted'),
+          color: '#ef4444',
+          bgColor: 'rgba(239, 68, 68, 0.1)',
+          icon: <AlertTriangle size={12} />
+        };
+      default:
+        return {
+          status: 'warning',
+          label: t('instances.status.unknown'),
+          color: '#6b7280',
+          bgColor: 'rgba(107, 114, 128, 0.1)',
+          icon: <AlertCircle size={12} />
+        };
+    }
+  };
+
   const getInstanceIcon = (inst: InstalledVersionInfo, size: number = 18) => {
     const key = `${inst.branch}-${inst.version}`;
     const customIcon = instanceIcons[key];
@@ -543,18 +598,18 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className="h-full flex px-4 pt-14 pb-28 gap-4"
     >
-      {/* Left Sidebar - Instances List */}
-      <div className="w-64 flex-shrink-0 flex flex-col">
+      {/* Left Sidebar - Instances List (macOS Tahoe style) */}
+      <div className="w-72 flex-shrink-0 flex flex-col">
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between mb-3 px-2">
+        <div className="flex items-center justify-between mb-3 px-3">
           <div className="flex items-center gap-2">
-            <HardDrive size={18} className="text-white/60" />
-            <h2 className="text-sm font-semibold text-white/80">{t('instances.title')}</h2>
+            <HardDrive size={18} className="text-white/70" />
+            <h2 className="text-sm font-semibold text-white">{t('instances.title')}</h2>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={onNavigateToDashboard}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all"
               title={t('instances.addInstance')}
             >
               <Plus size={14} />
@@ -562,7 +617,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             <button
               onClick={handleImport}
               disabled={isImporting}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all"
               title={t('instances.import')}
             >
               {isImporting ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
@@ -570,7 +625,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             <button
               onClick={loadInstances}
               disabled={isLoading}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all"
               title={t('common.refresh')}
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
@@ -578,19 +633,21 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
           </div>
         </div>
 
-        {/* Instance List */}
-        <div className={`flex-1 overflow-y-auto space-y-1 rounded-xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static'} p-2`}>
+        {/* Instance List & Storage Info - Unified glass panel */}
+        <div className="flex-1 flex flex-col overflow-hidden rounded-2xl glass-panel-static min-h-0">
+          <div className="flex-1 overflow-y-auto">
+          <div className="p-2 space-y-1">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 size={24} className="animate-spin" style={{ color: accentColor }} />
             </div>
           ) : instances.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-white/30">
+            <div className="flex flex-col items-center justify-center py-8 text-white/40">
               <Box size={32} className="mb-2 opacity-50" />
               <p className="text-xs text-center mb-3">{t('instances.noInstances')}</p>
               <button
                 onClick={onNavigateToDashboard}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-all"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs transition-all"
               >
                 <Plus size={14} />
                 {t('instances.addInstance')}
@@ -600,37 +657,49 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             instances.map((inst) => {
               const key = `${inst.branch}-${inst.version}`;
               const isSelected = selectedInstance?.branch === inst.branch && selectedInstance?.version === inst.version;
+              const validation = getValidationInfo(inst);
               
               return (
                 <button
                   key={key}
                   onClick={() => setSelectedInstance(inst)}
-                  className={`w-full p-3 rounded-xl flex items-center gap-3 text-left transition-all ${
+                  className={`w-full p-3 rounded-xl flex items-center gap-3 text-left transition-all duration-150 ${
                     isSelected 
-                      ? 'border-2' 
-                      : 'bg-white/5 border border-transparent hover:bg-white/10'
+                      ? 'shadow-md' 
+                      : 'hover:bg-white/[0.04]'
                   }`}
                   style={isSelected ? { 
-                    backgroundColor: `${accentColor}15`,
-                    borderColor: accentColor 
+                    backgroundColor: `${accentColor}18`,
+                    boxShadow: `0 0 0 1px ${accentColor}40`
                   } : undefined}
                 >
                   {/* Instance Icon */}
                   <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${accentColor}20` }}
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 border border-white/[0.08]"
+                    style={{ backgroundColor: isSelected ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}
                   >
                     {getInstanceIcon(inst)}
                   </div>
                   
                   {/* Instance Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium truncate">
+                    <p className="text-white text-sm font-medium truncate leading-tight">
                       {getInstanceDisplayName(inst)}
                     </p>
-                    <p className="text-white/40 text-xs truncate">
-                      {inst.sizeBytes ? formatBytes(inst.sizeBytes) : t('common.unknown')}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-white/40 text-xs">
+                        {inst.sizeBytes ? formatBytes(inst.sizeBytes) : t('common.unknown')}
+                      </span>
+                      {/* Validation Status Badge */}
+                      <span 
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                        style={{ backgroundColor: validation.bgColor, color: validation.color }}
+                        title={inst.validationDetails?.errorMessage || validation.label}
+                      >
+                        {validation.icon}
+                        {validation.status !== 'valid' && validation.label}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Selection indicator */}
@@ -641,112 +710,63 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
               );
             })
           )}
-        </div>
-
-        {/* Storage Info */}
-        {instanceDir && (
-          <div className="mt-3 px-2 py-2 rounded-lg bg-white/5 text-xs text-white/30 truncate">
-            {instanceDir}
           </div>
-        )}
+          </div>
+
+          {/* Storage Info */}
+          {instanceDir && (
+            <div className="px-3 py-2 border-t border-white/[0.06] text-xs text-white/40 truncate flex-shrink-0">
+              {instanceDir}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content - Instance Detail */}
       <div className="flex-1 flex flex-col min-w-0">
         {selectedInstance ? (
           <>
-            {/* Instance Header */}
-            <div className="flex items-center gap-4 mb-4 px-2">
-              {/* Instance Icon */}
-              <div 
-                className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-                style={{ backgroundColor: `${accentColor}20` }}
-              >
-                {getInstanceIcon(selectedInstance, 28)}
+            {/* Unified instance detail panel */}
+            <div className="flex-1 flex flex-col overflow-hidden rounded-2xl glass-panel-static">
+            {/* Tabs & Actions */}
+            <div className="flex items-center justify-between gap-4 px-3 py-3 flex-shrink-0 border-b border-white/[0.06]">
+              {/* Left side: Tabs */}
+              <div className="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-xl border border-white/[0.06]">
+                {(['content', 'worlds', 'logs'] as InstanceTab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                      activeTab === tab
+                        ? 'text-white shadow-sm'
+                        : 'text-white/50 hover:text-white/70'
+                    }`}
+                    style={activeTab === tab ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
+                  >
+                    {t(`instances.tab.${tab}`)}
+                  </button>
+                ))}
               </div>
 
-              {/* Instance Title and Info */}
-              <div className="flex-1 min-w-0">
-                {editingInstanceName ? (
-                  <div className="flex items-center gap-2 mb-1">
-                    <input
-                      type="text"
-                      value={editNameValue}
-                      onChange={(e) => setEditNameValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleRenameInstance(selectedInstance, editNameValue || null);
-                        } else if (e.key === 'Escape') {
-                          setEditingInstanceName(false);
-                        }
-                      }}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-xl font-bold focus:outline-none focus:border-white/30"
-                      placeholder={getInstanceDisplayName(selectedInstance)}
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => handleRenameInstance(selectedInstance, editNameValue || null)}
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      <Save size={16} className="text-white" />
-                    </button>
-                    <button
-                      onClick={() => setEditingInstanceName(false)}
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      <X size={16} className="text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-bold text-white truncate">
-                      {getInstanceDisplayName(selectedInstance)}
-                    </h1>
-                    <button
-                      onClick={() => {
-                        setEditNameValue(selectedInstance.customName || '');
-                        setEditingInstanceName(true);
-                      }}
-                      className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                      title={t('instances.rename')}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                  </div>
-                )}
-                <div className="flex items-center gap-3 text-sm text-white/50 mt-1">
-                  <span className="flex items-center gap-1">
-                    <Gamepad2 size={14} />
-                    {selectedInstance.branch}
-                  </span>
-                  {selectedInstance.lastPlayedAt && (
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} />
-                      {t('instances.lastPlayed')}: {new Date(selectedInstance.lastPlayedAt).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
+              {/* Right side: Action Buttons */}
               <div className="flex items-center gap-2">
                 {/* Play/Stop Button */}
                 {isGameRunning && runningBranch === selectedInstance.branch && runningVersion === selectedInstance.version ? (
                   <button
                     onClick={() => handleLaunchInstance(selectedInstance)}
-                    className="px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg bg-gradient-to-r from-red-600 to-red-500 text-white"
+                    className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg bg-gradient-to-r from-red-600 to-red-500 text-white"
                   >
-                    <X size={18} />
+                    <X size={16} />
                     {t('main.stop')}
                   </button>
                 ) : (
                   <button
                     onClick={() => handleLaunchInstance(selectedInstance)}
                     disabled={isGameRunning}
-                    className="px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: isGameRunning ? '#555' : accentColor, color: accentTextColor }}
                   >
-                    <Play size={18} fill="currentColor" />
+                    <Play size={16} fill="currentColor" />
                     {t('main.play')}
                   </button>
                 )}
@@ -754,9 +774,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {/* Install Content Button */}
                 <button
                   onClick={() => onOpenModBrowser?.(selectedInstance.branch, selectedInstance.version)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all bg-white/10 hover:bg-white/20 text-white"
+                  className="px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all bg-white/10 hover:bg-white/20 text-white"
                 >
-                  <Plus size={16} />
+                  <Plus size={14} />
                   {t('instances.installContent')}
                 </button>
 
@@ -766,11 +786,22 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                     onClick={() => setShowInstanceMenu(!showInstanceMenu)}
                     className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-all"
                   >
-                    <MoreVertical size={20} />
+                    <MoreVertical size={18} />
                   </button>
 
                   {showInstanceMenu && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setEditNameValue(selectedInstance.customName || '');
+                          setEditingInstanceName(true);
+                          setShowInstanceMenu(false);
+                        }}
+                        className="w-full px-4 py-2.5 text-sm text-left text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                      >
+                        <Edit2 size={14} />
+                        {t('instances.rename')}
+                      </button>
                       <button
                         onClick={() => {
                           handleOpenFolder(selectedInstance);
@@ -823,27 +854,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 mb-4 px-2">
-              {(['content', 'worlds', 'logs'] as InstanceTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    activeTab === tab
-                      ? 'text-white'
-                      : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-                  }`}
-                  style={activeTab === tab ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
-                >
-                  {t(`instances.tab.${tab}`)}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content - glass panel always visible, content animates inside */}
-            <div className={`flex-1 overflow-hidden ${animatedGlass ? 'glass-panel' : 'glass-panel-static'}`}>
-              <AnimatePresence mode="popLayout">
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden">              <AnimatePresence mode="popLayout">
                 {activeTab === 'content' && (
                   <motion.div
                     key="content"
@@ -854,7 +866,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                     className="h-full flex flex-col"
                   >
                   {/* Content Header */}
-                  <div className="p-4 border-b border-white/10 flex items-center gap-3">
+                  <div className="p-4 border-b border-white/[0.06] flex items-center gap-3">
                     {/* Search */}
                     <div className="relative flex-1 max-w-md">
                       <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
@@ -863,7 +875,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         value={modsSearchQuery}
                         onChange={(e) => setModsSearchQuery(e.target.value)}
                         placeholder={t('modManager.searchMods')}
-                        className="w-full h-10 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/40 focus:outline-none focus:border-white/20"
+                        className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#2c2c2e] border border-white/[0.08] text-white text-sm placeholder-white/40 focus:outline-none focus:border-white/20"
                       />
                     </div>
 
@@ -875,14 +887,14 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                     {/* Actions */}
                     <div className="flex items-center gap-2 ml-auto">
                       {updateCount > 0 && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/20">
                           {updateCount} {t('modManager.updatesAvailableShort')}
                         </span>
                       )}
                       <button
                         onClick={loadInstalledMods}
                         disabled={isLoadingMods}
-                        className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                        className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
                         title={t('common.refresh')}
                       >
                         <RefreshCw size={16} className={isLoadingMods ? 'animate-spin' : ''} />
@@ -891,7 +903,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         <button
                           onClick={handleBulkDeleteMods}
                           disabled={isDeletingMod}
-                          className="px-3 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center gap-2 transition-all"
+                          className="px-3 py-2 rounded-xl text-sm font-medium bg-red-500/15 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center gap-2 transition-all"
                         >
                           <Trash2 size={14} />
                           {t('modManager.deleteSelected')} ({selectedMods.size})
@@ -901,7 +913,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   </div>
 
                   {/* Mods List Header */}
-                  <div className="px-4 py-2 border-b border-white/5 flex items-center text-xs text-white/40 font-medium">
+                  <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center text-xs text-white/50 font-medium uppercase tracking-wide">
                     <div className="w-8" />
                     <div className="flex-1 pl-3">{t('modManager.name')}</div>
                     <div className="w-32 text-center">{t('modManager.version')}</div>
@@ -916,13 +928,13 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         <Loader2 size={32} className="animate-spin" style={{ color: accentColor }} />
                       </div>
                     ) : filteredMods.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-white/30">
-                        <Package size={48} className="mb-4 opacity-50" />
-                        <p className="text-lg font-medium">{t('modManager.noModsInstalled')}</p>
+                      <div className="flex flex-col items-center justify-center py-12 text-white/40">
+                        <Package size={48} className="mb-4 opacity-40" />
+                        <p className="text-lg font-medium text-white/60">{t('modManager.noModsInstalled')}</p>
                         <p className="text-sm mt-1">{t('modManager.clickInstallContent')}</p>
                         <button
                           onClick={() => onOpenModBrowser?.(selectedInstance.branch, selectedInstance.version)}
-                          className="mt-4 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
+                          className="mt-4 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg"
                           style={{ backgroundColor: accentColor, color: accentTextColor }}
                         >
                           <Plus size={16} />
@@ -1145,6 +1157,59 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 )}
               </AnimatePresence>
             </div>
+            </div>
+
+            {/* Rename Modal (shown when editing instance name) */}
+            <AnimatePresence>
+              {editingInstanceName && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className={`fixed inset-0 z-[300] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}
+                  onClick={(e) => e.target === e.currentTarget && setEditingInstanceName(false)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl"
+                  >
+                    <h3 className="text-white font-bold text-lg mb-4">{t('instances.rename')}</h3>
+                    <input
+                      type="text"
+                      value={editNameValue}
+                      onChange={(e) => setEditNameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleRenameInstance(selectedInstance, editNameValue || null);
+                        } else if (e.key === 'Escape') {
+                          setEditingInstanceName(false);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-[#2c2c2e] border border-white/10 text-white focus:outline-none focus:border-white/30 mb-4"
+                      placeholder={getInstanceDisplayName(selectedInstance)}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => setEditingInstanceName(false)}
+                        className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        onClick={() => handleRenameInstance(selectedInstance, editNameValue || null)}
+                        className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                        style={{ backgroundColor: accentColor, color: accentTextColor }}
+                      >
+                        {t('common.save')}
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </>
         ) : (
           /* No Instance Selected */
@@ -1182,7 +1247,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className={`fixed inset-0 z-[300] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}
             onClick={(e) => e.target === e.currentTarget && setInstanceToDelete(null)}
           >
             <motion.div
@@ -1217,7 +1282,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className={`fixed inset-0 z-[300] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}
             onClick={(e) => e.target === e.currentTarget && setModToDelete(null)}
           >
             <motion.div

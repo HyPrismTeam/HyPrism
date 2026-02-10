@@ -32,7 +32,9 @@
     "never": "Nie",
     "exporting": "Exportieren...",
     "importing": "Importieren...",
-    "Latest": "Neueste"
+    "Latest": "Neueste",
+    "refresh": "Refresh",
+    "unknown": "Unknown"
   },
   "app": {
     "title": "HyPrism",
@@ -81,7 +83,8 @@
     "buyMeA": "KAUF ES",
     "modManager": "Mod-Manager",
     "openInstanceFolder": "Instanz-Ordner öffnen",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "stop": "STOPP"
   },
   "settings": {
     "title": "Optionen",
@@ -126,11 +129,7 @@
       "closeLauncher": "Launcher schließen",
       "closeLauncherHint": "Schließt Launcher automatisch beim Start.",
       "showAlphaMods": "Alpha-Mods anzeigen",
-      "showAlphaModsHint": "Mods mit Alpha-Release-Typ im Mod-Manager anzeigen",
-      "onlineMode": "Online-Modus",
-      "onlineModeHint": "Beim Start mit Auth-Servern verbinden",
-      "disableNews": "News ausblenden",
-      "disableNewsHint": "Versteckt News im Hauptmenü."
+      "showAlphaModsHint": "Mods mit Alpha-Release-Typ im Mod-Manager anzeigen"
     },
     "visualSettings": {
       "title": "Visuelle Einstellungen",
@@ -145,7 +144,9 @@
       "hideNews": "Neuigkeiten ausblenden",
       "hideNewsHint": "Neuigkeiten vollständig ausblenden",
       "chooseBackground": "Hintergrund wählen",
-      "images": "Bilder"
+      "images": "Bilder",
+      "animatedGlass": "Animated Glass Effects",
+      "animatedGlassHint": "Enable smooth entrance animations for panels and menus. Disable for better performance."
     },
     "graphicsSettings": {
       "title": "Graphics Settings",
@@ -155,7 +156,16 @@
       "installingOptMods": "Optimierungsmods werden installiert...",
       "installOptModsAction": "8 Performance-Mods für alle Profile installieren",
       "optModsInstalled": "Optimierungsmods installiert!",
-      "optModsFailed": "Installation fehlgeschlagen"
+      "optModsFailed": "Installation fehlgeschlagen",
+      "gpuPreference": "GPU Preference",
+      "gpuPreferenceHint": "Choose which GPU to use for launching the game. Useful for laptops with both integrated and dedicated graphics.",
+      "gpu_dedicated": "Dedicated",
+      "gpu_dedicatedHint": "Use discrete GPU (NVIDIA/AMD)",
+      "gpu_integrated": "Integrated",
+      "gpu_integratedHint": "Use built-in GPU (Intel/AMD)",
+      "gpu_auto": "Auto",
+      "gpu_autoHint": "Let the system decide",
+      "singleGpuNotice": "Only one GPU detected — selection is locked to Auto mode."
     },
     "languageSettings": {
       "title": "Spracheinstellungen",
@@ -255,6 +265,19 @@
       "dontAskAgain": "Nicht erneut fragen",
       "noThanks": "Nein danke",
       "searchMods": "Mods suchen"
+    },
+    "network": "Netzwerk",
+    "networkSettings": {
+      "onlineMode": "Online Mode",
+      "onlineModeHint": "Connect to authentication servers for multiplayer.",
+      "authServer": "Auth Server",
+      "authServerHint": "Select the authentication server used for online play.",
+      "authDefault": "Default",
+      "authOfficial": "Official",
+      "authOfficialHint": "Hytale servers",
+      "authCustom": "Custom",
+      "authCustomHint": "Enter your own auth server address",
+      "currentServer": "Current server"
     }
   },
   "news": {
@@ -269,9 +292,7 @@
     "enableInSettings": "Enable news in Settings",
     "noNewsFound": "No news found",
     "expand": "Expand",
-    "minimize": "Minimize",
-    "noNews": "Keine Neuigkeiten verfügbar",
-    "retry": "Erneut versuchen"
+    "minimize": "Minimize"
   },
   "instances": {
     "title": "Instanzen",
@@ -287,8 +308,28 @@
     "importFailed": "Failed to import instance",
     "deleteTitle": "Delete Instance",
     "deleteConfirm": "Are you sure you want to delete",
-    "version": "Version",
-    "branch": "Branch"
+    "addInstance": "Add Instance",
+    "selectInstance": "Select an Instance",
+    "selectInstanceHint": "Choose an instance from the left to view and manage its content",
+    "lastPlayed": "Last played",
+    "installContent": "Install content",
+    "rename": "Rename",
+    "status": {
+      "ready": "Ready",
+      "incomplete": "Incomplete",
+      "notInstalled": "Not Installed",
+      "corrupted": "Corrupted",
+      "unknown": "Unknown"
+    },
+    "tab": {
+      "content": "Content",
+      "worlds": "Worlds",
+      "logs": "Logs"
+    },
+    "saves": "Saves",
+    "noSaves": "No saves found",
+    "noSavesHint": "Play the game to create your first save",
+    "logsComingSoon": "Logs viewer coming soon"
   },
   "profiles": {
     "title": "Profile",
@@ -309,8 +350,7 @@
     "editUuid": "Edit UUID",
     "saveUuid": "Save UUID",
     "openFolder": "Open Profile Folder",
-    "saved": "Profile saved!",
-    "myProfiles": "Meine Profile"
+    "saved": "Profile saved!"
   },
   "launch": {
     "state": {
@@ -436,13 +476,7 @@
     "loading": "Loading logs...",
     "noLogs": "Keine Protokolle verfügbar",
     "autoRefresh": "Auto-refreshing every 3 seconds",
-    "download": "Download",
-    "gameLogs": "Spielprotokolle:",
-    "lines": "Zeilen",
-    "autoScroll": "Autom. Scrollen",
-    "copyAll": "Alles kopieren",
-    "downloadLogs": "Protokolle herunterladen",
-    "clear": "Löschen"
+    "download": "Download"
   },
   "update": {
     "downloading": "Herunterladen...",
@@ -549,7 +583,23 @@
       "zipArchiveHint": "Alle Mod-Dateien gebündelt",
       "exportFolder": "Exportordner",
       "selectFolder": "Exportordner auswählen..."
-    }
+    },
+    "searchMods": "Search mods...",
+    "mods": "Mods",
+    "name": "Name",
+    "version": "Version",
+    "enabled": "Enabled",
+    "modsInstalled": "mods installed",
+    "updatesAvailableShort": "updates",
+    "clickInstallContent": "Click 'Install content' to add mods",
+    "unknownAuthor": "Unknown Author",
+    "updateBadge": "Update",
+    "deleteSelected": "Delete Selected",
+    "deleteFailed": "Failed to delete mod",
+    "deleteModTitle": "Delete Mod",
+    "deleteModConfirm": "Are you sure you want to delete this mod?",
+    "modDeleted": "Mod deleted successfully",
+    "modsDeleted": "Mods deleted successfully"
   },
   "onboarding": {
     "language": "Sprache",
@@ -613,12 +663,6 @@
     "mutedWhilePlaying": "Music muted while game is running",
     "unmute": "Unmute",
     "mute": "Mute",
-    "nowPlaying": "Wird gespielt",
-    "play": "Abspielen",
-    "pause": "Pause",
-    "next": "Nächster",
-    "previous": "Vorheriger",
-    "volume": "Lautstärke",
     "on": "Musik"
   }
 }

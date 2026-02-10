@@ -303,10 +303,41 @@ public class GameLauncher : IGameLauncher
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            return BuildWindowsStartInfo(executable, workingDir, versionPath, userDataDir, javaPath, sessionUuid, identityToken, sessionToken);
+            var startInfo = BuildWindowsStartInfo(executable, workingDir, versionPath, userDataDir, javaPath, sessionUuid, identityToken, sessionToken);
+            ApplyGpuEnvironment(startInfo);
+            return startInfo;
         }
 
         return BuildUnixStartInfo(executable, workingDir, versionPath, userDataDir, javaPath, sessionUuid, identityToken, sessionToken);
+    }
+
+    /// <summary>
+    /// Applies GPU environment variables to a ProcessStartInfo based on the configured GPU preference.
+    /// Used for Windows direct-launch mode. Linux/macOS uses the launch script approach.
+    /// </summary>
+    private void ApplyGpuEnvironment(ProcessStartInfo startInfo)
+    {
+        var gpuPref = _config.GpuPreference?.ToLowerInvariant() ?? "dedicated";
+        if (gpuPref == "auto") return;
+
+        if (gpuPref == "dedicated")
+        {
+            // NVIDIA Optimus: request dedicated GPU
+            startInfo.Environment["__NV_PRIME_RENDER_OFFLOAD"] = "1";
+            startInfo.Environment["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia";
+            // AMD switchable graphics
+            startInfo.Environment["DRI_PRIME"] = "1";
+            // Windows: hint to driver to use high-performance GPU
+            startInfo.Environment["DXGI_GPU_PREFERENCE"] = "2";
+            Logger.Info("Game", "GPU preference: dedicated (NVIDIA/AMD env vars set)");
+        }
+        else if (gpuPref == "integrated")
+        {
+            startInfo.Environment["DRI_PRIME"] = "0";
+            startInfo.Environment["__NV_PRIME_RENDER_OFFLOAD"] = "0";
+            startInfo.Environment["DXGI_GPU_PREFERENCE"] = "1";
+            Logger.Info("Game", "GPU preference: integrated (env vars set)");
+        }
     }
 
     private ProcessStartInfo BuildWindowsStartInfo(
@@ -399,7 +430,7 @@ public class GameLauncher : IGameLauncher
 # Set LD_LIBRARY_PATH to include Client directory for shared libraries
 CLIENT_DIR=""{clientDir}""
 
-exec env \
+{BuildGpuEnvLines()}exec env \
     HOME=""{homeDir}"" \
     USER=""{userName}"" \
     PATH=""/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"" \
@@ -434,8 +465,42 @@ exec env \
         return startInfo;
     }
 
+    /// <summary>
+    /// Builds GPU environment variable lines for the Unix launch script.
+    /// Returns a string with export lines to be placed before 'exec env'.
+    /// </summary>
+    private string BuildGpuEnvLines()
+    {
+        var gpuPref = _config.GpuPreference?.ToLowerInvariant() ?? "dedicated";
+        if (gpuPref == "auto") return "";
+
+        if (gpuPref == "dedicated")
+        {
+            Logger.Info("Game", "GPU preference: dedicated (NVIDIA/AMD env vars in launch script)");
+            return @"# GPU preference: dedicated (discrete GPU)
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export DRI_PRIME=1
+
+";
+        }
+
+        if (gpuPref == "integrated")
+        {
+            Logger.Info("Game", "GPU preference: integrated");
+            return @"# GPU preference: integrated
+export DRI_PRIME=0
+export __NV_PRIME_RENDER_OFFLOAD=0
+
+";
+        }
+
+        return "";
+    }
+
     private async Task StartAndMonitorProcessAsync(ProcessStartInfo startInfo, string sessionUuid)
     {
+
         Process? process = null;
         try
         {

@@ -83,7 +83,8 @@
     "buyMeA": "Buy me a",
     "modManager": "Mod Manager",
     "openInstanceFolder": "Open Instance Folder",
-    "settings": "Settings"
+    "settings": "Settings",
+    "stop": "STOP"
   },
   "settings": {
     "title": "Settings",
@@ -96,6 +97,7 @@
     "data": "Data",
     "instances": "Instances",
     "about": "About",
+    "network": "Network",
     "developer": "Developer",
     "close": "Close",
     "browse": "Browse",
@@ -128,11 +130,7 @@
       "closeLauncher": "Close after launch",
       "closeLauncherHint": "Close launcher when game starts",
       "showAlphaMods": "Show Alpha Mods",
-      "showAlphaModsHint": "Show mods with alpha release type in the mod manager",
-      "onlineMode": "Online Mode",
-      "onlineModeHint": "Connect to authentication servers when launching",
-      "disableNews": "Disable News",
-      "disableNewsHint": "Hide the news feed from the main menu."
+      "showAlphaModsHint": "Show mods with alpha release type in the mod manager"
     },
     "visualSettings": {
       "title": "Visual Settings",
@@ -147,10 +145,33 @@
       "hideNews": "Hide News",
       "hideNewsHint": "Completely hide the news panel",
       "chooseBackground": "Choose Background",
-      "images": "Images"
+      "images": "Images",
+      "animatedGlass": "Animated Glass Effects",
+      "animatedGlassHint": "Enable smooth entrance animations for panels and menus. Disable for better performance."
+    },
+    "networkSettings": {
+      "onlineMode": "Online Mode",
+      "onlineModeHint": "Connect to authentication servers for multiplayer.",
+      "authServer": "Auth Server",
+      "authServerHint": "Select the authentication server used for online play.",
+      "authDefault": "Default",
+      "authOfficial": "Official",
+      "authOfficialHint": "Hytale servers",
+      "authCustom": "Custom",
+      "authCustomHint": "Enter your own auth server address",
+      "currentServer": "Current server"
     },
     "graphicsSettings": {
       "title": "Graphics Settings",
+      "gpuPreference": "GPU Preference",
+      "gpuPreferenceHint": "Choose which GPU to use for launching the game. Useful for laptops with both integrated and dedicated graphics.",
+      "gpu_dedicated": "Dedicated",
+      "gpu_dedicatedHint": "Use discrete GPU (NVIDIA/AMD)",
+      "gpu_integrated": "Integrated",
+      "gpu_integratedHint": "Use built-in GPU (Intel/AMD)",
+      "gpu_auto": "Auto",
+      "gpu_autoHint": "Let the system decide",
+      "singleGpuNotice": "Only one GPU detected — selection is locked to Auto mode.",
       "optimizationMods": "Optimization Mods",
       "optimizationModsHint": "Download and install optimization mods to improve game performance",
       "enableOptimizationMods": "Enable Optimization Mods",
@@ -292,6 +313,14 @@
     "selectInstanceHint": "Choose an instance from the left to view and manage its content",
     "lastPlayed": "Last played",
     "installContent": "Install content",
+    "rename": "Rename",
+    "status": {
+      "ready": "Ready",
+      "incomplete": "Incomplete",
+      "notInstalled": "Not Installed",
+      "corrupted": "Corrupted",
+      "unknown": "Unknown"
+    },
     "tab": {
       "content": "Content",
       "worlds": "Worlds",

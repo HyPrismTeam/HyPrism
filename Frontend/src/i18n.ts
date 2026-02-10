@@ -70,13 +70,17 @@ export async function initI18n(): Promise<void> {
 
     try {
         // Get language from settings (persisted config)
+        console.log('[i18n] Calling ipc.settings.get()...');
         const settings = await ipc.settings.get();
-        console.log('[i18n] Settings from backend:', { language: settings?.language });
+        console.log('[i18n] Settings from backend:', JSON.stringify(settings));
+        console.log('[i18n] settings.language =', settings?.language, 'type:', typeof settings?.language);
         currentLang = settings?.language || Language.ENGLISH;
+        console.log('[i18n] currentLang after assignment:', currentLang);
         
         // Validate language exists
         if (!locales[currentLang]) {
-            console.warn(`[i18n] Language ${currentLang} not found, falling back to English`);
+            console.warn(`[i18n] Language ${currentLang} not found in locales, falling back to English`);
+            console.log('[i18n] Available locales:', Object.keys(locales));
             currentLang = Language.ENGLISH;
         }
     } catch (err) {

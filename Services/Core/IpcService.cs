@@ -30,12 +30,13 @@ namespace HyPrism.Services.Core;
 /// @type NewsItem { title: string; excerpt?: string; url?: string; date?: string; publishedAt?: string; author?: string; imageUrl?: string; source?: string; }
 /// @type Profile { id: string; name: string; avatar?: string; }
 /// @type ProfileSnapshot { nick: string; uuid: string; avatarPath?: string; }
-/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; dataDirectory: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
+/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; dataDirectory: string; gpuPreference?: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
 /// @type ModItem { id: string; name: string; description?: string; version?: string; author?: string; iconUrl?: string; isInstalled: boolean; featured?: boolean; downloads?: number; }
 /// @type ModSearchResult { items: ModItem[]; totalCount: number; }
 /// @type AppConfig { language: string; dataDirectory: string; [key: string]: unknown; }
-/// @type InstalledInstance { branch: string; version: number; path: string; hasUserData: boolean; userDataSize: number; totalSize: number; }
+/// @type InstalledInstance { branch: string; version: number; path: string; hasUserData: boolean; userDataSize: number; totalSize: number; isValid: boolean; }
 /// @type LanguageInfo { code: string; name: string; }
+/// @type GpuAdapterInfo { name: string; vendor: string; type: string; }
 public class IpcService
 {
     private readonly IServiceProvider _services;
@@ -116,6 +117,7 @@ public class IpcService
         RegisterLocalizationHandlers();
         RegisterWindowHandlers();
         RegisterModHandlers();
+        RegisterSystemHandlers();
         RegisterConsoleHandlers();
 
         Logger.Success("IPC", "All IPC handlers registered");
@@ -234,7 +236,7 @@ public class IpcService
             try
             {
                 var instances = instanceService.GetInstalledInstances();
-                Logger.Info("IPC", $"Returning {instances.Count} installed instances");
+                Logger.Debug("IPC", $"Returning {instances.Count} installed instances");
                 Reply("hyprism:game:instances:reply", instances);
             }
             catch (Exception ex)
@@ -249,12 +251,10 @@ public class IpcService
             try
             {
                 var isRunning = gameProcessService.CheckForRunningGame();
-                Logger.Info("IPC", $"Game running check: {isRunning}");
                 Reply("hyprism:game:isRunning:reply", isRunning);
             }
             catch (Exception ex)
             {
-                Logger.Error("IPC", $"Failed to check game running: {ex.Message}");
                 Reply("hyprism:game:isRunning:reply", false);
             }
         });
@@ -263,7 +263,6 @@ public class IpcService
         {
             try
             {
-                // Parse branch from args, default to current config branch
                 string branch = configService.Configuration.VersionType ?? "release";
                 if (args != null)
                 {
@@ -697,9 +696,10 @@ public class IpcService
 
         Electron.IpcMain.On("hyprism:settings:get", (_) =>
         {
+            var lang = settings.GetLanguage();
             Reply("hyprism:settings:get:reply", new
             {
-                language = settings.GetLanguage(),
+                language = lang,
                 musicEnabled = settings.GetMusicEnabled(),
                 launcherBranch = settings.GetLauncherBranch(),
                 versionType = settings.GetVersionType(),
@@ -713,7 +713,9 @@ public class IpcService
                 hasCompletedOnboarding = settings.GetHasCompletedOnboarding(),
                 onlineMode = settings.GetOnlineMode(),
                 authDomain = settings.GetAuthDomain(),
-                dataDirectory = settings.GetLauncherDataDirectory()
+                dataDirectory = settings.GetLauncherDataDirectory(),
+                gpuPreference = settings.GetGpuPreference(),
+                animatedGlassEffects = settings.GetAnimatedGlassEffects()
             });
         });
 
@@ -753,6 +755,8 @@ public class IpcService
             case "accentColor": s.SetAccentColor(val.GetString() ?? "#7C5CFC"); break;
             case "onlineMode": s.SetOnlineMode(val.GetBoolean()); break;
             case "authDomain": s.SetAuthDomain(val.GetString() ?? ""); break;
+            case "gpuPreference": s.SetGpuPreference(val.GetString() ?? "dedicated"); break;
+            case "animatedGlassEffects": s.SetAnimatedGlassEffects(val.GetBoolean()); break;
             default: Logger.Warning("IPC", $"Unknown setting key: {key}"); break;
         }
     }
@@ -867,6 +871,30 @@ public class IpcService
             }
         });
     }
+
+    // #region System Info
+    // @ipc invoke hyprism:system:gpuAdapters -> GpuAdapterInfo[]
+
+    private void RegisterSystemHandlers()
+    {
+        var gpuService = _services.GetRequiredService<GpuDetectionService>();
+
+        Electron.IpcMain.On("hyprism:system:gpuAdapters", (_) =>
+        {
+            try
+            {
+                var adapters = gpuService.GetAdapters();
+                Reply("hyprism:system:gpuAdapters:reply", adapters);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to get GPU adapters: {ex.Message}");
+                Reply("hyprism:system:gpuAdapters:reply", new List<object>());
+            }
+        });
+    }
+
+    // #endregion
 
     // #region Console (Electron renderer → .NET Logger)
     // @ipc send hyprism:console:log

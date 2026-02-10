@@ -121,25 +121,30 @@ async function IsVersionInstalled(branch: string, version: number): Promise<bool
   try {
     const instances = await ipc.game.instances();
     console.log('[IPC] IsVersionInstalled: checking', branch, version, 'in', instances);
-    // Version 0 means "latest" - check if there's at least one instance of the branch
+    // Version 0 means "latest" - check if there's at least one instance of the branch that IS VALID
     if (version === 0) {
-      return instances.some(inst => inst.branch === branch);
+      return instances.some(inst => inst.branch === branch && inst.isValid);
     }
-    return instances.some(inst => inst.branch === branch && inst.version === version);
+    return instances.some(inst => inst.branch === branch && inst.version === version && inst.isValid);
   } catch (e) {
     console.error('[IPC] IsVersionInstalled failed:', e);
     return false;
   }
 }
 
-async function GetInstalledVersionsForBranch(branch: string): Promise<number[]> {
+export interface InstalledVersionInfo {
+  version: number;
+  isValid: boolean;
+}
+
+async function GetInstalledVersionsForBranch(branch: string): Promise<InstalledVersionInfo[]> {
   try {
     const instances = await ipc.game.instances();
     console.log('[IPC] GetInstalledVersionsForBranch: for', branch, 'found', instances);
     return instances
       .filter(inst => inst.branch === branch)
-      .map(inst => inst.version)
-      .sort((a, b) => b - a); // Sort descending
+      .map(inst => ({ version: inst.version, isValid: inst.isValid }))
+      .sort((a, b) => b.version - a.version); // Sort descending
   } catch (e) {
     console.error('[IPC] GetInstalledVersionsForBranch failed:', e);
     return [];
@@ -270,7 +275,7 @@ const App: React.FC = () => {
   const currentBranchRef = useRef<string>(GameBranch.RELEASE);
   const currentVersionRef = useRef<number>(0);
   const [availableVersions, setAvailableVersions] = useState<number[]>([]);
-  const [installedVersions, setInstalledVersions] = useState<number[]>([]);
+  const [installedVersions, setInstalledVersions] = useState<InstalledVersionInfo[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState<boolean>(false);
   const [isVersionInstalled, setIsVersionInstalled] = useState<boolean>(false);
   const [isCheckingInstalled, setIsCheckingInstalled] = useState<boolean>(false);
@@ -400,7 +405,7 @@ const App: React.FC = () => {
         const installed = await GetInstalledVersionsForBranch(currentBranch);
         const latestInstalled = await IsVersionInstalled(currentBranch, 0);
         const installedWithLatest = [...(installed || [])];
-        if (latestInstalled && !installedWithLatest.includes(0)) installedWithLatest.unshift(0);
+        if (latestInstalled && !installedWithLatest.some(v => v.version === 0)) installedWithLatest.unshift({ version: 0, isValid: true });
         setInstalledVersions(installedWithLatest);
 
         // If current version is not valid for this branch, set to latest
@@ -432,7 +437,7 @@ const App: React.FC = () => {
       const installed = await GetInstalledVersionsForBranch(branch);
       const latestInstalled = await IsVersionInstalled(branch, 0);
       const installedWithLatest = [...(installed || [])];
-      if (latestInstalled && !installedWithLatest.includes(0)) installedWithLatest.unshift(0);
+      if (latestInstalled && !installedWithLatest.some(v => v.version === 0)) installedWithLatest.unshift({ version: 0, isValid: true });
       setInstalledVersions(installedWithLatest);
 
       // Always set to "latest" (version 0) when switching branches
@@ -600,7 +605,7 @@ const App: React.FC = () => {
         const installed = await GetInstalledVersionsForBranch(branch);
         const latestInstalled = await IsVersionInstalled(branch, 0);
         const installedWithLatest = [...(installed || [])];
-        if (latestInstalled && !installedWithLatest.includes(0)) installedWithLatest.unshift(0);
+        if (latestInstalled && !installedWithLatest.some(v => v.version === 0)) installedWithLatest.unshift({ version: 0, isValid: true });
         setInstalledVersions(installedWithLatest);
 
         // Check if "latest" (version 0) is installed first
@@ -621,7 +626,7 @@ const App: React.FC = () => {
           }
         } else if (installed && installed.length > 0) {
           // If latest not installed but other versions exist, select the highest installed version
-          const highestInstalled = Math.max(...installed.filter(v => v > 0));
+          const highestInstalled = Math.max(...installed.map(x => x.version).filter(v => v > 0));
           if (highestInstalled > 0) {
             setCurrentVersion(highestInstalled);
             await SetSelectedVersion(highestInstalled);
@@ -939,8 +944,8 @@ const App: React.FC = () => {
         const installed = await GetInstalledVersionsForBranch(currentBranch);
         const latestInstalled = await IsVersionInstalled(currentBranch, 0);
         const installedWithLatest = [...(installed || [])];
-        if (latestInstalled && !installedWithLatest.includes(0)) {
-          installedWithLatest.unshift(0);
+        if (latestInstalled && !installedWithLatest.some(v => v.version === 0)) {
+          installedWithLatest.unshift({ version: 0, isValid: true });
         }
         setInstalledVersions(installedWithLatest);
       }
@@ -1189,7 +1194,7 @@ const App: React.FC = () => {
     const installed = await GetInstalledVersionsForBranch(currentBranch);
     const latestInstalled = await IsVersionInstalled(currentBranch, 0);
     const installedWithLatest = [...(installed || [])];
-    if (latestInstalled && !installedWithLatest.includes(0)) installedWithLatest.unshift(0);
+    if (latestInstalled && !installedWithLatest.some(v => v.version === 0)) installedWithLatest.unshift({ version: 0, isValid: true });
     setInstalledVersions(installedWithLatest);
     const stillInstalled = await IsVersionInstalled(currentBranch, currentVersion);
     setIsVersionInstalled(stillInstalled);
@@ -1202,6 +1207,9 @@ const App: React.FC = () => {
   return (
     <div className="relative w-screen h-screen bg-[#090909] text-white overflow-hidden font-sans select-none">
       <BackgroundImage mode={backgroundMode} />
+
+      {/* Darkening overlay for background */}
+      <div className="absolute inset-0 z-[5] bg-black/50 pointer-events-none" />
 
       {/* Music Player - invisible, controlled by DockMenu */}
       <MusicPlayer muted={isMuted} forceMuted={isGameRunning} />

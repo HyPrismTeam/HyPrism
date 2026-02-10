@@ -81,6 +81,32 @@ button:focus-visible {
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* ── Modal overlay with smooth blur entrance ─────────────────── */
+/* Apply on the full-screen overlay div wrapping a modal.        */
+/* backdrop-filter is animated via @keyframes so it ramps up     */
+/* together with opacity instead of popping in after a frame.    */
+
+@keyframes overlay-blur-in {
+  from {
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+.modal-overlay-glass {
+  will-change: backdrop-filter, opacity;
+  animation: overlay-blur-in 0.25s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+/* Solid fallback – no blur, just darker bg */
+.modal-overlay-solid {
+  /* No backdrop-filter at all – uses opaque bg from inline style */
+}
+
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, #FFA845 0%, #FF6B35 100%);
@@ -253,6 +279,13 @@ button:focus-visible {
   animation: glass-bar-enter 0.5s cubic-bezier(0.33, 1, 0.68, 1) 0.35s both;
 }
 
+/* Solid variant – no blur, no animation delay */
+.glass-bar-dashboard-solid {
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
 .glass-panel {
   border-radius: 1rem;
   border: 1px solid rgba(255,255,255,0.12);
@@ -263,6 +296,14 @@ button:focus-visible {
   animation: glass-panel-enter 0.4s cubic-bezier(0.33, 1, 0.68, 1) 0.32s both;
 }
 
+/* Solid variant */
+.glass-panel-solid {
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(28, 28, 30, 0.98);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
 /* Glass panel without animation delay - for tab content */
 .glass-panel-static {
   border-radius: 1rem;
@@ -271,4 +312,12 @@ button:focus-visible {
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
   box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Solid variant */
+.glass-panel-static-solid {
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(28, 28, 30, 0.98);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
