@@ -286,17 +286,12 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     }
   }, [selectedInstance, updateSlider]);
 
-  // Track previous tab for directional animation
+  // Track previous tab for slider animation
   useEffect(() => {
     prevTabRef.current = activeTab;
   }, [activeTab]);
 
-  // Determine slide direction for content: 1 = forward (right), -1 = backward (left)
   const tabs: InstanceTab[] = ['content', 'browse', 'worlds', 'logs'];
-  const getTabDirection = (from: InstanceTab, to: InstanceTab) => {
-    return tabs.indexOf(to) > tabs.indexOf(from) ? 1 : -1;
-  };
-  const direction = getTabDirection(prevTabRef.current, activeTab);
 
   const loadInstances = useCallback(async () => {
     setIsLoading(true);
@@ -945,15 +940,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {/* Content tab */}
                 <div
                   className={`absolute inset-0 flex flex-col ${
-                    activeTab === 'content' ? 'z-10' : 'z-0 pointer-events-none'
+                    activeTab === 'content' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                   }`}
-                  style={{
-                    opacity: activeTab === 'content' ? 1 : 0,
-                    transform: activeTab === 'content' ? 'translateX(0) scale(1)' : `translateX(${direction * -12}px) scale(0.98)`,
-                    transition: activeTab === 'content'
-                      ? 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.05s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s'
-                      : 'opacity 0.15s cubic-bezier(0.4, 0, 1, 1), transform 0.15s cubic-bezier(0.4, 0, 1, 1)',
-                  }}
                 >
                   {/* Content Header */}
                   <div className="p-4 border-b border-white/[0.06] flex items-center gap-3">
@@ -1164,15 +1152,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {/* Browse tab — always mounted so downloads survive tab switches */}
                 <div
                   className={`absolute inset-0 ${
-                    activeTab === 'browse' ? 'z-10' : 'z-0 pointer-events-none'
+                    activeTab === 'browse' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                   }`}
-                  style={{
-                    opacity: activeTab === 'browse' ? 1 : 0,
-                    transform: activeTab === 'browse' ? 'translateX(0) scale(1)' : `translateX(${direction * -12}px) scale(0.98)`,
-                    transition: activeTab === 'browse'
-                      ? 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.05s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s'
-                      : 'opacity 0.15s cubic-bezier(0.4, 0, 1, 1), transform 0.15s cubic-bezier(0.4, 0, 1, 1)',
-                  }}
                 >
                   {selectedInstance && (
                     <InlineModBrowser
@@ -1189,15 +1170,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {/* Worlds tab */}
                 <div
                   className={`absolute inset-0 flex flex-col ${
-                    activeTab === 'worlds' ? 'z-10' : 'z-0 pointer-events-none'
+                    activeTab === 'worlds' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                   }`}
-                  style={{
-                    opacity: activeTab === 'worlds' ? 1 : 0,
-                    transform: activeTab === 'worlds' ? 'translateX(0) scale(1)' : `translateX(${direction * -12}px) scale(0.98)`,
-                    transition: activeTab === 'worlds'
-                      ? 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.05s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s'
-                      : 'opacity 0.15s cubic-bezier(0.4, 0, 1, 1), transform 0.15s cubic-bezier(0.4, 0, 1, 1)',
-                  }}
                 >
                   {/* Saves Header */}
                   <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -1288,15 +1262,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {/* Logs tab */}
                 <div
                   className={`absolute inset-0 flex flex-col items-center justify-center text-white/30 ${
-                    activeTab === 'logs' ? 'z-10' : 'z-0 pointer-events-none'
+                    activeTab === 'logs' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                   }`}
-                  style={{
-                    opacity: activeTab === 'logs' ? 1 : 0,
-                    transform: activeTab === 'logs' ? 'translateX(0) scale(1)' : `translateX(${direction * -12}px) scale(0.98)`,
-                    transition: activeTab === 'logs'
-                      ? 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1) 0.05s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.05s'
-                      : 'opacity 0.15s cubic-bezier(0.4, 0, 1, 1), transform 0.15s cubic-bezier(0.4, 0, 1, 1)',
-                  }}
                 >
                     <FileText size={48} className="mb-4 opacity-50" />
                     <p className="text-lg font-medium">{t('instances.logsComingSoon')}</p>
