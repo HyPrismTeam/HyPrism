@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { X, ChevronDown, Check, Image, Box, Loader2, GitBranch } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../../contexts/AnimatedGlassContext';
+
 import { ipc, invoke } from '@/lib/ipc';
 import { GameBranch } from '@/constants/enums';
 
@@ -20,7 +20,6 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { accentColor, accentTextColor } = useAccentColor();
-  const { animatedGlass } = useAnimatedGlass();
 
   // Form state
   const [selectedBranch, setSelectedBranch] = useState<string>(GameBranch.RELEASE);
@@ -115,26 +114,15 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
     setIsCreating(true);
 
     try {
-      // Notify parent to start tracking the download
-      onCreateStart?.(selectedBranch, selectedVersion, customName);
+      // Resolve the version (0 = latest)
+      const resolvedVersion = selectedVersion === 0 ? await getLatestVersion(selectedBranch) : selectedVersion;
 
-      // Start the download/installation process
-      // This triggers the same flow as clicking Play on dashboard
-      await ipc.game.launch({ branch: selectedBranch, version: selectedVersion });
-
-      // After download starts, set custom name and icon
-      // Note: Icon setting may need to wait until instance exists
-      if (customName && customName.trim()) {
-        try {
-          await invoke('hyprism:instance:setCustomName', {
-            branch: selectedBranch,
-            version: selectedVersion === 0 ? await getLatestVersion(selectedBranch) : selectedVersion,
-            customName: customName.trim()
-          });
-        } catch (err) {
-          console.warn('Failed to set custom name:', err);
-        }
-      }
+      // Create the instance (directory + metadata only, no download)
+      await ipc.instance.create({
+        branch: selectedBranch,
+        version: resolvedVersion,
+        customName: customName?.trim() || undefined,
+      });
 
       // Handle icon upload if provided
       if (iconFile) {
@@ -142,13 +130,16 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
           const base64 = await fileToBase64(iconFile);
           await invoke('hyprism:instance:setIcon', {
             branch: selectedBranch,
-            version: selectedVersion === 0 ? await getLatestVersion(selectedBranch) : selectedVersion,
+            version: resolvedVersion,
             iconBase64: base64
           });
         } catch (err) {
           console.warn('Failed to set icon:', err);
         }
       }
+
+      // Notify parent (refresh instance list)
+      onCreateStart?.(selectedBranch, resolvedVersion, customName);
 
       onClose();
     } catch (err) {
@@ -191,7 +182,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className={`fixed inset-0 z-[200] flex items-center justify-center ${
-          animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'
+          'bg-[#0a0a0a]/90'
         }`}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
@@ -200,7 +191,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className={`w-full max-w-md mx-4 ${
-            animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'
+            'glass-panel-static-solid'
           } shadow-2xl overflow-hidden`}
         >
           {/* Header */}

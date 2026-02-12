@@ -146,9 +146,7 @@
       "hideNews": "Ocultar Noticias",
       "hideNewsHint": "Ocultar completamente el panel de noticias",
       "chooseBackground": "Elegir Fondo",
-      "images": "Imágenes",
-      "animatedGlass": "Efectos de Vidrio Animados",
-      "animatedGlassHint": "Habilitar animaciones de entrada suaves para paneles y menús. Deshabilitar para mejor rendimiento."
+      "images": "Imágenes"
     },
     "graphicsSettings": {
       "title": "Configuración de Gráficos",

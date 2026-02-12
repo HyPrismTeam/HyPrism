@@ -146,9 +146,7 @@
       "hideNews": "뉴스 숨기기",
       "hideNewsHint": "뉴스 패널 완전히 숨기기",
       "chooseBackground": "배경 선택",
-      "images": "이미지",
-      "animatedGlass": "애니메이션 유리 효과",
-      "animatedGlassHint": "패널 및 메뉴에 대한 부드러운 입장 애니메이션 활성화. 더 나은 성능을 위해 비활성화하세요."
+      "images": "이미지"
     },
     "graphicsSettings": {
       "title": "그래픽 설정",

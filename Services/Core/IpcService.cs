@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ElectronNET.API;
 using Microsoft.Extensions.DependencyInjection;
+using HyPrism.Models;
 using HyPrism.Services.Game;
 using HyPrism.Services.User;
 
@@ -299,6 +300,7 @@ public class IpcService
     // #endregion
 
     // #region Instance Management
+    // @ipc invoke hyprism:instance:create -> boolean
     // @ipc invoke hyprism:instance:delete -> boolean
     // @ipc send hyprism:instance:openFolder
     // @ipc send hyprism:instance:openModsFolder
@@ -312,6 +314,37 @@ public class IpcService
     {
         var instanceService = _services.GetRequiredService<IInstanceService>();
         var fileService = _services.GetRequiredService<IFileService>();
+
+        // Create an instance (directory + metadata only, no download)
+        Electron.IpcMain.On("hyprism:instance:create", (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
+                var branch = data?["branch"].GetString() ?? "release";
+                var version = data?["version"].GetInt32() ?? 0;
+                var customName = data?.ContainsKey("customName") == true ? data["customName"].GetString() : null;
+
+                // Create the instance directory
+                var instancePath = instanceService.GetInstancePath(branch, version);
+                Directory.CreateDirectory(instancePath);
+                
+                // Set custom name if provided
+                if (!string.IsNullOrWhiteSpace(customName))
+                {
+                    instanceService.SetInstanceCustomName(branch, version, customName);
+                }
+
+                Logger.Success("IPC", $"Created instance {branch}/{version} (no download)");
+                Reply("hyprism:instance:create:reply", true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to create instance: {ex.Message}");
+                Reply("hyprism:instance:create:reply", false);
+            }
+        });
 
         // Delete an instance
         Electron.IpcMain.On("hyprism:instance:delete", (args) =>
@@ -862,7 +895,7 @@ public class IpcService
                 authDomain = settings.GetAuthDomain(),
                 dataDirectory = settings.GetLauncherDataDirectory(),
                 gpuPreference = settings.GetGpuPreference(),
-                animatedGlassEffects = settings.GetAnimatedGlassEffects()
+                launcherVersion = UpdateService.GetCurrentVersion()
             });
         });
 
@@ -903,7 +936,6 @@ public class IpcService
             case "onlineMode": s.SetOnlineMode(val.GetBoolean()); break;
             case "authDomain": s.SetAuthDomain(val.GetString() ?? ""); break;
             case "gpuPreference": s.SetGpuPreference(val.GetString() ?? "dedicated"); break;
-            case "animatedGlassEffects": s.SetAnimatedGlassEffects(val.GetBoolean()); break;
             default: Logger.Warning("IPC", $"Unknown setting key: {key}"); break;
         }
     }
@@ -1383,6 +1415,9 @@ public class IpcService
 
     // #region File Dialog
     // @ipc invoke hyprism:file:browseFolder -> string | null
+    // @ipc invoke hyprism:file:browseModFiles -> string[]
+    // @ipc invoke hyprism:mods:exportToFolder -> string
+    // @ipc invoke hyprism:mods:importList -> number
     // @ipc invoke hyprism:settings:launcherPath -> string
     // @ipc invoke hyprism:settings:defaultInstanceDir -> string
 
@@ -1391,6 +1426,154 @@ public class IpcService
         var fileDialog = _services.GetRequiredService<IFileDialogService>();
         var appPath = _services.GetRequiredService<AppPathConfiguration>();
         var config = _services.GetRequiredService<IConfigService>();
+        var instanceService = _services.GetRequiredService<IInstanceService>();
+        var modService = _services.GetRequiredService<IModService>();
+
+        // Browse mod files dialog (jar, zip, json)
+        Electron.IpcMain.On("hyprism:file:browseModFiles", async (_) =>
+        {
+            try
+            {
+                var files = await fileDialog.BrowseModFilesAsync();
+                Reply("hyprism:file:browseModFiles:reply", files ?? Array.Empty<string>());
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to browse mod files: {ex.Message}");
+                Reply("hyprism:file:browseModFiles:reply", Array.Empty<string>());
+            }
+        });
+
+        // Export mods to folder (modlist JSON or zip)
+        Electron.IpcMain.On("hyprism:mods:exportToFolder", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var branch = root.GetProperty("branch").GetString() ?? "release";
+                var version = root.GetProperty("version").GetInt32();
+                var exportPath = root.GetProperty("exportPath").GetString() ?? "";
+                var exportType = root.TryGetProperty("exportType", out var et) ? et.GetString() ?? "modlist" : "modlist";
+
+                if (string.IsNullOrEmpty(exportPath))
+                {
+                    Reply("hyprism:mods:exportToFolder:reply", "");
+                    return;
+                }
+
+                var instancePath = instanceService.GetInstancePath(branch, version);
+                var mods = modService.GetInstanceInstalledMods(instancePath);
+
+                if (mods.Count == 0)
+                {
+                    Reply("hyprism:mods:exportToFolder:reply", "");
+                    return;
+                }
+
+                // Save last export path to config
+                config.Configuration.LastExportPath = exportPath;
+                config.SaveConfig();
+
+                if (exportType == "zip")
+                {
+                    // Zip the mods folder
+                    var modsDir = Path.Combine(instancePath, "Client", "mods");
+                    if (!Directory.Exists(modsDir))
+                    {
+                        Reply("hyprism:mods:exportToFolder:reply", "");
+                        return;
+                    }
+
+                    var zipName = $"HyPrism-Mods-{branch}-v{version}-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
+                    var zipPath = Path.Combine(exportPath, zipName);
+                    System.IO.Compression.ZipFile.CreateFromDirectory(modsDir, zipPath);
+                    Logger.Success("IPC", $"Exported mods zip to: {zipPath}");
+                    Reply("hyprism:mods:exportToFolder:reply", zipPath);
+                }
+                else
+                {
+                    // Export as mod list JSON
+                    var modList = mods
+                        .Where(m => !string.IsNullOrEmpty(m.CurseForgeId))
+                        .Select(m => new ModListEntry
+                        {
+                            CurseForgeId = m.CurseForgeId,
+                            FileId = m.FileId,
+                            Name = m.Name,
+                            Version = m.Version
+                        })
+                        .ToList();
+
+                    if (modList.Count == 0)
+                    {
+                        Reply("hyprism:mods:exportToFolder:reply", "");
+                        return;
+                    }
+
+                    var fileName = $"HyPrism-ModList-{branch}-v{version}-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+                    var filePath = Path.Combine(exportPath, fileName);
+                    var jsonContent = System.Text.Json.JsonSerializer.Serialize(modList, new JsonSerializerOptions { WriteIndented = true });
+                    await File.WriteAllTextAsync(filePath, jsonContent);
+                    Logger.Success("IPC", $"Exported mod list to: {filePath}");
+                    Reply("hyprism:mods:exportToFolder:reply", filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to export mods: {ex.Message}");
+                Reply("hyprism:mods:exportToFolder:reply", "");
+            }
+        });
+
+        // Import mod list from JSON file
+        Electron.IpcMain.On("hyprism:mods:importList", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var filePath = root.GetProperty("filePath").GetString() ?? "";
+                var branch = root.GetProperty("branch").GetString() ?? "release";
+                var version = root.GetProperty("version").GetInt32();
+
+                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                {
+                    Reply("hyprism:mods:importList:reply", 0);
+                    return;
+                }
+
+                var instancePath = instanceService.GetInstancePath(branch, version);
+                var content = await File.ReadAllTextAsync(filePath);
+                var modList = System.Text.Json.JsonSerializer.Deserialize<List<ModListEntry>>(content) ?? new();
+                var successCount = 0;
+
+                foreach (var entry in modList)
+                {
+                    if (string.IsNullOrEmpty(entry.CurseForgeId)) continue;
+                    try
+                    {
+                        var fileId = entry.FileId ?? "";
+                        var success = await modService.InstallModFileToInstanceAsync(entry.CurseForgeId, fileId, instancePath);
+                        if (success) successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning("IPC", $"Failed to import mod {entry.Name}: {ex.Message}");
+                    }
+                }
+
+                Logger.Success("IPC", $"Imported {successCount}/{modList.Count} mods from list");
+                Reply("hyprism:mods:importList:reply", successCount);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to import mod list: {ex.Message}");
+                Reply("hyprism:mods:importList:reply", 0);
+            }
+        });
 
         // Browse folder dialog
         Electron.IpcMain.On("hyprism:file:browseFolder", async (args) =>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, RefreshCw, Check, User, Edit3, Copy, CheckCircle, Plus, Trash2, Dices, FolderOpen, CopyPlus, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
+
 import { ipc, Profile } from '@/lib/ipc';
 import { DeleteProfileConfirmationModal } from './modals/DeleteProfileConfirmationModal';
 import { ProfileCreationWizard } from './ProfileCreationWizard';
@@ -92,7 +92,7 @@ function generateRandomName(): string {
 export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, onProfileUpdate, pageMode: isPageMode = false }) => {
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
-    const { animatedGlass } = useAnimatedGlass();
+  
     const [uuid, setUuid] = useState<string>('');
     const [username, setUsernameState] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
@@ -468,7 +468,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                 exit={{ opacity: 0 }}
                 className={isPageMode
                     ? "w-full h-full flex gap-4"
-                    : `fixed inset-0 z-[200] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`
+                    : `fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0a0a]/90`
                 }
                 onClick={(e) => !isPageMode && e.target === e.currentTarget && onClose()}
             >
@@ -478,7 +478,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                     : "w-full max-w-3xl mx-4 max-h-[80vh] flex gap-2 relative"
                 }>
                     {/* Left Sidebar - Independent glass panel */}
-                    <div className={`w-48 flex-shrink-0 flex flex-col py-4 overflow-y-auto rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'}`}>
+                    <div className={`w-48 flex-shrink-0 flex flex-col py-4 overflow-y-auto rounded-2xl glass-panel-static-solid`}>
                         {!isPageMode && <h2 className="text-lg font-bold text-white px-4 mb-4">{t('profiles.savedProfiles')}</h2>}
                         
                         {/* Profile Navigation - All Profiles */}
@@ -575,7 +575,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                     </div>
 
                     {/* Right Content - Independent glass panel */}
-                    <div className={`flex-1 flex flex-col min-w-0 overflow-hidden rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 overflow-hidden rounded-2xl glass-panel-static-solid`}>
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b border-white/[0.04]">
                             <h3 className="text-white font-medium">{showWizard ? t('profiles.wizard.title') : t('profiles.editor')}</h3>

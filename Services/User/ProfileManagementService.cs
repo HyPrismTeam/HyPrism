@@ -561,8 +561,8 @@ public class ProfileManagementService : IProfileManagementService
             
             if (!Directory.Exists(profileDir))
             {
-                Logger.Warning("Profile", $"Profile folder does not exist: {profileDir}");
-                return false;
+                Directory.CreateDirectory(profileDir);
+                Logger.Info("Profile", $"Created profile folder: {profileDir}");
             }
             
             // Open folder in file manager (cross-platform)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence } from 'framer-motion';
-import { ipc, on, NewsItem } from '@/lib/ipc';
+import { ipc, on, send, NewsItem } from '@/lib/ipc';
 import { GameBranch } from './constants/enums';
 import { BackgroundImage } from './components/layout/BackgroundImage';
 import { MusicPlayer } from './components/layout/MusicPlayer';
@@ -55,7 +55,7 @@ async function GetCloseAfterLaunch(): Promise<boolean> { return (await ipc.setti
 async function GetDisableNews(): Promise<boolean> { return (await ipc.settings.get()).disableNews ?? false; }
 async function GetHasCompletedOnboarding(): Promise<boolean> { return (await ipc.settings.get()).hasCompletedOnboarding ?? false; }
 async function GetLauncherBranch(): Promise<string> { return (await ipc.settings.get()).launcherBranch ?? 'release'; }
-async function GetLauncherVersion(): Promise<string> { return (await ipc.settings.get()).launcherBranch ?? ''; }
+async function GetLauncherVersion(): Promise<string> { return (await ipc.settings.get()).launcherVersion ?? ''; }
 
 // Profile-backed getters
 async function GetNick(): Promise<string> { return (await ipc.profile.get()).nick ?? 'HyPrism'; }
@@ -221,8 +221,6 @@ const fetchLauncherReleases = async (locale: string) => {
   }
 };
 
-
-
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
   // User state
@@ -258,7 +256,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('dashboard');
 
   // Instance sub-tab state (persisted across page navigations)
-  const [instanceTab, setInstanceTab] = useState<'content' | 'browse' | 'worlds' | 'logs'>('content');
+  const [instanceTab, setInstanceTab] = useState<'content' | 'worlds' | 'logs'>('content');
 
   // Settings state
   const [launcherBranch, setLauncherBranch] = useState<string>('release');
@@ -948,6 +946,17 @@ const App: React.FC = () => {
     }
   };
 
+  // Launch a specific instance from the Instances page — properly tracks download state
+  const handleLaunchFromInstances = (branch: string, version: number) => {
+    if (isGameRunning || isDownloading) return;
+    // Update refs so game-state handler tracks the correct instance
+    currentBranchRef.current = branch;
+    currentVersionRef.current = version;
+    setIsDownloading(true);
+    setDownloadState('downloading');
+    send('hyprism:game:launch', { branch, version });
+  };
+
   const handleGameUpdate = async () => {
     // Trigger update/download for the latest instance
     setIsDownloading(true);
@@ -1016,6 +1025,8 @@ const App: React.FC = () => {
       setProgress(0);
       setDownloaded(0);
       setTotal(0);
+      setLaunchState('');
+      setLaunchDetail('');
     } catch (err) {
       console.error('Cancel failed:', err);
       // Still try to reset UI state even if call fails
@@ -1023,9 +1034,10 @@ const App: React.FC = () => {
       setProgress(0);
       setDownloaded(0);
       setTotal(0);
+      setLaunchState('');
+      setLaunchDetail('');
     }
   };
-
 
   const handleExit = async () => {
     try {
@@ -1261,7 +1273,7 @@ const App: React.FC = () => {
               onLauncherUpdate={handleUpdate}
               isDownloading={isDownloading}
               downloadState={downloadState}
-              canCancel={isDownloading && !isGameRunning && (downloadState === 'downloading' || downloadState === 'extracting')}
+              canCancel={isDownloading && !isGameRunning}
               isGameRunning={isGameRunning}
               isVersionInstalled={isVersionInstalled}
               isCheckingInstalled={isCheckingInstalled}
@@ -1313,6 +1325,16 @@ const App: React.FC = () => {
               onStopGame={handleExit}
               activeTab={instanceTab}
               onTabChange={setInstanceTab}
+              isDownloading={isDownloading}
+              downloadState={downloadState}
+              progress={progress}
+              downloaded={downloaded}
+              total={total}
+              launchState={launchState}
+              launchDetail={launchDetail}
+              canCancel={isDownloading && !isGameRunning}
+              onCancelDownload={handleCancelDownload}
+              onLaunchInstance={handleLaunchFromInstances}
             />
           )}
 

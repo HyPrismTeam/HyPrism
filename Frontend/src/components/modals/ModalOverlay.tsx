@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAnimatedGlass } from '../../contexts/AnimatedGlassContext';
 
 interface ModalOverlayProps {
   /** z-index class, e.g. "z-50" or "z-[200]" */
@@ -13,11 +12,10 @@ interface ModalOverlayProps {
 }
 
 /**
- * Full-screen modal overlay with smooth blur animation (glass)
- * or opaque solid background (when AnimatedGlass is OFF).
+ * Full-screen modal overlay with solid background.
  *
  * Replaces the repeated pattern:
- *   `<motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm ...">`
+ *   `<motion.div className="fixed inset-0 bg-black/60 ...">`
  */
 export const ModalOverlay: React.FC<ModalOverlayProps> = ({
   zClass = 'z-50',
@@ -25,7 +23,6 @@ export const ModalOverlay: React.FC<ModalOverlayProps> = ({
   onClick,
   children,
 }) => {
-  const { animatedGlass } = useAnimatedGlass();
 
   return (
     <motion.div
@@ -34,9 +31,9 @@ export const ModalOverlay: React.FC<ModalOverlayProps> = ({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className={`fixed inset-0 ${zClass} flex items-center justify-center p-8 ${
-        animatedGlass ? 'bg-black/60 modal-overlay-glass' : ''
+        ''
       } ${className}`}
-      style={!animatedGlass ? { background: 'rgba(0, 0, 0, 0.85)' } : undefined}
+      style={{ background: 'rgba(0, 0, 0, 0.85)' }}
       onClick={onClick}
     >
       {children}

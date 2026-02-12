@@ -219,20 +219,6 @@ public interface ISettingsService
     bool SetGpuPreference(string preference);
     
     /// <summary>
-    /// Gets whether animated glass UI effects are enabled.
-    /// </summary>
-    /// <returns><c>true</c> if animated glass effects are enabled; otherwise, <c>false</c>.</returns>
-    bool GetAnimatedGlassEffects();
-    
-    /// <summary>
-    /// Sets whether animated glass UI effects are enabled.
-    /// When disabled, solid opaque backgrounds are used instead of blurred glass.
-    /// </summary>
-    /// <param name="enabled">Whether to enable animated glass effects.</param>
-    /// <returns><c>true</c> if the setting was successfully saved.</returns>
-    bool SetAnimatedGlassEffects(bool enabled);
-    
-    /// <summary>
     /// Gets the current launcher data directory path.
     /// </summary>
     /// <returns>The absolute path to the launcher data directory.</returns>

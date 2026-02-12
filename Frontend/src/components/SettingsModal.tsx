@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Zap, Download, HardDrive, Package, Box, Wifi, Sparkles, Server, Edit3 } from 'lucide-react';
+import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Zap, Download, HardDrive, Package, Box, Wifi, Server, Edit3 } from 'lucide-react';
 import { ipc } from '@/lib/ipc';
 import { changeLanguage } from '../i18n';
 
@@ -57,7 +57,7 @@ const SetShowAlphaMods = _stub<void>('SetShowAlphaMods', undefined as void);
 const ImportInstanceFromZip = _stub('ImportInstanceFromZip', true);
 const InstallOptimizationMods = _stub('InstallOptimizationMods', true);
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
+
 import { DiscordIcon } from './icons/DiscordIcon';
 import { Language } from '../constants/enums';
 import { LANGUAGE_CONFIG } from '../constants/languages';
@@ -142,7 +142,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [gpuAdapters, setGpuAdapters] = useState<Array<{ name: string; vendor: string; type: string }>>([]);
     const [hasSingleGpu, setHasSingleGpu] = useState(false);
     const { accentColor, accentTextColor, setAccentColor: setAccentColorContext } = useAccentColor();
-    const { animatedGlass, setAnimatedGlass: setAnimatedGlassContext } = useAnimatedGlass();
+
+    // Glass-aware control background class for toggle rows, dropdowns, inputs
+    const gc = 'glass-control-solid';
     const [contributors, setContributors] = useState<Contributor[]>([]);
     const [isLoadingContributors, setIsLoadingContributors] = useState(false);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
@@ -488,13 +490,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
     };
 
-    const handleAnimatedGlassChange = async (enabled: boolean) => {
-        try {
-            await setAnimatedGlassContext(enabled);
-        } catch (err) {
-            console.error('Failed to set animated glass effects:', err);
-        }
-    };
+
 
     const handleBackgroundModeChange = async (mode: string) => {
         setBackgroundModeState(mode);
@@ -615,12 +611,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const maintainer = contributors.find(c => c.login.toLowerCase() === 'yyyumeniku');
     const otherContributors = contributors.filter(c => c.login.toLowerCase() !== 'yyyumeniku');
 
-
     return (
         <>
             <div className={isPageMode
                 ? "w-full h-full flex gap-4"
-                : `fixed inset-0 z-[200] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`
+                : `fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0a0a]/90`
             }>
                 {/* In modal mode, constrain width/height; in page mode, 'contents' makes this invisible to layout */}
                 <div className={isPageMode
@@ -628,7 +623,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     : "w-full max-w-4xl mx-4 max-h-[85vh] flex gap-2 relative"
                 }>
                     {/* Sidebar - Independent glass panel */}
-                    <div className={`${isPageMode ? 'w-52' : 'w-48'} flex-shrink-0 flex flex-col py-4 rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'}`}>
+                    <div className={`${isPageMode ? 'w-52' : 'w-48'} flex-shrink-0 flex flex-col py-4 rounded-2xl glass-panel-static-solid`}>
                         <nav className="flex-1 space-y-1 px-2">
                             {tabs.map((tab) => (
                                 <button
@@ -670,7 +665,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
 
                     {/* Content - Independent glass panel */}
-                    <div className={`flex-1 flex flex-col min-w-0 overflow-hidden rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 overflow-hidden rounded-2xl glass-panel-static-solid`}>
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
                             <h3 className="text-white font-medium">{tabs.find(t => t.id === activeTab)?.label}</h3>
@@ -722,7 +717,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     setIsLanguageOpen(!isLanguageOpen);
                                                     setIsBranchOpen(false);
                                                 }}
-                                                className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] flex items-center justify-between text-white transition-colors hover:border-white/[0.12]"
+                                                className={`w-full h-12 px-4 rounded-xl ${gc} flex items-center justify-between text-white transition-colors hover:border-white/[0.12]`}
                                                 style={{ borderColor: isLanguageOpen ? `${accentColor}50` : undefined }}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -733,7 +728,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </button>
 
                                             {isLanguageOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 z-10 max-h-60 overflow-y-auto bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50">
+                                                <div className={`absolute top-full left-0 right-0 mt-2 z-10 max-h-60 overflow-y-auto ${gc} rounded-xl shadow-xl shadow-black/50`}>
                                                     {Object.values(LANGUAGE_CONFIG).map((lang) => (
                                                         <button
                                                             key={lang.code}
@@ -765,7 +760,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     setIsBranchOpen(!isBranchOpen);
                                                     setIsLanguageOpen(false);
                                                 }}
-                                                className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] flex items-center justify-between text-white transition-colors hover:border-white/[0.12]"
+                                                className={`w-full h-12 px-4 rounded-xl ${gc} flex items-center justify-between text-white transition-colors hover:border-white/[0.12]`}
                                                 style={{ borderColor: isBranchOpen ? `${accentColor}50` : undefined }}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -782,7 +777,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </button>
 
                                             {isBranchOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 z-10 bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50 overflow-hidden">
+                                                <div className={`absolute top-full left-0 right-0 mt-2 z-10 ${gc} rounded-xl shadow-xl shadow-black/50 overflow-hidden`}>
                                                     <button
                                                         onClick={() => handleLauncherBranchChange('release')}
                                                         className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${selectedLauncherBranch === 'release'
@@ -825,7 +820,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <div className="space-y-3">
                                         {/* Close After Launch */}
                                         <div 
-                                            className="flex items-center justify-between p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
+                                            className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                             onClick={handleCloseAfterLaunchChange}
                                         >
                                             <div className="flex items-center gap-3">
@@ -850,7 +845,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                         {/* Show Alpha Mods Toggle */}
                                         <div 
-                                            className="flex items-center justify-between p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
+                                            className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                             onClick={async () => {
                                                 const newValue = !showAlphaMods;
                                                 setShowAlphaModsState(newValue);
@@ -959,7 +954,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Disable News Toggle */}
                                     <div 
-                                        className="flex items-center justify-between p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
+                                        className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                         onClick={() => handleDisableNewsChange(!disableNews)}
                                     >
                                         <div className="flex items-center gap-3">
@@ -982,30 +977,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* Animated Glass Effects Toggle */}
-                                    <div 
-                                        className="flex items-center justify-between p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
-                                        onClick={() => handleAnimatedGlassChange(!animatedGlass)}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                                                <Sparkles size={16} className="text-white/70" />
-                                            </div>
-                                            <div>
-                                                <span className="text-white text-sm font-medium">{t('settings.visualSettings.animatedGlass')}</span>
-                                                <p className="text-xs text-white/40">{t('settings.visualSettings.animatedGlassHint')}</p>
-                                            </div>
-                                        </div>
-                                        <div 
-                                            className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
-                                            style={{ backgroundColor: animatedGlass ? accentColor : 'rgba(255,255,255,0.15)' }}
-                                        >
-                                            <div 
-                                                className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${animatedGlass ? 'translate-x-6' : 'translate-x-1'}`}
-                                                style={{ backgroundColor: animatedGlass ? accentTextColor : 'white' }}
-                                            />
-                                        </div>
-                                    </div>
+
                                 </div>
                             )}
 
@@ -1015,7 +987,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     {/* Online Mode Toggle */}
                                     <div className="space-y-3">
                                         <div 
-                                            className="flex items-center justify-between p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.06] cursor-pointer hover:border-white/[0.12] transition-all"
+                                            className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                             onClick={async () => {
                                                 const newValue = !onlineMode;
                                                 setOnlineMode(newValue);
@@ -1057,8 +1029,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         authMode === 'default' 
                                                             ? 'border-white/20' 
                                                             : 'border-white/[0.06] hover:border-white/[0.12]'
-                                                    }`}
-                                                    style={authMode === 'default' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : { backgroundColor: '#2c2c2e' }}
+                                                    } ${authMode !== 'default' ? ('glass-panel-static-solid') : ''}`}
+                                                    style={authMode === 'default' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                     onClick={async () => {
                                                         setAuthModeState('default');
                                                         setAuthDomain('sessions.sanasol.ws');
@@ -1084,8 +1056,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         authMode === 'official' 
                                                             ? 'border-white/20' 
                                                             : 'border-white/[0.06] hover:border-white/[0.12]'
-                                                    }`}
-                                                    style={authMode === 'official' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : { backgroundColor: '#2c2c2e' }}
+                                                    } ${authMode !== 'official' ? ('glass-panel-static-solid') : ''}`}
+                                                    style={authMode === 'official' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                     onClick={async () => {
                                                         setAuthModeState('official');
                                                         setAuthDomain('sessionserver.mojang.com');
@@ -1111,8 +1083,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         authMode === 'custom' 
                                                             ? 'border-white/20' 
                                                             : 'border-white/[0.06] hover:border-white/[0.12]'
-                                                    }`}
-                                                    style={authMode === 'custom' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : { backgroundColor: '#2c2c2e' }}
+                                                    } ${authMode !== 'custom' ? ('glass-panel-static-solid') : ''}`}
+                                                    style={authMode === 'custom' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                 >
                                                     <div
                                                         className="flex items-center gap-3 p-4 cursor-pointer"
@@ -1310,12 +1282,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         await SetInstanceDirectory(instanceDir.trim());
                                                     }
                                                 }}
-                                                className="flex-1 h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] text-white text-sm focus:outline-none focus:border-white/30"
+                                                className={`flex-1 h-12 px-4 rounded-xl ${gc} text-white text-sm focus:outline-none focus:border-white/30`}
                                             />
                                             <div className="flex rounded-full overflow-hidden border border-white/10">
                                                 <button
                                                     onClick={handleResetInstanceDir}
-                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className={`h-12 px-4 ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
                                                     title={t('settings.dataSettings.resetToDefault')}
                                                 >
                                                     <RotateCcw size={18} />
@@ -1324,7 +1296,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={handleBrowseInstanceDir}
-                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className={`h-12 px-4 ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
                                                     title={t('common.browse')}
                                                 >
                                                     <FolderOpen size={18} />
@@ -1333,7 +1305,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={() => BrowserOpenURL(`file://${instanceDir}`)}
-                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className={`h-12 px-4 ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
                                                     title={t('common.openFolder')}
                                                 >
                                                     <ExternalLink size={18} />
@@ -1356,12 +1328,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         await SetLauncherDataDirectory(launcherDataDir.trim());
                                                     }
                                                 }}
-                                                className="flex-1 h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] text-white text-sm focus:outline-none focus:border-white/30"
+                                                className={`flex-1 h-12 px-4 rounded-xl ${gc} text-white text-sm focus:outline-none focus:border-white/30`}
                                             />
                                             <div className="flex rounded-full overflow-hidden border border-white/10">
                                                 <button
                                                     onClick={handleResetLauncherDataDir}
-                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className={`h-12 px-4 ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
                                                     title={t('settings.dataSettings.resetToDefault')}
                                                 >
                                                     <RotateCcw size={18} />
@@ -1370,7 +1342,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={handleBrowseLauncherDataDir}
-                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className={`h-12 px-4 ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
                                                     title={t('common.browse')}
                                                 >
                                                     <FolderOpen size={18} />
@@ -1379,7 +1351,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 <div className="w-px bg-white/10" />
                                                 <button
                                                     onClick={() => BrowserOpenURL(`file://${launcherDataDir}`)}
-                                                    className="h-12 px-4 bg-[#2c2c2e] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    className={`h-12 px-4 ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
                                                     title={t('common.openFolder')}
                                                 >
                                                     <ExternalLink size={18} />
@@ -1394,7 +1366,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <div className="space-y-3">
                                         <button
                                             onClick={handleOpenLauncherFolder}
-                                            className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-white/[0.06] flex items-center gap-3 text-white/70 hover:text-white hover:border-white/20 transition-colors"
+                                            className={`w-full h-12 px-4 rounded-xl ${gc} flex items-center gap-3 text-white/70 hover:text-white hover:border-white/20 transition-colors`}
                                         >
                                             <FolderOpen size={18} />
                                             <span>{t('settings.dataSettings.openLauncherFolder')}</span>
@@ -1402,7 +1374,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
-                                            className="w-full h-12 px-4 rounded-xl bg-[#2c2c2e] border border-red-500/30 flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                            className={`w-full h-12 px-4 rounded-xl ${gc} !border-red-500/30 flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors`}
                                         >
                                             <Trash2 size={18} />
                                             <span>{t('settings.dataSettings.deleteAllData')}</span>
@@ -1522,7 +1494,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
 
                                     {/* Disclaimer */}
-                                    <div className="p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.04]">
+                                    <div className={`p-4 rounded-2xl ${gc}`}>
                                         <p className="text-white/50 text-sm text-center">
                                             {t('settings.aboutSettings.disclaimer')}
                                         </p>
@@ -1552,7 +1524,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     </div>
 
                                     {/* Show Intro on Next Launch */}
-                                    <div className="p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.04] space-y-4">
+                                    <div className={`p-4 rounded-2xl ${gc} space-y-4`}>
                                         <h3 className="text-white font-medium text-sm">{t('settings.developerSettings.onboarding')}</h3>
                                         <button
                                             onClick={async () => {
@@ -1565,7 +1537,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </button>
                                     </div>
 
-                                    <div className="p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.04]">
+                                    <div className={`p-4 rounded-2xl ${gc}`}>
                                         <p className="text-white/40 text-xs">
                                             {t('settings.developerSettings.debugInfo')} Tab={activeTab}, Branch={selectedLauncherBranch}, Accent={accentColor}
                                         </p>
@@ -1579,8 +1551,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Translation Confirmation Modal */}
             {showTranslationConfirm && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
-                    <div className={`p-6 max-w-md w-full mx-4 ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
+                    <div className={`p-6 max-w-md w-full mx-4 glass-panel-static-solid`}>
                         <h3 className="text-lg font-bold text-white mb-3">{t('settings.languageChanged.title')}</h3>
                         <p className="text-white/70 text-sm mb-4">
                             {t('settings.languageChanged.message', { language: showTranslationConfirm.langName })}
@@ -1618,8 +1590,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
-                    <div className={`p-6 max-w-md w-full mx-4 ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
+                    <div className={`p-6 max-w-md w-full mx-4 glass-panel-static-solid`}>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                                 <Trash2 size={20} className="text-red-400" />
@@ -1649,8 +1621,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* Delete Instance Confirmation Modal */}
             {instanceToDelete && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
-                    <div className={`p-6 max-w-md w-full mx-4 ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
+                    <div className={`p-6 max-w-md w-full mx-4 glass-panel-static-solid`}>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                                 <Trash2 size={20} className="text-red-400" />
@@ -1682,8 +1654,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Export Instance Modal */}
             {showInstanceExportModal && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/80 modal-overlay-glass' : 'bg-[#0a0a0a]/95'}`}>
-                    <div className={`p-6 w-full max-w-md mx-4 ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/95`}>
+                    <div className={`p-6 w-full max-w-md mx-4 glass-panel-static-solid`}>
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-white">{t('settings.instanceSettings.exportInstance')}</h3>
                             <button
@@ -1755,8 +1727,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Import Instance Modal */}
             {showImportModal && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
-                    <div className={`p-6 max-w-md w-full mx-4 ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
+                    <div className={`p-6 max-w-md w-full mx-4 glass-panel-static-solid`}>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
                                 <Download size={20} style={{ color: accentColor }} />
@@ -1804,7 +1776,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <select
                                     value={importTargetVersion}
                                     onChange={(e) => setImportTargetVersion(parseInt(e.target.value))}
-                                    className="w-full h-10 px-3 rounded-lg bg-[#2c2c2e] border border-white/[0.06] text-white text-sm focus:outline-none"
+                                    className={`w-full h-10 px-3 rounded-lg ${gc} text-white text-sm focus:outline-none`}
                                 >
                                     <option value={0}>{t('common.Latest')}</option>
                                     {installedInstances
@@ -1847,8 +1819,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* All Backgrounds Modal - Now includes solid colors */}
             {showAllBackgrounds && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
-                    <div className={`max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
+                    <div className={`max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden glass-panel-static-solid`}>
                         <div className="flex items-center justify-between p-4 border-b border-white/5">
                             <h3 className="text-lg font-bold text-white">{t('settings.visualSettings.chooseBackground')}</h3>
                             <button

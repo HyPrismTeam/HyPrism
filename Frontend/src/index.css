@@ -77,34 +77,6 @@ button:focus-visible {
 /* Glass effect */
 .glass {
   background: rgba(9, 9, 9, 0.55);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* ── Modal overlay with smooth blur entrance ─────────────────── */
-/* Apply on the full-screen overlay div wrapping a modal.        */
-/* backdrop-filter is animated via @keyframes so it ramps up     */
-/* together with opacity instead of popping in after a frame.    */
-
-@keyframes overlay-blur-in {
-  from {
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-  to {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-}
-
-.modal-overlay-glass {
-  will-change: backdrop-filter, opacity;
-  animation: overlay-blur-in 0.25s cubic-bezier(0.33, 1, 0.68, 1) both;
-}
-
-/* Solid fallback – no blur, just darker bg */
-.modal-overlay-solid {
-  /* No backdrop-filter at all – uses opaque bg from inline style */
 }
 
 /* Gradient text */
@@ -185,12 +157,10 @@ button:focus-visible {
   overflow: hidden;
 }
 
-/* ── Dock Glass Effect ───────────────────────────────────── */
+/* ── Dock ── */
 
 .dock-glass {
   background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
 }
@@ -234,90 +204,38 @@ button:focus-visible {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%);
 }
 
-/* ── Glass bar / panel (smooth blur entrance after page transition) ── */
+/* ── Modal overlay (transparent, no blur) ── */
 
-@keyframes glass-bar-enter {
-  0% {
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-    background: rgba(255,255,255,0);
-    border-color: rgba(255,255,255,0);
-    box-shadow: 0 4px 24px rgba(0,0,0,0);
-  }
-  100% {
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    background: rgba(255,255,255,0.06);
-    border-color: rgba(255,255,255,0.1);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-  }
+.modal-overlay-glass {
+  /* transparent overlay, no backdrop-filter */
 }
 
-@keyframes glass-panel-enter {
-  0% {
-    backdrop-filter: blur(0px) saturate(100%);
-    -webkit-backdrop-filter: blur(0px) saturate(100%);
-    background: rgba(255,255,255,0);
-    border-color: rgba(255,255,255,0);
-    box-shadow: none;
-  }
-  100% {
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
-    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-    border-color: rgba(255,255,255,0.12);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
-  }
+.modal-overlay-solid {
+  /* opaque overlay fallback */
 }
 
-.glass-bar-dashboard {
+/* ── Glass panels – transparent without blur ── */
+
+.glass-bar-dashboard,
+.glass-bar-dashboard-solid {
   background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: 0 4px 24px rgba(0,0,0,0.3);
-  animation: glass-bar-enter 0.5s cubic-bezier(0.33, 1, 0.68, 1) 0.35s both;
 }
 
-/* Solid variant – no blur, no animation delay */
-.glass-bar-dashboard-solid {
-  background: rgba(26, 26, 26, 0.95);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-}
-
-.glass-panel {
-  border-radius: 1rem;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
-  animation: glass-panel-enter 0.4s cubic-bezier(0.33, 1, 0.68, 1) 0.32s both;
-}
-
-/* Solid variant */
-.glass-panel-solid {
-  border-radius: 1rem;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgb(28, 28, 30);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-}
-
-/* Glass panel without animation delay - for tab content */
-.glass-panel-static {
-  border-radius: 1rem;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
-}
-
-/* Solid variant */
+.glass-panel,
+.glass-panel-static,
+.glass-panel-solid,
 .glass-panel-static-solid {
   border-radius: 1rem;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgb(28, 28, 30);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.glass-control,
+.glass-control-solid {
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.04);
 }

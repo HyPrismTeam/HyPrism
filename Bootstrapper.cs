@@ -57,7 +57,8 @@ public static class Bootstrapper
             services.AddSingleton<ProfileService>(sp =>
                 new ProfileService(
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
-                    sp.GetRequiredService<ConfigService>()));
+                    sp.GetRequiredService<ConfigService>(),
+                    sp.GetRequiredService<AvatarService>()));
             services.AddSingleton<IProfileService>(sp => sp.GetRequiredService<ProfileService>());
 
             services.AddSingleton<DownloadService>();
@@ -208,8 +209,6 @@ public static class Bootstrapper
             #endregion
 
             #region Localization & UI Support
-
-            services.AddSingleton<LanguageService>();
 
             services.AddSingleton<LocalizationService>();
             services.AddSingleton<ILocalizationService>(sp => sp.GetRequiredService<LocalizationService>());

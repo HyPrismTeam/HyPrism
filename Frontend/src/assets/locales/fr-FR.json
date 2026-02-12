@@ -146,9 +146,7 @@
       "hideNews": "Masquer les Actualités",
       "hideNewsHint": "Masquer complètement le panneau d'actualités",
       "chooseBackground": "Choisir l'Arrière-plan",
-      "images": "Images",
-      "animatedGlass": "Effets de Verre Animés",
-      "animatedGlassHint": "Activer les animations d'entrée douces pour les panneaux et les menus. Désactiver pour de meilleures performances."
+      "images": "Images"
     },
     "graphicsSettings": {
       "title": "Paramètres Graphiques",

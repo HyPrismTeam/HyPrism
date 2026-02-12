@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { ipc } from '@/lib/ipc';
+import React, { createContext, useContext, ReactNode } from 'react';
 
 interface AnimatedGlassContextType {
   animatedGlass: boolean;
@@ -9,24 +8,12 @@ interface AnimatedGlassContextType {
 const AnimatedGlassContext = createContext<AnimatedGlassContextType | undefined>(undefined);
 
 export const AnimatedGlassProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [animatedGlass, setAnimatedGlassState] = useState<boolean>(true);
+  // Transparency is always enabled (blur removed globally)
+  const animatedGlass = true;
 
-  // Load animated glass setting on mount
-  useEffect(() => {
-    ipc.settings.get().then(s => {
-      const enabled = s.animatedGlassEffects ?? true;
-      setAnimatedGlassState(enabled);
-    }).catch(console.error);
-  }, []);
-
-  const setAnimatedGlass = useCallback(async (enabled: boolean) => {
-    setAnimatedGlassState(enabled);
-    try {
-      await ipc.settings.update({ animatedGlassEffects: enabled });
-    } catch (err) {
-      console.error('Failed to save animated glass setting:', err);
-    }
-  }, []);
+  const setAnimatedGlass = async (_enabled: boolean) => {
+    // No-op: transparency is always on
+  };
 
   return (
     <AnimatedGlassContext.Provider value={{ animatedGlass, setAnimatedGlass }}>

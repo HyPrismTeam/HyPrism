@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Play, Download, Loader2, X, GitBranch, ChevronDown, Check, RefreshCw, Copy, User, ShieldAlert } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
+
 import { ipc } from '@/lib/ipc';
 import { GameBranch } from '../constants/enums';
 import { DiscordIcon } from '../components/icons/DiscordIcon';
@@ -66,7 +66,7 @@ const pageVariants = {
 export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
   const { t } = useTranslation();
   const { accentColor, accentTextColor } = useAccentColor();
-  const { animatedGlass } = useAnimatedGlass();
+
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   const [isBranchOpen, setIsBranchOpen] = useState(false);
   const [isVersionOpen, setIsVersionOpen] = useState(false);
@@ -350,7 +350,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   className="absolute bottom-full flex w-full justify-center"
                 >
-                  <div className={`${animatedGlass ? 'bg-black/40 backdrop-blur-sm' : 'bg-[#1a1a1a]/90'} rounded-t-lg px-4 py-1.5 border-x border-t border-white/5`}>
+                  <div className={`bg-[#1a1a1a]/90 rounded-t-lg px-4 py-1.5 border-x border-t border-white/5`}>
                     <p className="text-white/40 text-[11px] whitespace-nowrap text-center">
                       {t('main.educational')}{' '}
                       <button
@@ -366,7 +366,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
               )}
             </AnimatePresence>
             <div
-              className={`flex items-center h-14 rounded-2xl overflow-hidden ${animatedGlass ? 'glass-bar-dashboard' : 'glass-bar-dashboard-solid'}`}
+              className={`flex items-center h-14 rounded-2xl overflow-hidden glass-bar-dashboard-solid`}
             >
               {/* Branch & Version Selectors - hidden during download/game running */}
               <AnimatePresence mode="wait">
@@ -430,7 +430,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.15 }}
-                  className={`absolute top-full left-0 mt-2 z-[100] min-w-[140px] bg-[#1a1a1a] ${animatedGlass ? 'backdrop-blur-xl' : ''} border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden p-1`}
+                  className={`absolute top-full left-0 mt-2 z-[100] min-w-[140px] bg-[#1a1a1a]  border border-white/10 rounded-xl shadow-xl shadow-black/50 overflow-hidden p-1`}
                 >
                   {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
                     <button
@@ -458,7 +458,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.15 }}
-                  className={`absolute top-full mt-2 z-[100] min-w-[140px] max-h-[168px] overflow-y-auto bg-[#1a1a1a] ${animatedGlass ? 'backdrop-blur-xl' : ''} border border-white/10 rounded-xl shadow-xl shadow-black/50 p-1`}
+                  className={`absolute top-full mt-2 z-[100] min-w-[140px] max-h-[168px] overflow-y-auto bg-[#1a1a1a]  border border-white/10 rounded-xl shadow-xl shadow-black/50 p-1`}
                   style={{ left: versionDropdownLeft }}
                 >
                   {props.availableVersions.length > 0 ? (
@@ -502,7 +502,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   transition={{ duration: 0.2 }}
                   className="absolute top-full mt-2 w-[350px] left-1/2"
                 >
-                  <div className={`${animatedGlass ? 'bg-black/60 backdrop-blur-md' : 'bg-[#1a1a1a]/95'} rounded-xl px-3 py-2 border border-white/5`}>
+                  <div className={`bg-[#1a1a1a]/95 rounded-xl px-3 py-2 border border-white/5`}>
                     {/* Progress bar container */}
                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
                       <div
@@ -539,7 +539,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                   className="absolute top-full flex w-full justify-center mt-2"
                 >
-                  <div className={`${animatedGlass ? 'backdrop-blur-sm' : ''} bg-orange-400/10 rounded-lg px-4 py-1.5 border border-orange-400/20`}>
+                  <div className={` bg-orange-400/10 rounded-lg px-4 py-1.5 border border-orange-400/20`}>
                     <p className="text-orange-400/80 text-[11px] whitespace-nowrap text-center flex items-center gap-1.5">
                       <ShieldAlert size={12} className="flex-shrink-0" />
                       {t('main.officialServerBlocked')}

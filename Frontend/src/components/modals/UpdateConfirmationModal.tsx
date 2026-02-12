@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, HardDrive, AlertTriangle, Copy, SkipForward } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../../contexts/AnimatedGlassContext';
 
 interface UpdateConfirmationModalProps {
     oldVersion: number;
@@ -23,7 +22,7 @@ export const UpdateConfirmationModal = ({
 }: UpdateConfirmationModalProps) => {
     const { t } = useTranslation();
     const { accentColor, accentTextColor } = useAccentColor();
-    const { animatedGlass } = useAnimatedGlass();
+  
     const [isLoading, setIsLoading] = useState(false);
 
     const handleConfirmWithCopy = async () => {
@@ -41,12 +40,12 @@ export const UpdateConfirmationModal = ({
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
             <div
-                className={`absolute inset-0 ${animatedGlass ? 'bg-black/70 modal-overlay-glass' : ''}`}
-                style={!animatedGlass ? { background: 'rgba(0, 0, 0, 0.85)' } : undefined}
+                className={`absolute inset-0 `}
+                style={{ background: 'rgba(0, 0, 0, 0.85)' }}
                 onClick={onCancel}
             />
 
-            <div className={`relative ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'} p-6 max-w-md w-full mx-4 shadow-2xl`}>
+            <div className={`relative glass-panel-static-solid p-6 max-w-md w-full mx-4 shadow-2xl`}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">

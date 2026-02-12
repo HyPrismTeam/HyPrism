@@ -9,12 +9,13 @@ import {
   Download, AlertCircle
 } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
+
 import { ipc, InstalledInstance, invoke, send, SaveInfo } from '@/lib/ipc';
 import { formatBytes } from '../utils/format';
 import { GameBranch } from '@/constants/enums';
 import { CreateInstanceModal } from '../components/modals/CreateInstanceModal';
-import { InlineModBrowser } from '../components/InlineModBrowser';
+
+const ModManager = React.lazy(() => import('../components/ModManager').then(m => ({ default: m.ModManager })));
 
 // IPC calls for instance operations - uses invoke to send to backend
 const ExportInstance = async (branch: string, version: number): Promise<string> => {
@@ -137,6 +138,9 @@ const toVersionInfo = (inst: InstalledInstance): InstalledVersionInfo => ({
   isLatest: false,
   isLatestInstance: inst.version === 0,
   iconPath: undefined,
+  validationStatus: inst.validationStatus,
+  validationDetails: inst.validationDetails,
+  customName: inst.customName,
 });
 
 export interface InstalledVersionInfo {
@@ -164,7 +168,7 @@ const pageVariants = {
 };
 
 // Instance detail tabs
-type InstanceTab = 'content' | 'worlds' | 'logs' | 'browse';
+type InstanceTab = 'content' | 'worlds' | 'logs';
 
 interface InstancesPageProps {
   onInstanceDeleted?: () => void;
@@ -174,6 +178,18 @@ interface InstancesPageProps {
   onStopGame?: () => void;
   activeTab?: InstanceTab;
   onTabChange?: (tab: InstanceTab) => void;
+  // Download progress
+  isDownloading?: boolean;
+  downloadState?: 'downloading' | 'extracting' | 'launching';
+  progress?: number;
+  downloaded?: number;
+  total?: number;
+  launchState?: string;
+  launchDetail?: string;
+  canCancel?: boolean;
+  onCancelDownload?: () => void;
+  // Launch callback — routes through App.tsx so download state is tracked
+  onLaunchInstance?: (branch: string, version: number) => void;
 }
 
 export const InstancesPage: React.FC<InstancesPageProps> = ({ 
@@ -184,10 +200,20 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
   onStopGame,
   activeTab: controlledTab,
   onTabChange,
+  isDownloading = false,
+  downloadState: _downloadState = 'downloading',
+  progress = 0,
+  downloaded = 0,
+  total = 0,
+  launchState = '',
+  launchDetail = '',
+  canCancel = false,
+  onCancelDownload,
+  onLaunchInstance,
 }) => {
   const { t } = useTranslation();
   const { accentColor, accentTextColor } = useAccentColor();
-  const { animatedGlass } = useAnimatedGlass();
+
   const [instances, setInstances] = useState<InstalledVersionInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [instanceDir, setInstanceDir] = useState('');
@@ -291,7 +317,10 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     prevTabRef.current = activeTab;
   }, [activeTab]);
 
-  const tabs: InstanceTab[] = ['content', 'browse', 'worlds', 'logs'];
+  const tabs: InstanceTab[] = ['content', 'worlds', 'logs'];
+
+  // Mod Manager modal state
+  const [showModManager, setShowModManager] = useState(false);
 
   const loadInstances = useCallback(async () => {
     setIsLoading(true);
@@ -485,7 +514,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     if (isGameRunning && runningBranch === inst.branch && runningVersion === inst.version) {
       onStopGame?.();
     } else {
-      send('hyprism:game:launch', { branch: inst.branch, version: inst.version });
+      onLaunchInstance?.(inst.branch, inst.version);
     }
   };
 
@@ -692,7 +721,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
         </div>
 
         {/* Instance List & Storage Info - Unified glass panel */}
-        <div className={`flex-1 flex flex-col overflow-hidden rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'} min-h-0`}>
+        <div className={`flex-1 flex flex-col overflow-hidden rounded-2xl glass-panel-static-solid min-h-0`}>
           <div className="flex-1 overflow-y-auto">
           <div className="p-2 space-y-1">
           {isLoading ? (
@@ -785,7 +814,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
         {selectedInstance ? (
           <>
             {/* Unified instance detail panel */}
-            <div className={`flex-1 flex flex-col overflow-hidden rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'}`}>
+            <div className={`flex-1 flex flex-col overflow-hidden rounded-2xl glass-panel-static-solid`}>
             {/* Tabs & Actions */}
             <div className="flex items-center justify-between gap-4 px-3 py-3 flex-shrink-0 border-b border-white/[0.06]">
               {/* Left side: Tabs */}
@@ -831,30 +860,94 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
               {/* Right side: Action Buttons */}
               <div className="flex items-center gap-2">
-                {/* Play/Stop Button */}
-                {isGameRunning && runningBranch === selectedInstance.branch && runningVersion === selectedInstance.version ? (
-                  <button
-                    onClick={() => handleLaunchInstance(selectedInstance)}
-                    className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg bg-gradient-to-r from-red-600 to-red-500 text-white"
-                  >
-                    <X size={16} />
-                    {t('main.stop')}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleLaunchInstance(selectedInstance)}
-                    disabled={isGameRunning}
-                    className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: isGameRunning ? '#555' : accentColor, color: accentTextColor }}
-                  >
-                    <Play size={16} fill="currentColor" />
-                    {t('main.play')}
-                  </button>
-                )}
+                {/* Full state-aware Play/Stop/Download button */}
+                {(() => {
+                  const isThisRunning = isGameRunning && runningBranch === selectedInstance.branch && runningVersion === selectedInstance.version;
+                  const isInstalled = selectedInstance.validationStatus === 'Valid';
 
-                {/* Install Content Button */}
+                  // Game running on THIS instance → Stop
+                  if (isThisRunning) {
+                    return (
+                      <button
+                        onClick={() => handleLaunchInstance(selectedInstance)}
+                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg bg-gradient-to-r from-red-600 to-red-500 text-white"
+                      >
+                        <X size={16} />
+                        {t('main.stop')}
+                      </button>
+                    );
+                  }
+
+                  // Downloading
+                  if (isDownloading) {
+                    const stateKey = `launch.state.${launchState}`;
+                    const stateLabel = t(stateKey) !== stateKey ? t(stateKey) : (launchState || t('launch.state.preparing'));
+                    return (
+                      <div
+                        className={`px-4 py-2 flex items-center justify-center relative overflow-hidden rounded-xl min-w-[140px] ${canCancel ? 'cursor-pointer' : 'cursor-default'}`}
+                        style={{ background: 'rgba(255,255,255,0.05)' }}
+                        onClick={() => canCancel && onCancelDownload?.()}
+                      >
+                        <div
+                          className="absolute inset-0 transition-all duration-300"
+                          style={{ width: `${Math.min(progress, 100)}%`, backgroundColor: `${accentColor}40` }}
+                        />
+                        <div className="relative z-10 flex items-center gap-2">
+                          <Loader2 size={14} className="animate-spin text-white" />
+                          <span className="text-sm font-bold text-white">{stateLabel}</span>
+                          {canCancel && (
+                            <span className="ml-1 text-xs text-red-400 hover:text-red-300">
+                              <X size={12} className="inline" />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Game running on ANOTHER instance → disabled
+                  if (isGameRunning) {
+                    return (
+                      <button
+                        disabled
+                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all opacity-50 cursor-not-allowed"
+                        style={{ backgroundColor: '#555', color: accentTextColor }}
+                      >
+                        <Play size={16} fill="currentColor" />
+                        {t('main.play')}
+                      </button>
+                    );
+                  }
+
+                  // Not installed → Download
+                  if (!isInstalled) {
+                    return (
+                      <button
+                        onClick={() => handleLaunchInstance(selectedInstance)}
+                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                      >
+                        <Download size={16} />
+                        {t('main.download')}
+                      </button>
+                    );
+                  }
+
+                  // Installed → Play
+                  return (
+                    <button
+                      onClick={() => handleLaunchInstance(selectedInstance)}
+                      className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-lg"
+                      style={{ backgroundColor: accentColor, color: accentTextColor }}
+                    >
+                      <Play size={16} fill="currentColor" />
+                      {t('main.play')}
+                    </button>
+                  );
+                })()}
+
+                {/* Install Content Button — opens full ModManager */}
                 <button
-                  onClick={() => setActiveTab('browse')}
+                  onClick={() => setShowModManager(true)}
                   className="px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all bg-white/10 hover:bg-white/20 text-white"
                 >
                   <Plus size={14} />
@@ -934,6 +1027,53 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Download Progress Counter */}
+            <AnimatePresence>
+              {isDownloading && launchState !== 'complete' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="px-4 py-2 border-b border-white/[0.06] flex-shrink-0"
+                >
+                  <div
+                    className={`rounded-xl px-3 py-2 border border-white/5 ${canCancel ? 'cursor-pointer' : ''}`}
+                    style={{ background: 'rgba(26,26,26,0.8)' }}
+                    onClick={() => canCancel && onCancelDownload?.()}
+                  >
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden mb-1.5">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(progress, 100)}%`, backgroundColor: accentColor }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="text-white/60 truncate max-w-[280px]">
+                        {launchDetail
+                          ? (t(launchDetail) !== launchDetail
+                            ? t(launchDetail).replace('{0}', `${Math.min(Math.round(progress), 100)}`)
+                            : launchDetail)
+                          : (() => { const k = `launch.state.${launchState}`; const v = t(k); return v !== k ? v : (launchState || t('launch.state.preparing')); })()}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/50 font-mono">
+                          {total > 0
+                            ? `${formatBytes(downloaded)} / ${formatBytes(total)}`
+                            : `${Math.min(Math.round(progress), 100)}%`}
+                        </span>
+                        {canCancel && (
+                          <span className="text-red-400 hover:text-red-300 transition-colors text-[9px] font-bold uppercase">
+                            <X size={10} className="inline" /> {t('main.cancel')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden relative">
@@ -1015,7 +1155,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         <p className="text-lg font-medium text-white/60">{t('modManager.noModsInstalled')}</p>
                         <p className="text-sm mt-1">{t('modManager.clickInstallContent')}</p>
                         <button
-                          onClick={() => setActiveTab('browse')}
+                          onClick={() => setShowModManager(true)}
                           className="mt-4 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg"
                           style={{ backgroundColor: accentColor, color: accentTextColor }}
                         >
@@ -1149,24 +1289,6 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   )}
                 </div>
 
-                {/* Browse tab — always mounted so downloads survive tab switches */}
-                <div
-                  className={`absolute inset-0 ${
-                    activeTab === 'browse' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-                  }`}
-                >
-                  {selectedInstance && (
-                    <InlineModBrowser
-                      currentBranch={selectedInstance.branch}
-                      currentVersion={selectedInstance.version}
-                      installedModIds={new Set(installedMods.map(m => m.curseForgeId ? `cf-${m.curseForgeId}` : m.id))}
-                      installedFileIds={new Set(installedMods.filter(m => m.fileId).map(m => String(m.fileId)))}
-                      onModsInstalled={() => loadInstalledMods()}
-                      onBack={() => setActiveTab('content')}
-                    />
-                  )}
-                </div>
-
                 {/* Worlds tab */}
                 <div
                   className={`absolute inset-0 flex flex-col ${
@@ -1261,12 +1383,66 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
                 {/* Logs tab */}
                 <div
-                  className={`absolute inset-0 flex flex-col items-center justify-center text-white/30 ${
+                  className={`absolute inset-0 flex flex-col p-4 overflow-y-auto ${
                     activeTab === 'logs' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                   }`}
                 >
-                    <FileText size={48} className="mb-4 opacity-50" />
-                    <p className="text-lg font-medium">{t('instances.logsComingSoon')}</p>
+                  {isDownloading ? (
+                    <div className="space-y-4">
+                      {/* Download source indicator */}
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${launchDetail.includes('mirror') ? 'bg-amber-400' : 'bg-green-400'} animate-pulse`} />
+                        <span className="text-sm font-medium text-white/80">
+                          {launchDetail.includes('mirror')
+                            ? t('instances.logs.downloadingMirror', 'Downloading from Mirror')
+                            : t('instances.logs.downloadingOfficial', 'Downloading from Official Server')}
+                        </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-white/50">
+                          <span>{launchState === 'download' ? t('instances.logs.downloading', 'Downloading...') : launchState === 'install' ? t('instances.logs.installing', 'Installing...') : t('instances.logs.preparing', 'Preparing...')}</span>
+                          <span>{Math.round(progress)}%</span>
+                        </div>
+                        <div className="w-full h-3 rounded-full bg-white/[0.06] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(progress, 100)}%`, backgroundColor: accentColor }}
+                          />
+                        </div>
+                        {total > 0 && (
+                          <div className="flex items-center justify-between text-xs text-white/40">
+                            <span>{(downloaded / 1024 / 1024).toFixed(1)} MB</span>
+                            <span>{(total / 1024 / 1024).toFixed(1)} MB</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Status detail */}
+                      {launchDetail && (
+                        <div className="mt-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+                          <p className="text-xs text-white/40 font-mono">{launchDetail}</p>
+                        </div>
+                      )}
+
+                      {/* Cancel button */}
+                      {canCancel && (
+                        <button
+                          onClick={() => onCancelDownload?.()}
+                          className="mt-2 px-4 py-2 rounded-lg text-sm text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                        >
+                          {t('main.cancel')}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-white/30">
+                      <FileText size={48} className="mb-4 opacity-50" />
+                      <p className="text-lg font-medium">{t('instances.logs.idle', 'No active download')}</p>
+                      <p className="text-sm text-white/20 mt-1">{t('instances.logs.idleHint', 'Download progress will appear here')}</p>
+                    </div>
+                  )}
                 </div>
             </div>
             </div>
@@ -1278,14 +1454,14 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className={`fixed inset-0 z-[300] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}
+                  className={`fixed inset-0 z-[300] flex items-center justify-center bg-[#0a0a0a]/90`}
                   onClick={(e) => e.target === e.currentTarget && setEditingInstanceName(false)}
                 >
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
-                    className={`p-6 max-w-sm mx-4 shadow-2xl ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}
+                    className={`p-6 max-w-sm mx-4 shadow-2xl glass-panel-static-solid`}
                   >
                     <h3 className="text-white font-bold text-lg mb-4">{t('instances.rename')}</h3>
                     <input
@@ -1325,7 +1501,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
           </>
         ) : instances.length === 0 ? (
           /* No Instances Available - Prompt to Create */
-          <div className={`flex-1 flex flex-col items-center justify-center rounded-2xl ${animatedGlass ? 'glass-panel' : 'glass-panel-static-solid'}`}>
+          <div className={`flex-1 flex flex-col items-center justify-center rounded-2xl glass-panel-static-solid`}>
             <Box size={64} className="mb-4 text-white/20" />
             <p className="text-xl font-medium text-white/70">{t('instances.noInstances')}</p>
             <p className="text-sm mt-2 text-white/40 text-center max-w-xs">{t('instances.createInstanceHint')}</p>
@@ -1374,14 +1550,14 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-[300] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}
+            className={`fixed inset-0 z-[300] flex items-center justify-center bg-[#0a0a0a]/90`}
             onClick={(e) => e.target === e.currentTarget && setInstanceToDelete(null)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className={`p-6 max-w-sm mx-4 shadow-2xl ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}
+              className={`p-6 max-w-sm mx-4 shadow-2xl glass-panel-static-solid`}
             >
               <h3 className="text-white font-bold text-lg mb-2">{t('instances.deleteTitle')}</h3>
               <p className="text-white/60 text-sm mb-4">
@@ -1409,14 +1585,14 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-[300] flex items-center justify-center ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}
+            className={`fixed inset-0 z-[300] flex items-center justify-center bg-[#0a0a0a]/90`}
             onClick={(e) => e.target === e.currentTarget && setModToDelete(null)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className={`p-6 max-w-sm mx-4 shadow-2xl ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}
+              className={`p-6 max-w-sm mx-4 shadow-2xl glass-panel-static-solid`}
             >
               <h3 className="text-white font-bold text-lg mb-2">{t('modManager.deleteModTitle')}</h3>
               <p className="text-white/60 text-sm mb-4">
@@ -1449,6 +1625,58 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
           loadInstances();
         }}
       />
+
+      {/* Mod Manager Modal — opened by Install Content */}
+      <AnimatePresence>
+        {showModManager && selectedInstance && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0a0a]/90`}
+            onClick={(e) => e.target === e.currentTarget && setShowModManager(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className={`w-[90vw] h-[80vh] max-w-6xl flex flex-col overflow-hidden glass-panel-static-solid`}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <Package size={18} className="text-white/70" />
+                  <h2 className="text-white font-bold text-base">{t('modManager.title')}</h2>
+                </div>
+                <button
+                  onClick={() => setShowModManager(false)}
+                  className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {/* ModManager component */}
+              <div className="flex-1 min-h-0">
+                <React.Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 size={24} className="animate-spin" style={{ color: accentColor }} />
+                  </div>
+                }>
+                  <ModManager
+                    onClose={() => {
+                      setShowModManager(false);
+                      loadInstalledMods();
+                    }}
+                    currentBranch={selectedInstance.branch}
+                    currentVersion={selectedInstance.version}
+                    pageMode={true}
+                  />
+                </React.Suspense>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

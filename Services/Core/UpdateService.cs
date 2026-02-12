@@ -99,6 +99,11 @@ public class UpdateService : IUpdateService
     public string GetLauncherVersion() => _launcherVersion.Value;
 
     /// <summary>
+    /// Gets the current launcher version (static accessor).
+    /// </summary>
+    public static string GetCurrentVersion() => _launcherVersion.Value;
+
+    /// <summary>
     /// Возвращает текущий канал обновлений (release/beta).
     /// </summary>
     public string GetLauncherBranch() => 

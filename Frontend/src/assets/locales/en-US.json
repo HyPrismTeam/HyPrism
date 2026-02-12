@@ -147,9 +147,7 @@
       "hideNews": "Hide News",
       "hideNewsHint": "Completely hide the news panel",
       "chooseBackground": "Choose Background",
-      "images": "Images",
-      "animatedGlass": "Animated Glass Effects",
-      "animatedGlassHint": "Enable smooth entrance animations for panels and menus. Disable for better performance."
+      "images": "Images"
     },
     "networkSettings": {
       "onlineMode": "Online Mode",

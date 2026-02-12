@@ -30,7 +30,7 @@ public enum NewsSource
 public class NewsService : INewsService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _appIconPath = "avares://HyPrism/Assets/logo.png";
+    private readonly string _appIconPath = "";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NewsService"/> class.

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../contexts/AnimatedGlassContext';
+
 import { ipc } from '@/lib/ipc';
 
 // Alias for compatibility
@@ -101,7 +101,7 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { accentColor, accentTextColor } = useAccentColor();
-  const { animatedGlass } = useAnimatedGlass();
+
   
   // Browse mods state
   const [searchQuery, setSearchQuery] = useState('');
@@ -563,7 +563,7 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`fixed inset-0 z-[100] flex items-center justify-center p-8 ${animatedGlass ? 'bg-black/80 modal-overlay-glass' : 'bg-[#0a0a0a]/95'}`}
+        className={`fixed inset-0 z-[100] flex items-center justify-center p-8 bg-[#0a0a0a]/95`}
         onClick={(e) => e.target === e.currentTarget && onClose()}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -573,7 +573,7 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className={`w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden transition-colors ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'} ${isDragging ? '!border-2' : ''}`}
+          className={`w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden transition-colors glass-panel-static-solid ${isDragging ? '!border-2' : ''}`}
           style={isDragging ? { borderColor: accentColor } : undefined}
         >
           {/* Drag overlay */}
@@ -1012,7 +1012,7 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
 
         {/* Download Progress Overlay */}
         {isDownloading && downloadProgress && (
-          <div className={`fixed inset-0 flex items-center justify-center z-[200] ${animatedGlass ? 'bg-black/60 modal-overlay-glass' : 'bg-[#0a0a0a]/90'}`}>
+          <div className={`fixed inset-0 flex items-center justify-center z-[200] bg-[#0a0a0a]/90`}>
             <div className="bg-black/80 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
               <div className="flex items-center gap-3 mb-4">
                 <Loader2 size={24} className="animate-spin" style={{ color: accentColor }} />
@@ -1058,7 +1058,7 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
         {/* Fullscreen Image Viewer */}
         {fullscreenImage && (
           <div
-            className={`fixed inset-0 flex items-center justify-center z-[250] ${animatedGlass ? 'bg-black/90 backdrop-blur-sm' : 'bg-[#0a0a0a]/98'}`}
+            className={`fixed inset-0 flex items-center justify-center z-[250] bg-[#0a0a0a]/98`}
             onClick={() => setFullscreenImage(null)}
           >
             <button

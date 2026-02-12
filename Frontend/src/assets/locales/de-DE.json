@@ -146,9 +146,7 @@
       "hideNews": "Neuigkeiten ausblenden",
       "hideNewsHint": "Neuigkeiten vollständig ausblenden",
       "chooseBackground": "Hintergrund wählen",
-      "images": "Bilder",
-      "animatedGlass": "Animierte Glaseffekte",
-      "animatedGlassHint": "Sanfte Eingangsanimationen für Panels und Menüs aktivieren. Für bessere Leistung deaktivieren."
+      "images": "Bilder"
     },
     "graphicsSettings": {
       "title": "Grafikeinstellungen",

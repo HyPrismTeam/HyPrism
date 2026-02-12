@@ -269,6 +269,7 @@ const _game = {
 };
 
 const _instance = {
+  create: (data?: unknown) => invoke<boolean>('hyprism:instance:create', data),
   delete: (data?: unknown) => invoke<boolean>('hyprism:instance:delete', data),
   openFolder: (data?: unknown) => send('hyprism:instance:openFolder', data),
   openModsFolder: (data?: unknown) => send('hyprism:instance:openModsFolder', data),
@@ -341,6 +342,8 @@ const _mods = {
   installBase64: (data?: unknown) => invoke<boolean>('hyprism:mods:installBase64', data),
   openFolder: (data?: unknown) => send('hyprism:mods:openFolder', data),
   toggle: (data?: unknown) => invoke<boolean>('hyprism:mods:toggle', data),
+  exportToFolder: (data?: unknown) => invoke<string>('hyprism:mods:exportToFolder', data),
+  importList: (data?: unknown) => invoke<number>('hyprism:mods:importList', data),
 };
 
 const _system = {
@@ -355,6 +358,7 @@ const _console = {
 
 const _file = {
   browseFolder: (data?: unknown) => invoke<string | null>('hyprism:file:browseFolder', data),
+  browseModFiles: (data?: unknown) => invoke<string[]>('hyprism:file:browseModFiles', data),
 };
 
 // #endregion

@@ -33,7 +33,7 @@ async function GetLauncherVersion(): Promise<string> { return (await ipc.setting
 async function SetBackgroundModeBackend(v: string): Promise<void> { await ipc.settings.update({ backgroundMode: v }); }
 async function GetDiscordLink(): Promise<string> { return 'https://discord.gg/hyprism'; }
 import { useAccentColor } from '../../contexts/AccentColorContext';
-import { useAnimatedGlass } from '../../contexts/AnimatedGlassContext';
+
 import { Language } from '../../constants/enums';
 import { LANGUAGE_CONFIG } from '../../constants/languages';
 import { ACCENT_COLORS } from '../../constants/colors';
@@ -100,7 +100,7 @@ type OnboardingStep = 'language' | 'profile' | 'visual' | 'location' | 'about';
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) => {
     const { i18n, t } = useTranslation();
     const { accentColor, accentTextColor, setAccentColor } = useAccentColor();
-    const { animatedGlass } = useAnimatedGlass();
+  
     
     // Initialize from cache or defaults
     const getCachedState = (): Partial<OnboardingState> => {
@@ -518,7 +518,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
             <div className="absolute inset-0 bg-black/50" />
             
             {/* Modal */}
-            <div className={`relative z-10 w-full max-w-3xl mx-4 overflow-hidden shadow-2xl ${animatedGlass ? 'glass-panel-static' : 'glass-panel-static-solid'}`}>
+            <div className={`relative z-10 w-full max-w-3xl mx-4 overflow-hidden shadow-2xl glass-panel-static-solid`}>
                 {/* Header */}
                 <div className="p-6 border-b border-white/10 bg-gradient-to-r from-[#151515]/80 to-[#111111]/80">
                     <div className="flex items-center justify-between">

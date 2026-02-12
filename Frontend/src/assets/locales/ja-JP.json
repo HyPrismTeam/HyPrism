@@ -146,9 +146,7 @@
       "hideNews": "ニュースを非表示",
       "hideNewsHint": "ニュースパネルを完全に非表示にする",
       "chooseBackground": "背景を選択",
-      "images": "画像",
-      "animatedGlass": "アニメーションガラス効果",
-      "animatedGlassHint": "パネルやメニューの滑らかな登場アニメーションを有効にします。パフォーマンス向上のため無効にすることもできます。"
+      "images": "画像"
     },
     "graphicsSettings": {
       "title": "グラフィック設定",

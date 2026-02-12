@@ -307,20 +307,6 @@ public class SettingsService : ISettingsService
         return true;
     }
 
-    // ========== Animated Glass Effects Settings ==========
-    
-    /// <inheritdoc/>
-    public bool GetAnimatedGlassEffects() => _configService.Configuration.AnimatedGlassEffects;
-    
-    /// <inheritdoc/>
-    public bool SetAnimatedGlassEffects(bool enabled)
-    {
-        _configService.Configuration.AnimatedGlassEffects = enabled;
-        _configService.SaveConfig();
-        Logger.Info("Config", $"Animated glass effects set to: {enabled}");
-        return true;
-    }
-
     // ========== Launcher Data Directory Settings ==========
     
     /// <inheritdoc/>

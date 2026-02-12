@@ -92,12 +92,6 @@ public class Config
     public int ActiveProfileIndex { get; set; } = -1;
     
     /// <summary>
-    /// If true, UI elements will use animated glass effects with entrance delays.
-    /// If false, static glass effects will be used for better performance.
-    /// </summary>
-    public bool AnimatedGlassEffects { get; set; } = true;
-    
-    /// <summary>
     /// Whether the user has completed the initial onboarding flow.
     /// </summary>
     public bool HasCompletedOnboarding { get; set; } = false;
