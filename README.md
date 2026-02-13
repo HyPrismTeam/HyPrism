@@ -48,8 +48,13 @@ Special thanks to **Sanasol** for maintaining and creating the [auth server](htt
 "Hytale", "Hypixel Studios", and strictly related logos and assets are trademarks or registered trademarks of **Hypixel Studios Inc.**. All rights reserved by their respective owners. usage of this software is subject to the terms of the [Hytale End-User License Agreement (EULA)](https://hytale.com/eula)
 
 ### Game Files & Distribution
-**HyPrism** does not host, distribute, or modify original game files directly.
-Game client files are downloaded via a third-party mirror provided by [MobCat](https://github.com/MobCat). HyPrism acts solely as a client to facilitate the downloading and launching process. The developers of HyPrism constitute no control over the content hosted on the external mirror
+
+**HyPrism** acts solely as a client-side tool to facilitate the downloading and launching process. It does not host, modify, or distribute original game files directly. The software supports two methods of data retrieval:
+
+1.  **Official Authentication:** HyPrism implements the standard Hytale authentication protocol. Users with a valid license can download unmodified game images directly from official servers, identical to the official launcher process
+2.  **Third-Party Mirrors:** The software is also capable of retrieving game files via third-party mirrors (e.g., repositories provided by [MobCat](https://github.com/MobCat))
+
+The developers of HyPrism constitute no control over the content hosted on external mirrors. The choice of download source and compliance with the applicable license agreements rests with the user
 
 <div align="center">
   <sub>Made with ❤️ by the HyPrism Community</sub>
