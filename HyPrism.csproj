@@ -28,16 +28,20 @@
     <ApplicationIcon>Packaging/windows/HyPrism.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <!-- Release optimizations + single-file publish -->
+  <!-- Release optimizations -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <DebuggerSupport>false</DebuggerSupport>
-    <PublishSingleFile>true</PublishSingleFile>
+    <!-- DO NOT use PublishSingleFile -->
+    <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <PublishTrimmed>false</PublishTrimmed>
+    <!-- ReadyToRun AOT compilation for faster startup -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <!-- Disable static asset compression (brotli/gzip) - prevents file duplication
+         and unnecessary decompression for local Electron apps -->
+    <CompressionEnabled>false</CompressionEnabled>
   </PropertyGroup>
 
   <!-- Memory and size optimizations -->

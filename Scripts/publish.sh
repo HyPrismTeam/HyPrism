@@ -202,7 +202,7 @@ write_config() {
     "target": TARGETS_PLACEHOLDER,
     "executableArgs": ["--no-sandbox"],
     "category": "Game",
-    "icon": "Packaging/flatpak/dev.hyprism.HyPrism.png",
+    "icon": "Build/icon.png",
     "maintainer": "HyPrism Team"
   }
 INNER
@@ -212,7 +212,7 @@ INNER
             platform_block=$(cat <<'INNER'
   "win": {
     "target": TARGETS_PLACEHOLDER,
-    "icon": "Packaging/windows/HyPrism.ico"
+    "icon": "Build/icon.ico"
   }
 INNER
 )
@@ -222,7 +222,7 @@ INNER
   "mac": {
     "target": TARGETS_PLACEHOLDER,
     "category": "public.app-category.games",
-    "icon": "Packaging/macos/hyprism-macos.icns"
+    "icon": "Build/icon.icns"
   }
 INNER
 )
@@ -248,7 +248,7 @@ FLATPAK
     cat > "$EB_CONFIG" <<EOF
 {
   "\$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/refs/heads/master/packages/app-builder-lib/scheme.json",
-  "compression": "maximum",
+  "compression": "store",
   "artifactName": "\${productName}-\${os}-\${arch}-\${version}.\${ext}",
 $platform_block$flatpak_block
 }

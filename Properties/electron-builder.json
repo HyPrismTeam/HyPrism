@@ -1,21 +1,25 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/refs/heads/master/packages/app-builder-lib/scheme.json",
-  "compression": "maximum",
+  "compression": "store",
   "artifactName": "${productName}-${os}-${arch}-${version}.${ext}",
+  "directories": {
+    "buildResources": "Build",
+    "output": "dist"
+  },
   "linux": {
     "target": ["tar.xz"],
     "executableArgs": ["--no-sandbox"],
     "category": "Game",
-    "icon": "Packaging/flatpak/dev.hyprism.HyPrism.png",
+    "icon": "Build/icon.png",
     "maintainer": "HyPrism Team <eivordoudo2021@gmail.com>"
   },
   "win": {
     "target": ["zip"],
-    "icon": "Packaging/windows/HyPrism.ico"
+    "icon": "Build/icon.ico"
   },
   "mac": {
     "target": ["dmg"],
     "category": "public.app-category.games",
-    "icon": "Packaging/macos/hyprism-macos.icns"
+    "icon": "Build/icon.icns"
   }
 }

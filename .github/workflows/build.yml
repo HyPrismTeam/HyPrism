@@ -205,9 +205,10 @@ jobs:
               sips -z $size2 $size2 Frontend/src/assets/images/appicon.png --out HyPrism.iconset/icon_${size}x${size}@2x.png
             fi
           done
-          iconutil -c icns HyPrism.iconset -o Packaging/macos/hyprism-macos.icns
+          mkdir -p Build
+          iconutil -c icns HyPrism.iconset -o Build/icon.icns
           rm -rf HyPrism.iconset
-          echo "ICNS icon generated successfully"
+          echo "ICNS icon generated in Build/icon.icns"
 
       - name: Build macOS ARM64
         run: |
