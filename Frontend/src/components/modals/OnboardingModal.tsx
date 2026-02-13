@@ -33,7 +33,7 @@ async function SetInstanceDirectory(_dir: string): Promise<void> { console.warn(
 async function BrowseFolder(_initialDir?: string): Promise<string> { console.warn('[IPC] BrowseFolder: no channel'); return ''; }
 async function SetHasCompletedOnboarding(v: boolean): Promise<void> { await ipc.settings.update({ hasCompletedOnboarding: v }); }
 async function GetRandomUsername(): Promise<string> { console.warn('[IPC] GetRandomUsername: stub'); return 'HyPrism' + Math.floor(Math.random() * 9999); }
-async function GetLauncherVersion(): Promise<string> { return (await ipc.settings.get()).launcherBranch ?? ''; }
+async function GetLauncherVersion(): Promise<string> { return (await ipc.settings.get()).launcherVersion ?? ''; }
 async function SetBackgroundModeBackend(v: string): Promise<void> { await ipc.settings.update({ backgroundMode: v }); }
 async function GetDiscordLink(): Promise<string> { return 'https://discord.gg/hyprism'; }
 import { useAccentColor } from '../../contexts/AccentColorContext';
