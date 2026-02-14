@@ -183,10 +183,6 @@ jobs:
             | macOS | ARM64 (Apple Silicon) |
             
             > **Note**: Windows ARM64 and macOS Intel (x86_64) are **not supported**.
-            
-            ### 📝 Changes
-            
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
           draft: false
           prerelease: ${{ github.event.inputs.prerelease || false }}
           artifacts: final-assets/*
