@@ -453,8 +453,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                 >
                   <button
                     onClick={() => ipc.browser.open('https://hytale.com')}
-                    className="px-3 py-1.5 rounded-full text-[11px] text-white/60 hover:text-white border border-white/10 hover:border-white/20 backdrop-blur-sm transition-all cursor-pointer"
-                    style={{ background: `${accentColor}15` }}
+                    className="px-3 py-1.5 rounded-full text-[11px] text-white/80 hover:text-white border border-white/20 hover:border-white/30 bg-[#1c1c1e] transition-all cursor-pointer"
                   >
                     {t('main.educational')} — <span className="font-semibold" style={{ color: accentColor }}>{t('main.buyIt')}</span>
                   </button>
@@ -489,12 +488,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   >
                     <button
                       onClick={() => setIsSwitcherOpen((prev) => !prev)}
-                      className="h-14 w-14 flex items-center justify-center rounded-xl bg-white/5 border border-white/15 hover:bg-white/10 active:scale-95 transition-all"
+                      className="h-16 w-16 flex items-center justify-center rounded-2xl bg-[#1c1c1e] border border-white/20 hover:border-white/30 active:scale-95 transition-all"
                       title={getInstanceDisplayName()}
                       aria-label={t('main.selectInstance')}
                       aria-expanded={isSwitcherOpen}
                     >
-                      {renderInstanceIcon(props.selectedInstance, 30)}
+                      {renderInstanceIcon(props.selectedInstance, 50)}
                     </button>
 
                     <AnimatePresence>
@@ -504,7 +503,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -6 }}
                           transition={{ duration: 0.14, ease: 'easeOut' }}
-                          className="absolute top-full left-0 mt-2 min-w-[260px] max-h-[320px] overflow-y-auto rounded-2xl bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 shadow-2xl z-50"
+                          className="absolute top-full left-0 mt-2 min-w-[260px] max-h-[320px] overflow-y-auto rounded-2xl bg-[#1a1a1a] border border-white/12 shadow-2xl z-50"
                         >
                           {props.instances.map((inst) => {
                             const isSelected = inst.id === props.selectedInstance?.id;
@@ -545,7 +544,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                             }}
                             className="w-full px-3 py-2.5 flex items-center gap-3 text-left text-white/75 hover:text-white hover:bg-white/5 transition-colors"
                           >
-                            <div className="w-9 h-9 rounded-xl border border-white/15 bg-white/5 flex items-center justify-center flex-shrink-0">
+                            <div className="w-9 h-9 rounded-xl border border-white/20 bg-[#242426] flex items-center justify-center flex-shrink-0">
                               <Plus size={16} />
                             </div>
                             <span className="text-sm font-semibold">{t('instances.addInstance')}</span>
