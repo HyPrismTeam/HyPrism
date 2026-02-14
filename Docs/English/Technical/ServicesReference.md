@@ -14,6 +14,9 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **Folder picker timeout:** `hyprism:file:browseFolder` uses extended timeout (300s) to allow manual directory selection without frontend timeout.
 - **Mods target resolution:** mod IPC handlers resolve the target from installed instance metadata (including latest) and avoid implicit `branch/latest` placeholder fallback.
 - **Mods exact targeting:** mod IPC accepts optional `instanceId`; when provided, it has priority over branch/version to prevent collisions between multiple instances with the same version.
+- **Instance operations targeting:** instance delete/saves IPC handlers accept `instanceId` and resolve by GUID first, with branch/version kept only as backward-compatible fallback.
+- **Instance icon refresh:** `hyprism:instance:getIcon` returns a cache-busted file URL (`?v=<lastWriteTicks>`) so updated logos appear immediately after overwrite.
+- **Frontend icon loading rule:** instance list icon requests are executed sequentially (not in parallel) to avoid mixed responses on shared IPC reply channels.
 
 ### ConfigService
 - **File:** `Services/Core/ConfigService.cs`
@@ -61,6 +64,8 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **Official 403 recovery:** If official CDN download returns HTTP 403 (expired signed `verify` token), the service force-refreshes version cache and retries official download once before mirror fallback.
 - **Selected instance launch sync:** selecting an instance updates both `SelectedInstanceId` and legacy launch fields (`VersionType`/`SelectedVersion`), and Dashboard launch sends explicit branch/version to avoid stale-target launches.
 - **Launch path priority:** if `SelectedInstanceId` is set, `GameSessionService` resolves launch/install path by instance ID first (no fallback to another installed instance with same branch/version).
+- **Latest metadata storage:** `latest.json` is stored under branch root (`Instances/<branch>/latest.json`) instead of `Instances/<branch>/latest/latest.json`, preventing accidental creation of placeholder `latest` instance folders.
+- **Linux NVIDIA EGL fix:** in dedicated GPU mode, launcher exports `__EGL_VENDOR_LIBRARY_FILENAMES` to detected NVIDIA GLVND vendor JSON (e.g. `/usr/share/glvnd/egl_vendor.d/10_nvidia.json`) to avoid fallback to `llvmpipe` on affected systems.
 
 ### ClientPatcher ⚠️
 - **File:** `Services/Game/ClientPatcher.cs`

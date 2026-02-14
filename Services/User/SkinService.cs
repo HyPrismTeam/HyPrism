@@ -211,10 +211,11 @@ public class SkinService : ISkinService
             }
             
             // Get the current instance's UserData path
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            var versionPath = TryGetCurrentExistingInstancePath();
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                return;
+            }
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             var skinCacheDir = Path.Combine(userDataPath, "CachedPlayerSkins");
             var avatarCacheDir = Path.Combine(userDataPath, "CachedAvatarPreviews");
@@ -292,10 +293,11 @@ public class SkinService : ISkinService
         {
             var config = _configService.Configuration;
             // Get the current instance's UserData path
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            var versionPath = TryGetCurrentExistingInstancePath();
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                return null;
+            }
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             var skinCacheDir = Path.Combine(userDataPath, "CachedPlayerSkins");
             
@@ -389,10 +391,11 @@ public class SkinService : ISkinService
             }
             
             // If the current UUID already has a skin, don't overwrite
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            var versionPath = TryGetCurrentExistingInstancePath();
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                return false;
+            }
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             var skinCacheDir = Path.Combine(userDataPath, "CachedPlayerSkins");
             var avatarCacheDir = Path.Combine(userDataPath, "CachedAvatarPreviews");
@@ -455,10 +458,11 @@ public class SkinService : ISkinService
             Directory.CreateDirectory(profileDir);
             
             // Get game UserData path
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            var versionPath = TryGetCurrentExistingInstancePath();
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                return;
+            }
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             
             // Backup skin JSON
@@ -516,10 +520,11 @@ public class SkinService : ISkinService
             }
             
             // Get game UserData path
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            var versionPath = TryGetCurrentExistingInstancePath();
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                return;
+            }
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             
             // Restore skin JSON
@@ -557,10 +562,11 @@ public class SkinService : ISkinService
         {
             var config = _configService.Configuration;
             // Get game UserData path
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            var versionPath = TryGetCurrentExistingInstancePath();
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                return;
+            }
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             
             // Copy skin JSON
@@ -597,5 +603,36 @@ public class SkinService : ISkinService
     public void Dispose()
     {
         StopSkinProtection();
+    }
+
+    private string? TryGetCurrentExistingInstancePath()
+    {
+        var config = _configService.Configuration;
+        var selected = _instanceService.GetSelectedInstance();
+        if (selected != null)
+        {
+            var selectedPath = _instanceService.GetInstancePathById(selected.Id)
+                               ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
+            if (!string.IsNullOrWhiteSpace(selectedPath))
+            {
+                return selectedPath;
+            }
+        }
+
+        #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
+        var branch = UtilityService.NormalizeVersionType(config.VersionType);
+        var configuredVersion = config.SelectedVersion;
+        #pragma warning restore CS0618
+
+        var configuredPath = _instanceService.FindExistingInstancePath(branch, configuredVersion);
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        return _instanceService
+            .GetInstalledInstances()
+            .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
+            ?.Path;
     }
 }

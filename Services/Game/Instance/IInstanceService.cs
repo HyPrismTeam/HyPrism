@@ -122,6 +122,13 @@ public interface IInstanceService
     bool DeleteGame(string branch, int versionNumber);
 
     /// <summary>
+    /// Deletes a game instance from disk by its unique ID.
+    /// </summary>
+    /// <param name="instanceId">The instance ID.</param>
+    /// <returns><c>true</c> if the instance was successfully deleted; otherwise, <c>false</c>.</returns>
+    bool DeleteGameById(string instanceId);
+
+    /// <summary>
     /// Gets a list of all installed game instances.
     /// </summary>
     /// <returns>A list of installed instance metadata.</returns>

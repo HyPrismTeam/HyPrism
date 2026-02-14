@@ -547,24 +547,28 @@ public class ProfileManagementService : IProfileManagementService
             // Copy UserData from source profile if it exists
             try
             {
-                #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-                var branch = UtilityService.NormalizeVersionType(config.VersionType);
-                #pragma warning restore CS0618
-                var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
-                var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
-                
-                if (Directory.Exists(userDataPath))
+                var versionPath = TryGetCurrentExistingInstancePath();
+                if (string.IsNullOrWhiteSpace(versionPath))
                 {
-                    var sourceProfileFolder = UtilityService.GetProfileFolderPath(_appDir, sourceProfile);
-                    var sourceUserDataBackup = Path.Combine(sourceProfileFolder, "UserData");
-                    var destProfileFolder = UtilityService.GetProfileFolderPath(_appDir, newProfile);
-                    var destUserDataBackup = Path.Combine(destProfileFolder, "UserData");
-                    
-                    // If source profile has a UserData backup, copy it
-                    if (Directory.Exists(sourceUserDataBackup))
+                    Logger.Info("Profile", "No existing instance selected, skipping UserData copy during duplication");
+                }
+                else
+                {
+                    var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
+                
+                    if (Directory.Exists(userDataPath))
                     {
-                        CopyDirectory(sourceUserDataBackup, destUserDataBackup);
-                        Logger.Info("Profile", $"Copied UserData from '{sourceProfile.Name}' to '{newProfile.Name}'");
+                        var sourceProfileFolder = UtilityService.GetProfileFolderPath(_appDir, sourceProfile);
+                        var sourceUserDataBackup = Path.Combine(sourceProfileFolder, "UserData");
+                        var destProfileFolder = UtilityService.GetProfileFolderPath(_appDir, newProfile);
+                        var destUserDataBackup = Path.Combine(destProfileFolder, "UserData");
+                        
+                        // If source profile has a UserData backup, copy it
+                        if (Directory.Exists(sourceUserDataBackup))
+                        {
+                            CopyDirectory(sourceUserDataBackup, destUserDataBackup);
+                            Logger.Info("Profile", $"Copied UserData from '{sourceProfile.Name}' to '{newProfile.Name}'");
+                        }
                     }
                 }
             }
@@ -858,22 +862,11 @@ public class ProfileManagementService : IProfileManagementService
     {
         try
         {
-            var config = _configService.Configuration;
-
-            string? versionPath = null;
-            var selected = _instanceService.GetSelectedInstance();
-            if (selected != null)
-            {
-                versionPath = _instanceService.GetInstancePathById(selected.Id)
-                              ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
-            }
-
+            var versionPath = TryGetCurrentExistingInstancePath();
             if (string.IsNullOrWhiteSpace(versionPath))
             {
-                #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-                var branch = UtilityService.NormalizeVersionType(config.VersionType);
-                #pragma warning restore CS0618
-                versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+                Logger.Info("Mods", "No existing instance found for mods directory initialization");
+                return;
             }
 
             var userDataPath = Path.Combine(versionPath, "UserData");
@@ -950,6 +943,37 @@ public class ProfileManagementService : IProfileManagementService
         {
             Logger.Warning("Mods", $"Failed to ensure instance mods directory: {ex.Message}");
         }
+    }
+
+    private string? TryGetCurrentExistingInstancePath()
+    {
+        var config = _configService.Configuration;
+        var selected = _instanceService.GetSelectedInstance();
+        if (selected != null)
+        {
+            var selectedPath = _instanceService.GetInstancePathById(selected.Id)
+                               ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
+            if (!string.IsNullOrWhiteSpace(selectedPath))
+            {
+                return selectedPath;
+            }
+        }
+
+        #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
+        var branch = UtilityService.NormalizeVersionType(config.VersionType);
+        var configuredVersion = config.SelectedVersion;
+        #pragma warning restore CS0618
+
+        var configuredPath = _instanceService.FindExistingInstancePath(branch, configuredVersion);
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        return _instanceService
+            .GetInstalledInstances()
+            .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
+            ?.Path;
     }
     
     /// <summary>

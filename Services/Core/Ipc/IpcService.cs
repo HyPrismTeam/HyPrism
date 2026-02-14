@@ -520,11 +520,22 @@ public class IpcService
             {
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
-                var branch = data?["branch"].GetString() ?? "release";
-                var version = data?["version"].GetInt32() ?? 0;
-                
-                var result = instanceService.DeleteGame(branch, version);
-                Logger.Info("IPC", $"Deleted instance {branch}/{version}: {result}");
+                var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
+
+                bool result;
+                if (!string.IsNullOrWhiteSpace(instanceId))
+                {
+                    result = instanceService.DeleteGameById(instanceId);
+                    Logger.Info("IPC", $"Deleted instance by ID {instanceId}: {result}");
+                }
+                else
+                {
+                    var branch = data?["branch"].GetString() ?? "release";
+                    var version = data?["version"].GetInt32() ?? 0;
+                    result = instanceService.DeleteGame(branch, version);
+                    Logger.Info("IPC", $"Deleted instance {branch}/{version}: {result}");
+                }
+
                 Reply("hyprism:instance:delete:reply", result);
             }
             catch (Exception ex)
@@ -773,10 +784,20 @@ public class IpcService
             {
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
+                var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
                 var branch = data?["branch"].GetString() ?? "release";
                 var version = data?["version"].GetInt32() ?? 0;
-                
-                var instancePath = instanceService.GetInstancePath(branch, version);
+
+                var instancePath = !string.IsNullOrWhiteSpace(instanceId)
+                    ? instanceService.GetInstancePathById(instanceId) ?? instanceService.GetInstancePath(branch, version)
+                    : instanceService.GetInstancePath(branch, version);
+
+                if (string.IsNullOrWhiteSpace(instancePath))
+                {
+                    Reply("hyprism:instance:saves:reply", new List<object>());
+                    return;
+                }
+
                 var savesPath = Path.Combine(instancePath, "UserData", "Saves");
                 
                 var saves = new List<object>();
@@ -824,11 +845,20 @@ public class IpcService
             {
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
+                var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
                 var branch = data?["branch"].GetString() ?? "release";
                 var version = data?["version"].GetInt32() ?? 0;
                 var saveName = data?["saveName"].GetString() ?? "";
                 
-                var instancePath = instanceService.GetInstancePath(branch, version);
+                var instancePath = !string.IsNullOrWhiteSpace(instanceId)
+                    ? instanceService.GetInstancePathById(instanceId) ?? instanceService.GetInstancePath(branch, version)
+                    : instanceService.GetInstancePath(branch, version);
+
+                if (string.IsNullOrWhiteSpace(instancePath))
+                {
+                    return;
+                }
+
                 var savePath = Path.Combine(instancePath, "UserData", "Saves", saveName);
                 
                 if (Directory.Exists(savePath))
@@ -850,6 +880,7 @@ public class IpcService
             {
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
+                var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
                 var branch = data?["branch"].GetString() ?? "release";
                 var version = data?["version"].GetInt32() ?? 0;
                 var saveName = data?["saveName"].GetString() ?? "";
@@ -860,7 +891,16 @@ public class IpcService
                     return;
                 }
 
-                var instancePath = instanceService.GetInstancePath(branch, version);
+                var instancePath = !string.IsNullOrWhiteSpace(instanceId)
+                    ? instanceService.GetInstancePathById(instanceId) ?? instanceService.GetInstancePath(branch, version)
+                    : instanceService.GetInstancePath(branch, version);
+
+                if (string.IsNullOrWhiteSpace(instancePath))
+                {
+                    Reply("hyprism:instance:deleteSave:reply", false);
+                    return;
+                }
+
                 var savesPath = Path.GetFullPath(Path.Combine(instancePath, "UserData", "Saves"));
                 var targetSavePath = Path.GetFullPath(Path.Combine(savesPath, saveName));
 
@@ -918,7 +958,8 @@ public class IpcService
                 
                 if (foundPath != null)
                 {
-                    Reply("hyprism:instance:getIcon:reply", $"file://{foundPath.Replace("\\", "/")}");
+                    var cacheBuster = File.GetLastWriteTimeUtc(foundPath).Ticks;
+                    Reply("hyprism:instance:getIcon:reply", $"file://{foundPath.Replace("\\", "/")}?v={cacheBuster}");
                 }
                 else
                 {

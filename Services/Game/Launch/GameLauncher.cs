@@ -817,12 +817,21 @@ exec env ""${{ENV_ARGS[@]}}"" ""{executable}"" {argsString}
         if (gpuPref == "dedicated")
         {
             Logger.Info("Game", "GPU preference: dedicated (NVIDIA/AMD env vars in launch script)");
-            return @"# GPU preference: dedicated (discrete GPU)
-export __NV_PRIME_RENDER_OFFLOAD=1
-export __GLX_VENDOR_LIBRARY_NAME=nvidia
-export DRI_PRIME=1
+            var sb = new StringBuilder();
+            sb.AppendLine("# GPU preference: dedicated (discrete GPU)");
+            sb.AppendLine("export __NV_PRIME_RENDER_OFFLOAD=1");
+            sb.AppendLine("export __GLX_VENDOR_LIBRARY_NAME=nvidia");
+            sb.AppendLine("export DRI_PRIME=1");
 
-";
+            var nvidiaEglVendorJson = TryGetLinuxNvidiaEglVendorJsonPath();
+            if (!string.IsNullOrWhiteSpace(nvidiaEglVendorJson))
+            {
+                sb.AppendLine($"export __EGL_VENDOR_LIBRARY_FILENAMES=\"{nvidiaEglVendorJson}\"");
+                Logger.Info("Game", $"Applied NVIDIA EGL vendor override: {nvidiaEglVendorJson}");
+            }
+
+            sb.AppendLine();
+            return sb.ToString();
         }
 
         if (gpuPref == "integrated")
@@ -836,6 +845,43 @@ export __NV_PRIME_RENDER_OFFLOAD=0
         }
 
         return "";
+    }
+
+    private static string? TryGetLinuxNvidiaEglVendorJsonPath()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return null;
+
+        const string glvndDir = "/usr/share/glvnd/egl_vendor.d";
+        if (!Directory.Exists(glvndDir))
+            return null;
+
+        var preferred = new[]
+        {
+            Path.Combine(glvndDir, "10_nvidia.json"),
+            Path.Combine(glvndDir, "15_nvidia_gbm.json"),
+            Path.Combine(glvndDir, "20_nvidia.json")
+        };
+
+        foreach (var candidate in preferred)
+        {
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        try
+        {
+            foreach (var candidate in Directory.GetFiles(glvndDir, "*nvidia*.json", SearchOption.TopDirectoryOnly))
+            {
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
     }
 
     /// <summary>

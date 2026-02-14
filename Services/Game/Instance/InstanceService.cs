@@ -256,8 +256,13 @@ public class InstanceService : IInstanceService
     /// </summary>
     public string GetLatestInfoPath(string branch)
     {
-        return Path.Combine(GetLatestInstancePath(branch), "latest.json");
+            return Path.Combine(GetBranchPath(branch), "latest.json");
     }
+
+        private string GetLegacyLatestInfoPath(string branch)
+        {
+            return Path.Combine(GetLatestInstancePath(branch), "latest.json");
+        }
 
     /// <summary>
     /// Load latest instance info from latest.json.
@@ -266,8 +271,12 @@ public class InstanceService : IInstanceService
     {
         try
         {
-            var path = GetLatestInfoPath(branch);
-            if (!File.Exists(path)) return null;
+                var path = GetLatestInfoPath(branch);
+                if (!File.Exists(path))
+                {
+                    path = GetLegacyLatestInfoPath(branch);
+                    if (!File.Exists(path)) return null;
+                }
             var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<LatestInstanceInfo>(json, JsonOptions);
         }
@@ -1074,6 +1083,45 @@ public class InstanceService : IInstanceService
         catch (Exception ex)
         {
             Logger.Error("Game", $"Error deleting game: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Deletes a game instance by unique ID.
+    /// </summary>
+    public bool DeleteGameById(string instanceId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                return false;
+            }
+
+            var info = FindInstanceById(instanceId);
+            var versionPath = GetInstancePathById(instanceId);
+            if (string.IsNullOrWhiteSpace(versionPath) || !Directory.Exists(versionPath))
+            {
+                return false;
+            }
+
+            Directory.Delete(versionPath, true);
+
+            if (info?.Version == 0)
+            {
+                var infoPath = GetLatestInfoPath(info.Branch);
+                if (File.Exists(infoPath))
+                {
+                    File.Delete(infoPath);
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Game", $"Error deleting game by id: {ex.Message}");
             return false;
         }
     }

@@ -27,9 +27,9 @@ const ExportInstance = async (instanceId: string): Promise<string> => {
   }
 };
 
-const DeleteGame = async (branch: string, version: number): Promise<boolean> => {
+const DeleteGame = async (instanceId: string, branch: string, version: number): Promise<boolean> => {
   try {
-    return await invoke<boolean>('hyprism:instance:delete', { branch, version });
+    return await invoke<boolean>('hyprism:instance:delete', { instanceId, branch, version });
   } catch (e) {
     console.warn('[IPC] DeleteGame:', e);
     return false;
@@ -86,22 +86,22 @@ const CheckInstanceModUpdates = async (branch: string, version: number, instance
 };
 
 // World/Save IPC calls
-const GetInstanceSaves = async (branch: string, version: number): Promise<SaveInfo[]> => {
+const GetInstanceSaves = async (instanceId: string, branch: string, version: number): Promise<SaveInfo[]> => {
   try {
-    return await invoke<SaveInfo[]>('hyprism:instance:saves', { branch, version });
+    return await invoke<SaveInfo[]>('hyprism:instance:saves', { instanceId, branch, version });
   } catch (e) {
     console.warn('[IPC] GetInstanceSaves:', e);
     return [];
   }
 };
 
-const OpenSaveFolder = (branch: string, version: number, saveName: string): void => {
-  send('hyprism:instance:openSaveFolder', { branch, version, saveName });
+const OpenSaveFolder = (instanceId: string, branch: string, version: number, saveName: string): void => {
+  send('hyprism:instance:openSaveFolder', { instanceId, branch, version, saveName });
 };
 
-const DeleteSaveFolder = async (branch: string, version: number, saveName: string): Promise<boolean> => {
+const DeleteSaveFolder = async (instanceId: string, branch: string, version: number, saveName: string): Promise<boolean> => {
   try {
-    return await invoke<boolean>('hyprism:instance:deleteSave', { branch, version, saveName });
+    return await invoke<boolean>('hyprism:instance:deleteSave', { instanceId, branch, version, saveName });
   } catch (e) {
     console.warn('[IPC] DeleteSaveFolder:', e);
     return false;
@@ -276,6 +276,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
   // Instance icons cache
   const [instanceIcons, setInstanceIcons] = useState<Record<string, string>>({});
+  const iconLoadSeqRef = useRef(0);
 
   // Instance action menu
   const [showInstanceMenu, setShowInstanceMenu] = useState(false);
@@ -439,7 +440,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     
     setIsLoadingSaves(true);
     try {
-      const savesData = await GetInstanceSaves(selectedInstance.branch, selectedInstance.version);
+      const savesData = await GetInstanceSaves(selectedInstance.id, selectedInstance.branch, selectedInstance.version);
       setSaves(savesData || []);
     } catch (err) {
       console.error('Failed to load saves:', err);
@@ -448,27 +449,72 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     setIsLoadingSaves(false);
   }, [selectedInstance]);
 
+  const refreshInstanceIcon = useCallback(async (instanceId: string) => {
+    if (!instanceId) return;
+    try {
+      const icon = await GetInstanceIcon(instanceId);
+      setInstanceIcons(prev => {
+        const next = { ...prev };
+        if (icon) {
+          const suffix = icon.includes('?') ? '&' : '?';
+          next[instanceId] = `${icon}${suffix}ts=${Date.now()}`;
+        } else {
+          delete next[instanceId];
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to refresh instance icon:', err);
+    }
+  }, []);
+
+  const loadAllInstanceIcons = useCallback(async () => {
+    const requestSeq = ++iconLoadSeqRef.current;
+
+    if (instances.length === 0) {
+      setInstanceIcons({});
+      return;
+    }
+
+    try {
+      const nextIcons: Record<string, string> = {};
+
+      for (const inst of instances) {
+        if (requestSeq !== iconLoadSeqRef.current) {
+          return;
+        }
+
+        if (!inst.id) {
+          continue;
+        }
+
+        const icon = await GetInstanceIcon(inst.id);
+        if (icon) {
+          const suffix = icon.includes('?') ? '&' : '?';
+          nextIcons[inst.id] = `${icon}${suffix}ts=${Date.now()}`;
+        }
+      }
+
+      if (requestSeq !== iconLoadSeqRef.current) {
+        return;
+      }
+
+      setInstanceIcons(nextIcons);
+    } catch (err) {
+      console.error('Failed to refresh instance icons:', err);
+    }
+  }, [instances]);
+
   useEffect(() => {
     if (activeTab === 'worlds') {
       loadSaves();
     }
   }, [loadSaves, activeTab]);
 
-  // Load instance icons
+  // Initial/structural icon sync: load icons for current instance list
   useEffect(() => {
-    const loadIcons = async () => {
-      for (const inst of instances) {
-        const key = inst.id;
-        if (!instanceIcons[key]) {
-          const icon = await GetInstanceIcon(inst.id);
-          if (icon) {
-            setInstanceIcons(prev => ({ ...prev, [key]: icon }));
-          }
-        }
-      }
-    };
-    loadIcons();
-  }, [instances, instanceIcons]);
+    loadAllInstanceIcons();
+  }, [loadAllInstanceIcons]);
 
   // Normalize backend payload casing and defaults
   const normalizeInstalledMods = (mods: unknown[]): ModInfo[] => {
@@ -558,7 +604,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     e.stopPropagation();
     if (!selectedInstance) return;
 
-    const ok = await DeleteSaveFolder(selectedInstance.branch, selectedInstance.version, saveName);
+    const ok = await DeleteSaveFolder(selectedInstance.id, selectedInstance.branch, selectedInstance.version, saveName);
     if (ok) {
       setMessage({ type: 'success', text: 'World deleted' });
       await loadSaves();
@@ -587,9 +633,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
   const handleDelete = async (inst: InstalledVersionInfo) => {
     try {
-      await DeleteGame(inst.branch, inst.version);
+      await DeleteGame(inst.id, inst.branch, inst.version);
       setInstanceToDelete(null);
-      if (selectedInstance?.branch === inst.branch && selectedInstance?.version === inst.version) {
+      if (selectedInstance?.id === inst.id) {
         setSelectedInstance(null);
       }
       loadInstances();
@@ -767,9 +813,12 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
           src={customIcon} 
           alt="" 
           className="w-full h-full object-cover rounded-lg"
-          onError={(e) => {
-            // Fallback to default icon if custom icon fails to load
-            (e.target as HTMLImageElement).style.display = 'none';
+          onError={() => {
+            setInstanceIcons(prev => {
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            });
           }}
         />
       );
@@ -860,7 +909,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             </div>
           ) : (
             instances.map((inst) => {
-              const key = `${inst.branch}-${inst.version}`;
+              const key = inst.id;
               const isSelected = selectedInstance?.id === inst.id;
               const validation = getValidationInfo(inst);
               
@@ -1591,7 +1640,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         {saves.map((save) => (
                           <div
                             key={save.name}
-                            onClick={() => OpenSaveFolder(selectedInstance!.branch, selectedInstance!.version, save.name)}
+                            onClick={() => OpenSaveFolder(selectedInstance!.id, selectedInstance!.branch, selectedInstance!.version, save.name)}
                             className="group relative rounded-xl overflow-hidden border border-white/10 hover:border-white/20 transition-all bg-white/5 hover:bg-white/10 cursor-pointer"
                           >
                             {/* Preview Image */}
@@ -1633,7 +1682,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  OpenSaveFolder(selectedInstance!.branch, selectedInstance!.version, save.name);
+                                  OpenSaveFolder(selectedInstance!.id, selectedInstance!.branch, selectedInstance!.version, save.name);
                                 }}
                                 className="px-6 py-3 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-semibold flex items-center justify-center gap-2 min-w-[200px]"
                               >
