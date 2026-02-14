@@ -17,6 +17,13 @@
 5. Commit with clear messages
 6. Open a Pull Request
 
+### Linux packaging icon note
+
+- For `.deb`/`.rpm` desktop icons, `Scripts/publish.sh` now prepares a Linux icon set under `Build/icons/` as size files (`16x16.png` … `512x512.png`) plus `icon.png`.
+- Ensure `Build/icon.png` exists before running publish targets (`deb`, `rpm`, `linux`, `all`).
+- Linux package app ID is `com.hyprismteam.hyprism`.
+- AppStream metadata is injected for Linux packaging from `Packaging/linux/com.hyprismteam.hyprism.metainfo.xml`.
+
 ## Adding a New Feature
 
 ### Checklist

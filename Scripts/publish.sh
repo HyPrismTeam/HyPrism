@@ -238,6 +238,160 @@ prepare_macos_icon() {
     rm -rf "$iconset_dir"
 }
 
+# ─── Prepare Linux icon set for desktop environments ───────────────────────
+prepare_linux_icon_set() {
+    local source_png="$PROJECT_ROOT/Build/icon.png"
+    local iconset_root="$PROJECT_ROOT/Build/icons"
+
+    if [[ ! -f "$source_png" ]]; then
+        log_warn "Build/icon.png not found; Linux packages may miss launcher icon"
+        return 0
+    fi
+
+    rm -rf "$iconset_root"
+    mkdir -p "$iconset_root"
+
+    local sizes=(16 24 32 48 64 128 256 512)
+    for size in "${sizes[@]}"; do
+        local target="$iconset_root/${size}x${size}.png"
+
+        if command -v convert >/dev/null 2>&1; then
+            convert "$source_png" -resize "${size}x${size}" "$target" >/dev/null 2>&1 || cp "$source_png" "$target"
+        else
+            cp "$source_png" "$target"
+        fi
+    done
+
+    # Keep a generic icon file as fallback for tooling that expects icon.png
+    cp "$source_png" "$iconset_root/icon.png"
+
+    log_ok "Prepared Linux icon set in Build/icons (files: ${sizes[*]} + icon.png)"
+}
+
+# ─── Inject AppStream metadata into .deb artifact ───────────────────────────
+inject_deb_appstream() {
+    local deb_path="$1"
+    local metainfo_src="$PROJECT_ROOT/Packaging/linux/com.hyprismteam.hyprism.metainfo.xml"
+
+    if [[ ! -f "$metainfo_src" ]]; then
+        log_warn "AppStream metadata not found: Packaging/linux/com.hyprismteam.hyprism.metainfo.xml"
+        return 0
+    fi
+
+    if ! command -v dpkg-deb >/dev/null 2>&1; then
+        log_warn "dpkg-deb is not available; skipping AppStream injection for $(basename "$deb_path")"
+        return 0
+    fi
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    if ! dpkg-deb -R "$deb_path" "$tmp_dir" >/dev/null 2>&1; then
+        log_warn "Failed to unpack $(basename "$deb_path") for AppStream injection"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    if [[ -f "$tmp_dir/usr/share/metainfo/com.hyprismteam.hyprism.metainfo.xml" ]]; then
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    mkdir -p "$tmp_dir/usr/share/metainfo"
+    cp "$metainfo_src" "$tmp_dir/usr/share/metainfo/com.hyprismteam.hyprism.metainfo.xml"
+
+    if dpkg-deb -b "$tmp_dir" "$deb_path" >/dev/null 2>&1; then
+        log_ok "Injected AppStream metainfo into $(basename "$deb_path")"
+    else
+        log_warn "Failed to repack $(basename "$deb_path") after AppStream injection"
+    fi
+
+    rm -rf "$tmp_dir"
+}
+
+# ─── Inject AppStream metadata into .rpm artifact ───────────────────────────
+inject_rpm_appstream() {
+    local rpm_path="$1"
+    local metainfo_src="$PROJECT_ROOT/Packaging/linux/com.hyprismteam.hyprism.metainfo.xml"
+
+    if [[ ! -f "$metainfo_src" ]]; then
+        log_warn "AppStream metadata not found: Packaging/linux/com.hyprismteam.hyprism.metainfo.xml"
+        return 0
+    fi
+
+    if ! command -v rpm2cpio >/dev/null 2>&1 || ! command -v cpio >/dev/null 2>&1 || ! command -v rpmbuild >/dev/null 2>&1; then
+        log_warn "rpm2cpio/cpio/rpmbuild is not available; skipping AppStream injection for $(basename "$rpm_path")"
+        return 0
+    fi
+
+    local tmp_dir root_dir
+    tmp_dir=$(mktemp -d)
+    root_dir="$tmp_dir/root"
+
+    mkdir -p "$root_dir" "$tmp_dir"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+
+    if ! rpm2cpio "$rpm_path" | (cd "$root_dir" && cpio -idmu --quiet); then
+        log_warn "Failed to unpack $(basename "$rpm_path") for AppStream injection"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    if [[ -f "$root_dir/usr/share/metainfo/com.hyprismteam.hyprism.metainfo.xml" ]]; then
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    mkdir -p "$root_dir/usr/share/metainfo"
+    cp "$metainfo_src" "$root_dir/usr/share/metainfo/com.hyprismteam.hyprism.metainfo.xml"
+
+    local pkg_name pkg_version pkg_release pkg_arch pkg_summary pkg_license
+    pkg_name=$(rpm -qp --qf '%{NAME}' "$rpm_path" 2>/dev/null || echo "com.hyprismteam.hyprism")
+    pkg_version=$(rpm -qp --qf '%{VERSION}' "$rpm_path" 2>/dev/null || echo "3.0.0")
+    pkg_release=$(rpm -qp --qf '%{RELEASE}' "$rpm_path" 2>/dev/null || echo "1")
+    pkg_arch=$(rpm -qp --qf '%{ARCH}' "$rpm_path" 2>/dev/null || echo "x86_64")
+    pkg_summary=$(rpm -qp --qf '%{SUMMARY}' "$rpm_path" 2>/dev/null || echo "Cross-platform Hytale launcher")
+    pkg_license=$(rpm -qp --qf '%{LICENSE}' "$rpm_path" 2>/dev/null || echo "MIT")
+
+    cat > "$tmp_dir/SPECS/repack.spec" <<EOF
+Name: $pkg_name
+Version: $pkg_version
+Release: $pkg_release
+Summary: $pkg_summary
+License: $pkg_license
+BuildArch: $pkg_arch
+AutoReqProv: no
+
+%description
+HyPrism is a cross-platform Hytale launcher with instance and mod management.
+
+%prep
+%build
+%install
+mkdir -p %{buildroot}
+cp -a $root_dir/. %{buildroot}/
+
+%files
+/
+EOF
+
+    if ! rpmbuild --define "_topdir $tmp_dir" -bb "$tmp_dir/SPECS/repack.spec" >/dev/null 2>&1; then
+        log_warn "Failed to repack $(basename "$rpm_path") after AppStream injection"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    local rebuilt_rpm
+    rebuilt_rpm=$(find "$tmp_dir/RPMS" -type f -name '*.rpm' | head -n1)
+    if [[ -n "$rebuilt_rpm" && -f "$rebuilt_rpm" ]]; then
+        cp "$rebuilt_rpm" "$rpm_path"
+        log_ok "Injected AppStream metainfo into $(basename "$rpm_path")"
+    else
+        log_warn "Repacked rpm not found for $(basename "$rpm_path")"
+    fi
+
+    rm -rf "$tmp_dir"
+}
+
 # ─── Write temporary electron-builder config ──────────────────────────────────
 write_config() {
     local platform="$1"
@@ -251,8 +405,17 @@ write_config() {
     "target": TARGETS_PLACEHOLDER,
     "executableArgs": ["--no-sandbox"],
     "category": "Game",
-        "icon": "icon.png",
-    "maintainer": "HyPrism Team"
+    "icon": "LINUX_ICONSET_PLACEHOLDER",
+        "maintainer": "HyPrism Team <eivordoudo2021@gmail.com>",
+        "synopsis": "Cross-platform Hytale launcher",
+        "description": "HyPrism is a cross-platform Hytale launcher with instance and mod management.",
+    "desktop": {
+        "entry": {
+            "Name": "HyPrism",
+            "Comment": "Cross-platform Hytale launcher",
+            "Categories": "Game;Utility;"
+        }
+    }
   }
 INNER
 )
@@ -279,6 +442,7 @@ INNER
     esac
 
     platform_block="${platform_block//TARGETS_PLACEHOLDER/$targets_json}"
+    platform_block="${platform_block//LINUX_ICONSET_PLACEHOLDER/$PROJECT_ROOT\/Build\/icons}"
 
     # Add flatpak-specific config when building flatpak target
     local flatpak_block=""
@@ -341,6 +505,12 @@ do_publish() {
     # Collect distributable artifacts (exclude unpacked dirs and metadata)
     local count=0
     while IFS= read -r -d '' artifact; do
+        if [[ "$artifact" == *.deb ]]; then
+            inject_deb_appstream "$artifact"
+        elif [[ "$artifact" == *.rpm ]]; then
+            inject_rpm_appstream "$artifact"
+        fi
+
         cp "$artifact" "$DIST_DIR/"
         count=$((count + 1))
         local size
@@ -385,6 +555,8 @@ build_platform() {
 
     if [[ "$platform" == "mac" ]]; then
         prepare_macos_icon
+    elif [[ "$platform" == "linux" ]]; then
+        prepare_linux_icon_set
     fi
 
     write_config "$platform" "$targets_json"

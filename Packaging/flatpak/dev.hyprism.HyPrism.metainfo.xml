@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>dev.hyprism.HyPrism</id>
+  <id>com.hyprismteam.hyprism</id>
   <name>HyPrism</name>
   <summary>A modern launcher for Hytale</summary>
   <metadata_license>MIT</metadata_license>

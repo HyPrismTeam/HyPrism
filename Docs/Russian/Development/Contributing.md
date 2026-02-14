@@ -17,6 +17,13 @@
 5. Сделайте коммит с понятным сообщением
 6. Откройте Pull Request
 
+### Примечание по иконкам Linux-пакетов
+
+- Для корректной иконки в `.deb`/`.rpm` скрипт `Scripts/publish.sh` теперь готовит Linux icon-set в `Build/icons/` как набор файлов размеров (`16x16.png` … `512x512.png`) и `icon.png`.
+- Перед публикацией (`deb`, `rpm`, `linux`, `all`) убедитесь, что существует `Build/icon.png`.
+- Linux package app ID: `com.hyprismteam.hyprism`.
+- AppStream-метаданные для Linux-пакетов берутся из `Packaging/linux/com.hyprismteam.hyprism.metainfo.xml`.
+
 ## Добавление новой функции
 
 ### Чек-лист
