@@ -64,6 +64,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
   const [instanceIconMap, setInstanceIconMap] = useState<Record<string, string>>({});
   const switcherRef = useRef<HTMLDivElement>(null);
 
+  const withCacheBust = (iconUrl: string) => {
+    if (!iconUrl) return iconUrl;
+    const separator = iconUrl.includes('?') ? '&' : '?';
+    return `${iconUrl}${separator}t=${Date.now()}`;
+  };
+
   useEffect(() => {
     ipc.profile.get().then(p => { if (p.avatarPath) setLocalAvatar(p.avatarPath); }).catch(() => {});
   }, [props.uuid, props.avatarRefreshTrigger]);
@@ -90,7 +96,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           try {
             const icon = await ipc.instance.getIcon({ instanceId: inst.id });
             if (icon) {
-              found[inst.id] = icon;
+              found[inst.id] = withCacheBust(icon);
             }
           } catch {
             // Ignore per-instance icon loading errors
@@ -122,7 +128,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
       try {
         const icon = await ipc.instance.getIcon({ instanceId: selected.id });
         if (!cancelled && icon) {
-          setInstanceIconMap((prev) => ({ ...prev, [selected.id]: icon }));
+          setInstanceIconMap((prev) => ({ ...prev, [selected.id]: withCacheBust(icon) }));
         }
       } catch {
         // Ignore selected icon loading errors
@@ -134,6 +140,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
       cancelled = true;
     };
   }, [props.selectedInstance, instanceIconMap]);
+
+  useEffect(() => {
+    const selected = props.selectedInstance;
+    if (!selected) return;
+
+    let cancelled = false;
+    const retry = setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        const icon = await ipc.instance.getIcon({ instanceId: selected.id });
+        if (!cancelled && icon) {
+          setInstanceIconMap((prev) => ({ ...prev, [selected.id]: withCacheBust(icon) }));
+        }
+      } catch {
+        // Ignore retry errors
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(retry);
+    };
+  }, [props.selectedInstance]);
 
   // Close switcher on outside click
   useEffect(() => {
@@ -200,19 +229,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     return `${branchLabel} v${version}`;
   };
 
-  const doesIconPathMatchInstance = (inst: InstanceInfo, iconUrl: string) => {
-    if (!iconUrl) return false;
-    const normalized = decodeURIComponent(iconUrl).replace(/\\/g, '/').toLowerCase();
-    const branchSegment = `/${inst.branch.toLowerCase()}/`;
-    const idSegment = `/${inst.id.toLowerCase()}/`;
-    const versionSegment = inst.version > 0 ? `/v${inst.version}/` : '/latest/';
-    return normalized.includes(branchSegment) && (normalized.includes(versionSegment) || normalized.includes(idSegment));
-  };
-
   // Render an instance icon (custom image or version badge)
   const renderInstanceIcon = (inst: InstanceInfo, size: number = 28, full: boolean = false) => {
     const customIcon = instanceIconMap[inst.id];
-    if (customIcon && doesIconPathMatchInstance(inst, customIcon)) {
+    if (customIcon) {
       return (
         <img
           src={customIcon}
@@ -450,7 +470,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
       </div>
 
       {/* Center: Logo + Label + Play Bar */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-5">
+      <div className="flex-1 flex flex-col items-center justify-center gap-3">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -511,7 +531,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           className="flex flex-col items-center"
         >
           {/* Button bar with relative positioning */}
-          <div className="relative mt-7">
+          <div className="relative mt-3">
             <div className="flex items-center h-14 gap-2">
               {/* Instance Switcher - icon button with dropdown */}
               <div className="w-14 h-14 relative flex items-center justify-center" ref={switcherRef}>

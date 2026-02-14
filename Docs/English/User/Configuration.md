@@ -84,6 +84,8 @@ Instances/
 - **Centered play action** — The main Play button stays centered on the dashboard even when the instance switcher is visible
 - **Per-instance icon fidelity** — Dashboard custom icons are validated against the target instance path to avoid showing another instance's icon
 - **Full icon tiles** — Custom instance icons fill their switcher tiles for clearer visual identity
+- **Startup icon detection** — Dashboard retries selected-instance icon loading during startup so custom icons appear without manually switching instances
+- **Tighter dashboard spacing** — The Play row is positioned closer to the disclaimer badge
 
 ### Data Folder Quick Action
 
