@@ -77,6 +77,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
 
   // Check if selectors should be hidden (during download/launch or game running)
   const shouldHideInfo = props.isDownloading || props.isGameRunning;
+  const showInstanceSwitcher = !shouldHideInfo && !!props.selectedInstance && props.instances.length > 0;
 
   // Eager selected-instance icon: instant local cache + background refresh from backend
   useEffect(() => {
@@ -453,36 +454,40 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
         >
           {/* Button bar with relative positioning */}
           <div className="relative mt-3 w-full flex justify-center">
-            <div className="flex items-center h-14 gap-2">
+            <motion.div
+              layout
+              className="h-14 flex items-center"
+              transition={{ duration: 0.28, ease: 'easeInOut' }}
+            >
               {/* Instance Switcher - icon button opens side panel */}
-              <div className="w-14 h-14 relative flex items-center justify-center">
-                <AnimatePresence mode="wait">
-                  {!shouldHideInfo && props.selectedInstance && props.instances.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.25, ease: 'easeInOut' }}
-                      className="relative flex items-center h-full"
-                    >
-                      <button
-                        onClick={props.onNavigateToInstances}
-                        className="h-14 w-14 flex items-center justify-center rounded-xl bg-[#1c1c1e] border border-white/20 hover:border-white/30 active:scale-95 transition-all overflow-hidden"
-                        title={getInstanceDisplayName()}
-                        aria-label={t('main.selectInstance')}
-                      >
-                        {renderInstanceIcon(props.selectedInstance, 30, true)}
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <motion.div
+                layout
+                className="h-14 overflow-hidden flex items-center justify-center"
+                animate={{
+                  width: showInstanceSwitcher ? '56px' : '0px',
+                  marginRight: showInstanceSwitcher ? '14px' : '0px',
+                  opacity: showInstanceSwitcher ? 1 : 0,
+                  scale: showInstanceSwitcher ? 1 : 0.92,
+                }}
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+              >
+                {showInstanceSwitcher && props.selectedInstance && (
+                  <button
+                    onClick={props.onNavigateToInstances}
+                    className="h-14 w-14 flex items-center justify-center rounded-xl bg-[#1c1c1e] border border-white/20 hover:border-white/30 active:scale-95 transition-all overflow-hidden"
+                    title={getInstanceDisplayName()}
+                    aria-label={t('main.selectInstance')}
+                  >
+                    {renderInstanceIcon(props.selectedInstance, 30, true)}
+                  </button>
+                )}
+              </motion.div>
 
               {/* Action Button (Play/Download/Update) */}
-              <div className="h-14 flex items-center justify-center">
+              <motion.div layout className="h-14 flex items-center justify-center">
                 {renderActionButton()}
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
             {/* Progress Bar - only show when downloading and NOT in complete state */}
             <AnimatePresence>
