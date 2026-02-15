@@ -5,12 +5,12 @@ import {
   HardDrive, FolderOpen, Trash2, Upload, RefreshCw, 
   Clock, Box, Loader2, AlertTriangle, Check, Plus,
   Search, Package, MoreVertical,
-  ChevronRight, Image, Map, Globe, Play, X, Edit2,
-  Download, AlertCircle
+  ChevronRight, Image, Map, Globe, Play, X, Edit2, ChevronDown,
+  Download, AlertCircle, RotateCw
 } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
 
-import { ipc, InstalledInstance, invoke, send, SaveInfo, InstanceValidationDetails } from '@/lib/ipc';
+import { ipc, InstalledInstance, invoke, send, SaveInfo, InstanceValidationDetails, type ModInfo as CurseForgeModInfo, type ModScreenshot } from '@/lib/ipc';
 import { InlineModBrowser } from '../components/InlineModBrowser';
 import { formatBytes } from '../utils/format';
 import { GameBranch } from '@/constants/enums';
@@ -124,6 +124,7 @@ interface ModInfo {
   name: string;
   slug?: string;
   version: string;
+  fileName?: string;
   author: string;
   description: string;
   enabled: boolean;
@@ -257,11 +258,31 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
   // Installed mods for selected instance
   const [installedMods, setInstalledMods] = useState<ModInfo[]>([]);
   const [isLoadingMods, setIsLoadingMods] = useState(false);
+  const modsLoadInFlightRef = useRef(0);
+  const installedModsSignatureRef = useRef('');
+  const updatesSignatureRef = useRef('');
+  const modsLoadSeqRef = useRef(0);
   const [modsSearchQuery, setModsSearchQuery] = useState('');
   const [selectedMods, setSelectedMods] = useState<Set<string>>(new Set());
   const contentSelectionAnchorRef = useRef<number | null>(null);
+  const [isModDropActive, setIsModDropActive] = useState(false);
+  const [isImportingDroppedMods, setIsImportingDroppedMods] = useState(false);
+  const modDropDepthRef = useRef(0);
   const [modToDelete, setModToDelete] = useState<ModInfo | null>(null);
   const [isDeletingMod, setIsDeletingMod] = useState(false);
+  const [isBulkTogglingMods, setIsBulkTogglingMods] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [showBulkUpdateConfirm, setShowBulkUpdateConfirm] = useState(false);
+  const [isUpdatingMods, setIsUpdatingMods] = useState(false);
+  const [selectedBulkUpdateIds, setSelectedBulkUpdateIds] = useState<Set<string>>(new Set());
+  const [selectedBulkDeleteIds, setSelectedBulkDeleteIds] = useState<Set<string>>(new Set());
+  const [modDetailsCache, setModDetailsCache] = useState<Record<string, CurseForgeModInfo | null>>({});
+  
+  const [bulkUpdatePreviewId, setBulkUpdatePreviewId] = useState<string | null>(null);
+  const [bulkDeletePreviewId, setBulkDeletePreviewId] = useState<string | null>(null);
+  const [browseRefreshSignal, setBrowseRefreshSignal] = useState(0);
+  const [openChangelogIds, setOpenChangelogIds] = useState<Set<string>>(new Set());
+  const [changelogCache, setChangelogCache] = useState<Record<string, { status: 'idle' | 'loading' | 'ready' | 'error'; text: string }>>({});
   const [editingInstanceName, setEditingInstanceName] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
@@ -351,6 +372,28 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
   const tabs: InstanceTab[] = ['content', 'browse', 'worlds'];
 
+  const buildModSignature = useCallback((mods: ModInfo[]): string => {
+    return (mods || [])
+      .map((m) => {
+        const parts = [
+          m.id ?? '',
+          m.enabled ? '1' : '0',
+          m.name ?? '',
+          m.author ?? '',
+          m.version ?? '',
+          m.fileName ?? '',
+          m.slug ?? '',
+          m.iconUrl ?? '',
+          m.curseForgeId ?? '',
+          m.fileId ?? '',
+          m.latestVersion ?? '',
+          m.latestFileId ?? '',
+        ];
+        return parts.join('\u0001');
+      })
+      .join('\u0002');
+  }, []);
+
   const loadInstances = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -360,7 +403,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
       ]);
       const instanceList = (data || []).map(toVersionInfo);
       setInstances(instanceList);
-      
+
       // Try to restore previously selected instance (use ref to avoid infinite loop)
       const currentSelected = selectedInstanceRef.current;
       if (selected && instanceList.length > 0) {
@@ -387,45 +430,77 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
   }, [loadInstances]);
 
   // Load installed mods when selected instance changes
-  const loadInstalledMods = useCallback(async () => {
+  const loadInstalledMods = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = !!options?.silent;
+
     if (!selectedInstance) {
-      setInstalledMods([]);
+      if (!silent) {
+        setInstalledMods([]);
+        installedModsSignatureRef.current = '';
+        setModsWithUpdates([]);
+        updatesSignatureRef.current = '';
+        setUpdateCount(0);
+      }
       return;
     }
+
+    if (silent && modsLoadInFlightRef.current > 0) return;
+
     const currentInstance = selectedInstance;
-    
-    setIsLoadingMods(true);
+    const requestSeq = ++modsLoadSeqRef.current;
+    modsLoadInFlightRef.current += 1;
+    if (!silent) setIsLoadingMods(true);
+
     try {
       const mods = await GetInstanceInstalledMods(currentInstance.branch, currentInstance.version, currentInstance.id);
       const normalized = normalizeInstalledMods(mods || []);
-      setInstalledMods(normalized);
-      setIsLoadingMods(false);
-      
-      // Check updates in background to keep the list snappy
-      void (async () => {
-        try {
-          const updates = await CheckInstanceModUpdates(currentInstance.branch, currentInstance.version, currentInstance.id);
-          const normalizedUpdates = normalizeInstalledMods(updates || []);
-          // Apply only if still on same instance
-          if (selectedInstanceRef.current?.id === currentInstance.id) {
-            setModsWithUpdates(normalizedUpdates);
-            setUpdateCount(normalizedUpdates.length);
-          }
-        } catch {
-          if (selectedInstanceRef.current?.id === currentInstance.id) {
-            setModsWithUpdates([]);
-            setUpdateCount(0);
-          }
+
+      // Apply only if still on same instance and still latest request
+      if (selectedInstanceRef.current?.id === currentInstance.id && modsLoadSeqRef.current === requestSeq) {
+        const nextSig = buildModSignature(normalized);
+        if (!silent || nextSig !== installedModsSignatureRef.current) {
+          setInstalledMods(normalized);
+          installedModsSignatureRef.current = nextSig;
         }
-      })();
+
+        // Check updates in background to keep the list snappy
+        void (async () => {
+          try {
+            const updates = await CheckInstanceModUpdates(currentInstance.branch, currentInstance.version, currentInstance.id);
+            const normalizedUpdates = normalizeInstalledMods(updates || []);
+
+            // Apply only if still on same instance and still latest request
+            if (selectedInstanceRef.current?.id === currentInstance.id && modsLoadSeqRef.current === requestSeq) {
+              const nextUpdatesSig = buildModSignature(normalizedUpdates);
+              if (nextUpdatesSig !== updatesSignatureRef.current) {
+                setModsWithUpdates(normalizedUpdates);
+                setUpdateCount(normalizedUpdates.length);
+                updatesSignatureRef.current = nextUpdatesSig;
+              }
+            }
+          } catch {
+            if (!silent && selectedInstanceRef.current?.id === currentInstance.id && modsLoadSeqRef.current === requestSeq) {
+              setModsWithUpdates([]);
+              updatesSignatureRef.current = '';
+              setUpdateCount(0);
+            }
+          }
+        })();
+      }
     } catch (err) {
       console.error('Failed to load installed mods:', err);
-      setInstalledMods([]);
-      setModsWithUpdates([]);
-      setUpdateCount(0);
-      setIsLoadingMods(false);
+      if (!silent && selectedInstanceRef.current?.id === currentInstance.id && modsLoadSeqRef.current === requestSeq) {
+        setInstalledMods([]);
+        installedModsSignatureRef.current = '';
+        setModsWithUpdates([]);
+        updatesSignatureRef.current = '';
+        setUpdateCount(0);
+      }
+    } finally {
+      if (!silent) setIsLoadingMods(false);
+      modsLoadInFlightRef.current = Math.max(0, modsLoadInFlightRef.current - 1);
     }
-  }, [selectedInstance]);
+  }, [buildModSignature, selectedInstance]);
 
   useEffect(() => {
     loadInstalledMods();
@@ -511,6 +586,126 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     }
   }, [loadSaves, activeTab]);
 
+  useEffect(() => {
+    // Selection should not persist when switching tabs.
+    setSelectedMods(new Set());
+    contentSelectionAnchorRef.current = null;
+  }, [activeTab]);
+
+  useEffect(() => {
+    // Selection should not persist across instance switches.
+    setSelectedMods(new Set());
+    contentSelectionAnchorRef.current = null;
+  }, [selectedInstance?.id]);
+
+  useEffect(() => {
+    if (!selectedInstance) return;
+    if (activeTab !== 'content') return;
+    if (selectedInstance.validationStatus !== 'Valid') return;
+
+    const intervalId = window.setInterval(() => {
+      if (modsLoadInFlightRef.current > 0) return;
+      if (showBulkUpdateConfirm || showBulkDeleteConfirm) return;
+      if (modToDelete || instanceToDelete) return;
+      if (isImportingDroppedMods || isModDropActive) return;
+      void loadInstalledMods({ silent: true });
+    }, 4000);
+
+    return () => window.clearInterval(intervalId);
+  }, [
+    activeTab,
+    instanceToDelete,
+    isImportingDroppedMods,
+    isLoadingMods,
+    isModDropActive,
+    loadInstalledMods,
+    modToDelete,
+    selectedInstance,
+    showBulkDeleteConfirm,
+    showBulkUpdateConfirm,
+  ]);
+
+  const readFileAsBase64 = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const ab = reader.result as ArrayBuffer;
+        const bytes = new Uint8Array(ab);
+        let binary = '';
+        const chunkSize = 0x2000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        resolve(btoa(binary));
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    });
+  }, []);
+
+  const handleDropImportMods = useCallback(async (files: FileList | File[]) => {
+    if (!selectedInstance) return;
+    const list = Array.from(files || []);
+    if (list.length === 0) return;
+
+    const allowedExt = new Set(['.jar', '.zip', '.disabled']);
+    const maxBytes = 100 * 1024 * 1024; // 100MB safety cap (base64 is larger; prevents OS lockups)
+
+    setIsImportingDroppedMods(true);
+    let okCount = 0;
+    let failCount = 0;
+    let skippedType = 0;
+    let skippedSize = 0;
+
+    for (const file of list) {
+      try {
+        const name = String(file.name || '');
+        const lower = name.toLowerCase();
+        const dot = lower.lastIndexOf('.');
+        const ext = dot >= 0 ? lower.slice(dot) : '';
+        if (!allowedExt.has(ext)) {
+          skippedType++;
+          continue;
+        }
+        if (typeof file.size === 'number' && file.size > maxBytes) {
+          skippedSize++;
+          continue;
+        }
+
+        const base64Content = await readFileAsBase64(file);
+        const ok = await ipc.mods.installBase64({
+          fileName: file.name,
+          base64Content,
+          instanceId: selectedInstance.id,
+          branch: selectedInstance.branch,
+          version: selectedInstance.version,
+        });
+        if (ok) okCount++;
+        else failCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    await loadInstalledMods();
+    setIsImportingDroppedMods(false);
+
+    const skippedTotal = skippedType + skippedSize;
+    if (failCount === 0 && skippedTotal === 0) {
+      setMessage({ type: 'success', text: `Imported ${okCount} mod(s)` });
+    } else if (failCount === 0) {
+      setMessage({ type: 'success', text: `Imported ${okCount} mod(s), skipped ${skippedTotal}` });
+    } else {
+      setMessage({ type: 'error', text: `Imported ${okCount} mod(s), failed ${failCount}, skipped ${skippedTotal}` });
+    }
+    setTimeout(() => setMessage(null), 3000);
+  }, [loadInstalledMods, readFileAsBase64, selectedInstance]);
+
+  useEffect(() => {
+    if (activeTab !== 'browse') return;
+    setBrowseRefreshSignal((v) => v + 1);
+  }, [activeTab]);
+
   // Initial/structural icon sync: load icons for current instance list
   useEffect(() => {
     loadAllInstanceIcons();
@@ -520,20 +715,35 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
   const normalizeInstalledMods = (mods: unknown[]): ModInfo[] => {
     return (mods || []).map((m: unknown) => {
       const mod = m as Record<string, unknown>;
-      const curseForgeId = mod.curseForgeId || mod.CurseForgeId || (typeof mod.id === 'string' && (mod.id as string).startsWith('cf-') ? (mod.id as string).replace('cf-', '') : mod.id);
+
+      const curseForgeIdRaw = mod.curseForgeId || mod.CurseForgeId || (typeof mod.id === 'string' && (mod.id as string).startsWith('cf-') ? (mod.id as string).replace('cf-', '') : undefined);
+      let curseForgeId: number | undefined;
+      if (typeof curseForgeIdRaw === 'number' && Number.isFinite(curseForgeIdRaw)) {
+        curseForgeId = curseForgeIdRaw;
+      } else if (typeof curseForgeIdRaw === 'string' && curseForgeIdRaw.trim()) {
+        const parsed = Number(curseForgeIdRaw.replace(/^cf-/i, ''));
+        if (Number.isFinite(parsed)) curseForgeId = parsed;
+      }
+
+      const fileIdRaw = mod.fileId ?? mod.FileId;
+      const latestFileIdRaw = mod.latestFileId ?? mod.LatestFileId;
+      const fileId = typeof fileIdRaw === 'number' ? fileIdRaw : typeof fileIdRaw === 'string' ? Number(fileIdRaw) : undefined;
+      const latestFileId = typeof latestFileIdRaw === 'number' ? latestFileIdRaw : typeof latestFileIdRaw === 'string' ? Number(latestFileIdRaw) : undefined;
+
       return {
         id: mod.id as string,
         name: mod.name as string || mod.Name as string || '',
         slug: mod.slug as string,
         version: mod.version as string || mod.Version as string || '',
+        fileName: (mod.fileName as string) || (mod.FileName as string) || '',
         author: mod.author as string || mod.Author as string || '',
         description: mod.description as string || mod.Description as string || mod.summary as string || '',
         enabled: mod.enabled as boolean ?? true,
         iconUrl: mod.iconUrl as string || mod.IconUrl as string || mod.iconURL as string || '',
-        curseForgeId: curseForgeId as number,
-        fileId: mod.fileId as number || mod.FileId as number,
+        curseForgeId,
+        fileId: typeof fileId === 'number' && Number.isFinite(fileId) ? fileId : undefined,
         latestVersion: mod.latestVersion as string || mod.LatestVersion as string,
-        latestFileId: mod.latestFileId as number || mod.LatestFileId as number,
+        latestFileId: typeof latestFileId === 'number' && Number.isFinite(latestFileId) ? latestFileId : undefined,
       } as ModInfo;
     });
   };
@@ -547,6 +757,265 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
       mod.author?.toLowerCase().includes(query)
     );
   }, [installedMods, modsSearchQuery]);
+
+  const getCurseForgeModId = useCallback((mod: ModInfo): string => {
+    if (typeof mod.curseForgeId === 'number' && Number.isFinite(mod.curseForgeId)) return String(mod.curseForgeId);
+    if (typeof mod.id === 'string' && mod.id.startsWith('cf-')) return mod.id.replace('cf-', '');
+    return mod.id;
+  }, []);
+
+  const normalizeCfId = useCallback((id: string): string => {
+    return id.startsWith('cf-') ? id.slice(3) : id;
+  }, []);
+
+  const isLocalInstalledMod = useCallback((mod: ModInfo): boolean => {
+    if (typeof mod.id === 'string' && mod.id.startsWith('local-')) return true;
+    if (String(mod.version || '').toLowerCase() === 'local') return true;
+    if (String(mod.author || '').toLowerCase() === 'local file') return true;
+    return false;
+  }, []);
+
+  const isTrustedRemoteIdentity = useCallback((mod: ModInfo): boolean => {
+    if (!isLocalInstalledMod(mod)) return true;
+    if (mod.curseForgeId != null) return true;
+    if (mod.slug && mod.slug.trim()) return true;
+    return false;
+  }, [isLocalInstalledMod]);
+
+  const getLocalFileStem = useCallback((fileName?: string): string => {
+    const n = String(fileName || '').trim();
+    if (!n) return '';
+    const withoutDisabled = n.replace(/\.disabled$/i, '');
+    return withoutDisabled.replace(/\.(jar|zip)$/i, '');
+  }, []);
+
+  const extractLocalVersionFromStem = useCallback((stem: string): string => {
+    const s = String(stem || '').trim();
+    if (!s) return '';
+    const m = s.match(/(?:^|[\s_-]+)(v?\d+(?:\.\d+){0,4}(?:[-_.]?(?:alpha|beta|rc)\d*)?|\d{4}\.\d+(?:\.\d+)?|v\d+|V\d+)$/i);
+    return m?.[1] ?? '';
+  }, []);
+
+  const getDisplayVersion = useCallback((mod: ModInfo): string => {
+    const v = String(mod.version || '').trim();
+    if (!isLocalInstalledMod(mod)) return v || '-';
+    if (v && v.toLowerCase() !== 'local') return v;
+    const stem = getLocalFileStem(mod.fileName);
+    const fromName = extractLocalVersionFromStem(stem);
+    return fromName || '-';
+  }, [extractLocalVersionFromStem, getLocalFileStem, isLocalInstalledMod]);
+
+  const normalizeKey = useCallback((value: string): string => {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }, []);
+
+  const getLocalMetadataQueries = useCallback((name: string): string[] => {
+    const raw = String(name || '').trim();
+    if (!raw) return [];
+
+    const spaced = raw.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const stripped = spaced
+      .replace(/\s+(?:v)?\d+(?:\.\d+)*$/i, '')
+      .replace(/\s+(?:alpha|beta|release)\s*\d*(?:\.\d+)*$/i, '')
+      .trim();
+
+    const candidates = [stripped, spaced, raw]
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    // unique preserving order
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    for (const q of candidates) {
+      const key = q.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(q);
+    }
+    return unique;
+  }, []);
+
+  const prefetchModDetails = useCallback(async (mods: ModInfo[]) => {
+    const toFetch = mods.filter((m) => modDetailsCache[m.id] === undefined);
+    if (toFetch.length === 0) return;
+
+    const pickBestCandidate = (mod: ModInfo, queries: string[], candidates: CurseForgeModInfo[]): CurseForgeModInfo | null => {
+      if (candidates.length === 0) return null;
+
+      // Strong identifiers win.
+      const strong = candidates.find((c) => {
+        const cfId = normalizeCfId(String(c.id ?? ''));
+        if (mod.curseForgeId != null && cfId === String(mod.curseForgeId)) return true;
+        if (mod.slug && c.slug && c.slug === mod.slug) return true;
+        return false;
+      });
+      if (strong) return strong;
+
+      const targetQuery = queries[0] || mod.name;
+      const targetKey = normalizeKey(targetQuery);
+      const targetTokens = new Set(
+        targetQuery
+          .toLowerCase()
+          .split(/[^a-z0-9]+/g)
+          .map((t) => t.trim())
+          .filter((t) => t.length >= 3)
+      );
+
+      const score = (c: CurseForgeModInfo): number => {
+        const nameKey = normalizeKey(c.name);
+        const slugKey = normalizeKey(c.slug);
+
+        let s = 0;
+        if (targetKey && (nameKey === targetKey || slugKey === targetKey)) s += 120;
+        if (targetKey && (nameKey.includes(targetKey) || targetKey.includes(nameKey))) s += 80;
+        if (targetKey && (slugKey.includes(targetKey) || targetKey.includes(slugKey))) s += 60;
+
+        const cTokens = new Set(
+          String(c.name || '')
+            .toLowerCase()
+            .split(/[^a-z0-9]+/g)
+            .map((t) => t.trim())
+            .filter((t) => t.length >= 3)
+        );
+        let overlap = 0;
+        for (const t of targetTokens) if (cTokens.has(t)) overlap++;
+        s += overlap * 10;
+
+        const downloads = typeof c.downloadCount === 'number' ? c.downloadCount : 0;
+        s += Math.min(downloads / 100_000, 8);
+        return s;
+      };
+
+      let best: CurseForgeModInfo | null = null;
+      let bestScore = -1;
+      for (const c of candidates) {
+        const sc = score(c);
+        if (sc > bestScore) {
+          bestScore = sc;
+          best = c;
+        }
+      }
+
+      // If we can't find any similarity, don't guess.
+      if (bestScore < 25) return null;
+      return best;
+    };
+
+    const pickBestLocalStrictCandidate = (mod: ModInfo, candidates: CurseForgeModInfo[]): CurseForgeModInfo | null => {
+      if (candidates.length === 0) return null;
+
+      const targetNameKey = normalizeKey(mod.name);
+      if (!targetNameKey) return null;
+
+      const targetAuthorKey = normalizeKey(mod.author || '');
+      const exactNameMatches = candidates.filter((c) => normalizeKey(c.name) === targetNameKey);
+      if (exactNameMatches.length === 0) return null;
+
+      const strongAuthorMatch = (candidateAuthor: string): boolean => {
+        const candKey = normalizeKey(candidateAuthor || '');
+        if (!candKey || !targetAuthorKey) return false;
+        return candKey === targetAuthorKey || candKey.includes(targetAuthorKey) || targetAuthorKey.includes(candKey);
+      };
+
+      const exactWithAuthor = exactNameMatches.find((c) => strongAuthorMatch(c.author));
+      if (exactWithAuthor) return exactWithAuthor;
+
+      // If we don't have an author on the local manifest, pick the most-downloaded exact-name match.
+      if (!targetAuthorKey) {
+        return exactNameMatches.slice().sort((a, b) => (b.downloadCount ?? 0) - (a.downloadCount ?? 0))[0] ?? null;
+      }
+
+      return null;
+    };
+
+    // Fetch sequentially to avoid spamming the backend/CF proxy.
+    for (const mod of toFetch) {
+      try {
+        // Remote-installed mods: if we know the numeric CurseForgeId, fetch directly.
+        if (!isLocalInstalledMod(mod) && mod.curseForgeId != null && Number.isFinite(mod.curseForgeId)) {
+          const info = await ipc.mods.info({ modId: String(mod.curseForgeId) });
+          if (info && String(info.id || '').trim()) {
+            setModDetailsCache((prev) => ({ ...prev, [mod.id]: info }));
+          } else {
+            setModDetailsCache((prev) => ({ ...prev, [mod.id]: null }));
+          }
+          continue;
+        }
+
+        // Remote-installed mods: also try cf-<id> from our manifest id.
+        if (!isLocalInstalledMod(mod) && typeof mod.id === 'string' && mod.id.startsWith('cf-')) {
+          const numeric = mod.id.slice(3);
+          if (numeric && /^\d+$/.test(numeric)) {
+            const info = await ipc.mods.info({ modId: numeric });
+            if (info && String(info.id || '').trim()) {
+              setModDetailsCache((prev) => ({ ...prev, [mod.id]: info }));
+              continue;
+            }
+          }
+        }
+
+        // Local mods: allow icons/links, but only via a STRICT match (exact name + strong author).
+        if (isLocalInstalledMod(mod) && !isTrustedRemoteIdentity(mod)) {
+          const query = mod.name?.trim();
+          if (!query) {
+            setModDetailsCache((prev) => ({ ...prev, [mod.id]: null }));
+            continue;
+          }
+
+          const result = await ipc.mods.search({
+            query,
+            page: 0,
+            pageSize: 15,
+            categories: [],
+            sortField: 1,
+            sortOrder: 1,
+          });
+
+          const candidates: CurseForgeModInfo[] = result?.mods ?? [];
+          const strict = pickBestLocalStrictCandidate(mod, candidates);
+          setModDetailsCache((prev) => ({ ...prev, [mod.id]: strict }));
+          continue;
+        }
+
+        const queries = mod.slug?.trim()
+          ? [mod.slug.trim()]
+          : mod.curseForgeId != null
+            ? [String(mod.curseForgeId)]
+            : [mod.name];
+
+        if (queries.length === 0) {
+          setModDetailsCache((prev) => ({ ...prev, [mod.id]: null }));
+          continue;
+        }
+
+        let best: CurseForgeModInfo | null = null;
+        for (const query of queries) {
+          const result = await ipc.mods.search({
+            query,
+            page: 0,
+            pageSize: 10,
+            categories: [],
+            sortField: 1,
+            sortOrder: 1,
+          });
+
+          const candidates: CurseForgeModInfo[] = result?.mods ?? [];
+          best = pickBestCandidate(mod, [query], candidates);
+          if (best) break;
+        }
+
+        setModDetailsCache((prev) => ({ ...prev, [mod.id]: best }));
+      } catch {
+        // ignore fetch failure; modal will fall back to installed-mod fields
+      }
+    }
+  }, [getLocalMetadataQueries, isLocalInstalledMod, isTrustedRemoteIdentity, modDetailsCache, normalizeCfId, normalizeKey]);
+
+  useEffect(() => {
+    if (installedMods.length === 0) return;
+    const toEnrich = installedMods.filter((m) => !m.iconUrl || !m.slug);
+    void prefetchModDetails(toEnrich);
+  }, [installedMods, prefetchModDetails]);
 
   const toggleContentModSelection = useCallback((modId: string, index: number) => {
     setSelectedMods((prev) => {
@@ -604,8 +1073,21 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     if (mod.slug) {
       return `https://www.curseforge.com/hytale/mods/${mod.slug}`;
     }
-    const id = mod.curseForgeId || (typeof mod.id === 'string' && mod.id.startsWith('cf-') ? mod.id.replace('cf-', '') : mod.id);
+    if (isLocalInstalledMod(mod)) {
+      return `https://www.curseforge.com/hytale/mods/search?search=${encodeURIComponent(String(mod.name || ''))}`;
+    }
+    if (mod.curseForgeId != null) {
+      return `https://www.curseforge.com/hytale/mods/${String(mod.curseForgeId)}`;
+    }
+    const id = (typeof mod.id === 'string' && mod.id.startsWith('cf-') ? mod.id.replace('cf-', '') : mod.id);
     return `https://www.curseforge.com/hytale/mods/search?search=${encodeURIComponent(String(id || mod.name))}`;
+  }, []);
+
+  const getCurseForgeUrlFromDetails = useCallback((details: CurseForgeModInfo | null | undefined): string | null => {
+    if (!details) return null;
+    if (details.slug) return `https://www.curseforge.com/hytale/mods/${details.slug}`;
+    if (details.id) return `https://www.curseforge.com/hytale/mods/${String(details.id)}`;
+    return null;
   }, []);
 
   const getTabLabel = useCallback((tab: InstanceTab) => {
@@ -616,8 +1098,34 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
   const handleOpenModPage = useCallback((e: React.MouseEvent, mod: ModInfo) => {
     e.preventDefault();
     e.stopPropagation();
+    const cached = modDetailsCache[mod.id];
+    const cachedUrl = getCurseForgeUrlFromDetails(cached);
+    if (cachedUrl) {
+      ipc.browser.open(cachedUrl);
+      return;
+    }
+
+    // If we have a numeric id but no slug yet, fetch once on-demand so we can open the real page.
+    if (!isLocalInstalledMod(mod) && !mod.slug && mod.curseForgeId != null && Number.isFinite(mod.curseForgeId)) {
+      void (async () => {
+        try {
+          const info = await ipc.mods.info({ modId: String(mod.curseForgeId) });
+          if (info && String(info.id || '').trim()) {
+            setModDetailsCache((prev) => ({ ...prev, [mod.id]: info }));
+            const url = getCurseForgeUrlFromDetails(info) || getCurseForgeUrl(mod);
+            ipc.browser.open(url);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        ipc.browser.open(getCurseForgeUrl(mod));
+      })();
+      return;
+    }
+
     ipc.browser.open(getCurseForgeUrl(mod));
-  }, [getCurseForgeUrl]);
+  }, [getCurseForgeUrl, getCurseForgeUrlFromDetails, isLocalInstalledMod, modDetailsCache]);
 
   const handleDeleteSave = useCallback(async (e: React.MouseEvent, saveName: string) => {
     e.preventDefault();
@@ -742,11 +1250,15 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     setIsDeletingMod(false);
   };
 
-  const handleBulkDeleteMods = async () => {
-    if (!selectedInstance || selectedMods.size === 0) return;
+  const handleBulkDeleteMods = async (ids?: Iterable<string>) => {
+    if (!selectedInstance) return;
+
+    const idsToDelete = Array.from(ids ?? selectedMods);
+    if (idsToDelete.length === 0) return;
+
     setIsDeletingMod(true);
     try {
-      for (const modId of selectedMods) {
+      for (const modId of idsToDelete) {
         await UninstallInstanceMod(modId, selectedInstance.branch, selectedInstance.version, selectedInstance.id);
       }
       setSelectedMods(new Set());
@@ -758,6 +1270,142 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     }
     setIsDeletingMod(false);
   };
+
+  const handleBulkSetModsEnabled = async (desiredEnabled: boolean) => {
+    if (!selectedInstance || selectedMods.size === 0) return;
+
+    // Apply to the currently visible (filtered) selection.
+    const selectedVisibleMods = filteredMods.filter((m) => selectedMods.has(m.id));
+    if (selectedVisibleMods.length === 0) return;
+
+    const modsNeedingChange = selectedVisibleMods.filter((m) => Boolean(m.enabled) !== desiredEnabled);
+    if (modsNeedingChange.length === 0) {
+      setMessage({
+        type: 'success',
+        text: desiredEnabled ? t('modManager.modsEnabled') : t('modManager.modsDisabled'),
+      });
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+
+    setIsBulkTogglingMods(true);
+    try {
+      for (const mod of modsNeedingChange) {
+        await ipc.mods.toggle({
+          modId: mod.id,
+          instanceId: selectedInstance.id,
+          branch: selectedInstance.branch,
+          version: selectedInstance.version,
+        });
+      }
+
+      const changedIds = new Set(modsNeedingChange.map((m) => m.id));
+      setInstalledMods((prev) => prev.map((m) => (changedIds.has(m.id) ? { ...m, enabled: desiredEnabled } : m)));
+
+      setMessage({
+        type: 'success',
+        text: desiredEnabled ? t('modManager.modsEnabled') : t('modManager.modsDisabled'),
+      });
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage({ type: 'error', text: t('modManager.toggleFailed') });
+      setTimeout(() => setMessage(null), 3000);
+    }
+    setIsBulkTogglingMods(false);
+  };
+
+  const bulkDeleteList = useMemo(() => {
+    if (selectedMods.size === 0) return [];
+    return filteredMods.filter((m) => selectedMods.has(m.id));
+  }, [filteredMods, selectedMods]);
+
+  const bulkUpdateList = useMemo(() => {
+    return (modsWithUpdates || []).filter((m) => typeof m.latestFileId === 'number' && Number.isFinite(m.latestFileId));
+  }, [modsWithUpdates]);
+
+  useEffect(() => {
+    if (!showBulkUpdateConfirm) return;
+    setSelectedBulkUpdateIds(new Set(bulkUpdateList.map((m) => m.id)));
+    setBulkUpdatePreviewId(bulkUpdateList[0]?.id ?? null);
+    void prefetchModDetails(bulkUpdateList);
+  }, [showBulkUpdateConfirm, bulkUpdateList, prefetchModDetails]);
+
+  useEffect(() => {
+    if (!showBulkDeleteConfirm) return;
+    setSelectedBulkDeleteIds(new Set(bulkDeleteList.map((m) => m.id)));
+    setBulkDeletePreviewId(bulkDeleteList[0]?.id ?? null);
+    void prefetchModDetails(bulkDeleteList);
+  }, [showBulkDeleteConfirm, bulkDeleteList, prefetchModDetails]);
+
+  const handleBulkUpdateMods = useCallback(async () => {
+
+    if (!selectedInstance || bulkUpdateList.length === 0) return;
+
+    const modsToUpdate = bulkUpdateList.filter((m) => selectedBulkUpdateIds.has(m.id) && typeof m.latestFileId === 'number' && Number.isFinite(m.latestFileId));
+    if (modsToUpdate.length === 0) return;
+
+    setIsUpdatingMods(true);
+    let failed = 0;
+    for (const mod of modsToUpdate) {
+      try {
+        const fileId = String(mod.latestFileId);
+        await ipc.mods.install({
+          modId: getCurseForgeModId(mod),
+          fileId,
+          instanceId: selectedInstance.id,
+          branch: selectedInstance.branch,
+          version: selectedInstance.version,
+        });
+      } catch {
+        failed++;
+      }
+    }
+
+    await loadInstalledMods();
+    if (failed > 0) {
+      setMessage({ type: 'error', text: `${t('modManager.toggleFailed')} (${failed}/${modsToUpdate.length})` });
+      setTimeout(() => setMessage(null), 3500);
+    } else {
+      setMessage({ type: 'success', text: t('modManager.updating') });
+      setTimeout(() => setMessage(null), 2500);
+    }
+    setIsUpdatingMods(false);
+  }, [selectedInstance, bulkUpdateList, selectedBulkUpdateIds, getCurseForgeModId, loadInstalledMods, t]);
+
+  const loadChangelogFor = useCallback(async (mod: ModInfo) => {
+    if (changelogCache[mod.id]?.status === 'loading' || changelogCache[mod.id]?.status === 'ready') return;
+    if (typeof mod.latestFileId !== 'number' || !Number.isFinite(mod.latestFileId)) return;
+
+    setChangelogCache((prev) => ({
+      ...prev,
+      [mod.id]: { status: 'loading', text: '' },
+    }));
+
+    try {
+      const text = await invoke<string>('hyprism:mods:changelog', {
+        modId: getCurseForgeModId(mod),
+        fileId: String(mod.latestFileId),
+      });
+
+      setChangelogCache((prev) => ({
+        ...prev,
+        [mod.id]: { status: 'ready', text: (text ?? '').trim() },
+      }));
+    } catch {
+      setChangelogCache((prev) => ({
+        ...prev,
+        [mod.id]: { status: 'error', text: '' },
+      }));
+    }
+  }, [changelogCache, getCurseForgeModId]);
+
+  useEffect(() => {
+    if (!showBulkUpdateConfirm) return;
+    const activeId = bulkUpdatePreviewId ?? bulkUpdateList[0]?.id;
+    const active = bulkUpdateList.find((x) => x.id === activeId) ?? bulkUpdateList[0];
+    if (!active) return;
+    void loadChangelogFor(active);
+  }, [showBulkUpdateConfirm, bulkUpdatePreviewId, bulkUpdateList, loadChangelogFor]);
 
   const getInstanceDisplayName = (inst: InstalledVersionInfo) => {
     // Use custom name if set
@@ -1379,7 +2027,47 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   className={`absolute inset-0 flex flex-col ${
                     activeTab === 'content' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                   }`}
+                  onDragEnter={(e) => {
+                    if (!selectedInstance || selectedInstance.validationStatus !== 'Valid') return;
+                    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    modDropDepthRef.current++;
+                    setIsModDropActive(true);
+                  }}
+                  onDragOver={(e) => {
+                    if (!selectedInstance || selectedInstance.validationStatus !== 'Valid') return;
+                    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDragLeave={(e) => {
+                    if (!selectedInstance || selectedInstance.validationStatus !== 'Valid') return;
+                    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    modDropDepthRef.current = Math.max(0, modDropDepthRef.current - 1);
+                    if (modDropDepthRef.current === 0) setIsModDropActive(false);
+                  }}
+                  onDrop={(e) => {
+                    if (!selectedInstance || selectedInstance.validationStatus !== 'Valid') return;
+                    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    modDropDepthRef.current = 0;
+                    setIsModDropActive(false);
+                    void handleDropImportMods(e.dataTransfer.files);
+                  }}
                 >
+                  {isModDropActive && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50">
+                      <div className="px-5 py-4 rounded-2xl border border-white/10 bg-[#1c1c1e]/80 text-white/80 text-sm font-medium">
+                        Drop mod files to import
+                      </div>
+                    </div>
+                  )}
+
                   {selectedInstance.validationStatus === 'Valid' && (
                     <>
                   {/* Content Header */}
@@ -1391,6 +2079,13 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         type="text"
                         value={modsSearchQuery}
                         onChange={(e) => setModsSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            (e.currentTarget as HTMLInputElement).select();
+                          }
+                        }}
                         placeholder={t('modManager.searchMods')}
                         className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#2c2c2e] border border-white/[0.08] text-white text-sm placeholder-white/40 focus:outline-none focus:border-white/20"
                       />
@@ -1398,36 +2093,74 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 ml-auto">
-                      {updateCount > 0 && (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/20">
-                          {updateCount} {t('modManager.updatesAvailableShort')}
-                        </span>
-                      )}
                       <button
-                        onClick={loadInstalledMods}
+                        onClick={() => void loadInstalledMods()}
                         disabled={isLoadingMods}
                         className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
                         title={t('common.refresh')}
                       >
-                        <RefreshCw size={16} className={isLoadingMods ? 'animate-spin' : ''} />
+                        <RotateCw size={16} className={isLoadingMods ? 'animate-spin' : ''} />
                       </button>
-                      {selectedMods.size > 0 && (
-                        <button
-                          onClick={handleBulkDeleteMods}
-                          disabled={isDeletingMod}
-                          className="px-3 py-2 rounded-xl text-sm font-medium bg-red-500/15 text-red-400 hover:bg-red-500/20 border border-red-500/20 flex items-center gap-2 transition-all"
-                        >
-                          <Trash2 size={14} />
-                          {t('modManager.deleteSelected')} ({selectedMods.size})
-                        </button>
-                      )}
+
+                      <button
+                        onClick={() => setShowBulkUpdateConfirm(true)}
+                        disabled={updateCount === 0 || isUpdatingMods || isBulkTogglingMods}
+                        className={`relative p-2 rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-transparent ${
+                          updateCount > 0
+                            ? 'text-green-400 bg-green-500/10 hover:bg-green-500/15 border border-green-500/20'
+                            : 'text-white/50 hover:text-white hover:bg-white/[0.06]'
+                        }`}
+                        title={t('modManager.checkForUpdates')}
+                      >
+                        <RefreshCw size={16} className={isUpdatingMods ? 'animate-spin' : ''} />
+                        {updateCount > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full text-[10px] leading-4 text-center bg-green-500 text-black font-bold">
+                            {updateCount}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowBulkDeleteConfirm(true)}
+                        disabled={selectedMods.size === 0 || isDeletingMod || isBulkTogglingMods}
+                        className="relative p-2 rounded-xl text-white/50 hover:text-red-300 hover:bg-red-500/10 transition-all disabled:opacity-40 disabled:hover:bg-transparent"
+                        title={t('modManager.deleteSelected')}
+                      >
+                        <Trash2 size={16} />
+                        {selectedMods.size > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full text-[10px] leading-4 text-center bg-red-500 text-black font-bold">
+                            {selectedMods.size}
+                          </span>
+                        )}
+                      </button>
                     </div>
                   </div>
                     </>
                   )}
 
                   {/* Mods List */}
-                  <div className="flex-1 overflow-y-auto">
+                  <div
+                    className="flex-1 overflow-y-auto focus:outline-none"
+                    tabIndex={0}
+                    onMouseDown={(e) => {
+                      // Allow Cmd/Ctrl+A to work even if the user last clicked inside the list.
+                      (e.currentTarget as HTMLDivElement).focus();
+                    }}
+                    onKeyDown={(e) => {
+                      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'a') return;
+
+                      const target = e.target as HTMLElement | null;
+                      const tag = target?.tagName?.toLowerCase();
+                      const isTypingTarget = tag === 'input' || tag === 'textarea' || Boolean((target as any)?.isContentEditable);
+                      if (isTypingTarget) return;
+
+                      e.preventDefault();
+                      e.stopPropagation();
+
+                      const allIds = filteredMods.map((m) => m.id);
+                      const alreadyAllSelected = allIds.length > 0 && allIds.every((id) => selectedMods.has(id));
+                      setSelectedMods(alreadyAllSelected ? new Set() : new Set(allIds));
+                    }}
+                  >
                     {selectedInstance.validationStatus !== 'Valid' ? (
                       <div className="flex flex-col items-center justify-center h-full text-white/40">
                         <Download size={48} className="mb-4 opacity-40" />
@@ -1458,6 +2191,12 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                           {filteredMods.map((mod, index) => {
                             const hasUpdate = modsWithUpdates.some(u => u.id === mod.id);
                             const isSelected = selectedMods.has(mod.id);
+                            const details = modDetailsCache[mod.id];
+                            const canUseRemoteDetails = isTrustedRemoteIdentity(mod) || details != null;
+                            const resolvedIconUrl = mod.iconUrl || (canUseRemoteDetails ? (details?.iconUrl || details?.thumbnailUrl) : undefined);
+                            const displayName = canUseRemoteDetails ? (details?.name || mod.name) : mod.name;
+                            const displayAuthor = canUseRemoteDetails ? (details?.author || mod.author) : mod.author;
+                            const cfUrlFromDetails = canUseRemoteDetails ? getCurseForgeUrlFromDetails(details) : null;
 
                             return (
                               <div
@@ -1465,10 +2204,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                 onClick={(e) => {
                                   handleContentRowClick(e, mod.id, index);
                                 }}
-                                className={`group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
-                                  isSelected
-                                    ? 'border-white/[0.08] bg-[#252527]'
-                                    : 'border-transparent hover:bg-[#252527]'
+                                className={`group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                                  isSelected ? 'bg-[#252527]' : 'hover:bg-[#252527]'
                                 }`}
                               >
                                 {/* Checkbox */}
@@ -1491,8 +2228,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
                                 {/* Icon */}
                                 <div className="w-12 h-12 rounded-lg bg-[#1c1c1e] flex items-center justify-center overflow-hidden flex-shrink-0">
-                                  {mod.iconUrl ? (
-                                    <img src={mod.iconUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                  {resolvedIconUrl ? (
+                                    <img src={resolvedIconUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
                                   ) : (
                                     <Package size={20} className="text-white/30" />
                                   )}
@@ -1502,37 +2239,49 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <button
-                                      onClick={(e) => handleOpenModPage(e, mod)}
+                                      onClick={(e) => {
+                                        if (cfUrlFromDetails) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          ipc.browser.open(cfUrlFromDetails);
+                                          return;
+                                        }
+                                        handleOpenModPage(e, mod);
+                                      }}
                                       className="text-white font-medium truncate hover:underline underline-offset-2 text-left"
                                       title="Open CurseForge page"
                                     >
-                                      {mod.name}
+                                      {displayName}
                                     </button>
                                     {hasUpdate && (
                                       <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 flex-shrink-0">
                                         {t('modManager.updateBadge')}
                                       </span>
                                     )}
-                                    {mod.categories?.length > 0 && typeof mod.categories[0] === 'string' && (
+                                    {(() => {
+                                      const firstCategory = mod.categories?.[0];
+                                      if (typeof firstCategory !== 'string') return null;
+
+                                      return (
                                       <span className="px-1.5 py-0.5 rounded text-[10px] text-white/40 bg-[#2c2c2e] flex-shrink-0">
                                         {(() => {
-                                          const raw = mod.categories[0] as string;
-                                          const key = `modManager.category.${raw.replace(/[\s\\/]+/g, '_').toLowerCase()}`;
+                                          const key = `modManager.category.${firstCategory.replace(/[\s\\/]+/g, '_').toLowerCase()}`;
                                           const translated = t(key);
-                                          return translated !== key ? translated : raw;
+                                          return translated !== key ? translated : firstCategory;
                                         })()}
                                       </span>
-                                    )}
+                                      );
+                                    })()}
                                   </div>
                                   <p className="text-white/30 text-xs truncate mt-0.5">
-                                    {mod.author || t('modManager.unknownAuthor')}
+                                    {displayAuthor || t('modManager.unknownAuthor')}
                                   </p>
                                 </div>
 
                                 {/* Right side: version + toggle (Installed-specific) */}
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-white/60 text-xs truncate max-w-[140px]">{mod.version || '-'}</span>
+                                    <span className="text-white/60 text-xs truncate max-w-[140px]">{getDisplayVersion(mod)}</span>
                                     {mod.releaseType && mod.releaseType !== 1 && (
                                       <span
                                         className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${
@@ -1549,10 +2298,18 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                   <button
                                     className="w-11 h-6 rounded-full p-0.5 transition-colors"
                                     style={{ backgroundColor: mod.enabled ? accentColor : 'rgba(255,255,255,0.18)' }}
+                                    disabled={isBulkTogglingMods}
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       if (!selectedInstance) return;
                                       try {
+                                        // If there is a current selection and the clicked mod is part of it,
+                                        // treat this toggle as a bulk enable/disable for the whole selection.
+                                        if (selectedMods.size > 0 && selectedMods.has(mod.id)) {
+                                          await handleBulkSetModsEnabled(!mod.enabled);
+                                          return;
+                                        }
+
                                         const ok = await ipc.mods.toggle({
                                           modId: mod.id,
                                           instanceId: selectedInstance.id,
@@ -1618,6 +2375,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                       installedFileIds={new Set(installedMods.filter(m => m.fileId).map(m => String(m.fileId)))}
                       onModsInstalled={() => loadInstalledMods()}
                       onBack={() => setActiveTab('content')}
+                      refreshSignal={browseRefreshSignal}
                     />
                   )}
                 </div>
@@ -1851,6 +2609,337 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all flex items-center gap-2">
                   {isDeletingMod && <Loader2 size={14} className="animate-spin" />}
                   {t('common.delete')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Update Confirmation */}
+      <AnimatePresence>
+        {showBulkUpdateConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0a0a0a]/90"
+            onClick={(e) => e.target === e.currentTarget && setShowBulkUpdateConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="p-6 w-full max-w-4xl mx-4 shadow-2xl glass-panel-static-solid"
+            >
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                    <RefreshCw size={16} className="text-green-400" />
+                    {t('modManager.updateAll')}
+                  </h3>
+                  <p className="text-white/60 text-sm mt-1">
+                    {bulkUpdateList.length > 0
+                      ? t('modManager.updatesAvailable', { count: bulkUpdateList.length })
+                      : t('modManager.allUpToDate')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowBulkUpdateConfirm(false)}
+                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                  title={t('common.close')}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {bulkUpdateList.length > 0 && (
+                <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-4">
+                  {/* List */}
+                  <div className="rounded-2xl border border-white/10 bg-[#1c1c1e]/60 overflow-hidden">
+                    <div className="p-2 space-y-1">
+                      {bulkUpdateList.map((m) => {
+                        const details = modDetailsCache[m.id];
+                        const ss0 = (details?.screenshots as ModScreenshot[] | undefined)?.[0];
+                        const iconUrl = m.iconUrl || details?.iconUrl || details?.thumbnailUrl;
+                        const isChecked = selectedBulkUpdateIds.has(m.id);
+                        const isActive = bulkUpdatePreviewId === m.id;
+                        const summary = details?.summary || m.description || '';
+                        const isChangelogOpen = openChangelogIds.has(m.id);
+                        const changelogState = changelogCache[m.id]?.status ?? 'idle';
+                        const changelogText = changelogCache[m.id]?.text ?? '';
+
+                        return (
+                          <div key={m.id} className="rounded-xl">
+                            <div
+                              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                                isActive ? 'bg-white/5 border border-white/10' : 'hover:bg-white/5'
+                              }`}
+                              onClick={() => {
+                                setBulkUpdatePreviewId((prev) => (prev === m.id ? null : m.id));
+                                setOpenChangelogIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(m.id);
+                                  return next;
+                                });
+                              }}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedBulkUpdateIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(m.id)) next.delete(m.id);
+                                    else next.add(m.id);
+                                    return next;
+                                  });
+                                }}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                  isChecked ? '' : 'bg-transparent border-white/30 hover:border-white/50'
+                                }`}
+                                style={isChecked ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                                title={t('modManager.selected')}
+                              >
+                                {isChecked && <Check size={12} style={{ color: accentTextColor }} />}
+                              </button>
+
+                              <div className="w-12 h-12 rounded-lg bg-[#2c2c2e] overflow-hidden flex-shrink-0">
+                                {ss0?.thumbnailUrl ? (
+                                  <img src={ss0.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                ) : iconUrl ? (
+                                  <img src={iconUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package size={18} className="text-white/30" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="text-white font-medium truncate">{m.name}</div>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 flex-shrink-0">
+                                      {m.latestVersion || t('modManager.update')}
+                                    </span>
+                                  </div>
+                                  <div className="text-white/40 text-xs truncate max-w-[55%] text-right">
+                                    {m.latestVersion ? `${t('modManager.update')} → ${m.latestVersion}` : t('modManager.update')}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {isActive && (
+                              <div className="mt-2 px-4 pb-4">
+                                <div className="text-white/70 text-sm leading-relaxed">
+                                  {summary?.trim() ? summary : t('modManager.noDescription')}
+                                </div>
+
+                                <div className="mt-3">
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const willOpen = !openChangelogIds.has(m.id);
+                                      setOpenChangelogIds((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(m.id)) next.delete(m.id);
+                                        else next.add(m.id);
+                                        return next;
+                                      });
+                                      if (willOpen) {
+                                        await loadChangelogFor(m);
+                                      }
+                                    }}
+                                    className="flex items-center gap-2 text-white/70 hover:text-white/85 transition-colors text-xs font-medium"
+                                  >
+                                    <ChevronDown
+                                      size={14}
+                                      className={`text-white/40 transition-transform ${isChangelogOpen ? 'rotate-180' : ''}`}
+                                    />
+                                    {t('modManager.viewChangelog')}
+                                  </button>
+
+                                  {isChangelogOpen && (
+                                    <div className="mt-1">
+                                      {changelogState === 'loading' && (
+                                        <div className="flex items-center gap-2 text-white/50 text-xs">
+                                          <Loader2 size={12} className="animate-spin" />
+                                          {t('modManager.updating')}
+                                        </div>
+                                      )}
+                                      {changelogState === 'error' && (
+                                        <div className="text-red-400 text-xs">{t('modManager.toggleFailed')}</div>
+                                      )}
+                                      {changelogState === 'ready' && (
+                                        <pre className="whitespace-pre-wrap text-white/60 text-xs leading-relaxed font-sans">
+                                          {changelogText || t('modManager.noDescription')}
+                                        </pre>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 mt-5">
+                <button
+                  onClick={() => setShowBulkUpdateConfirm(false)}
+                  className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleBulkUpdateMods();
+                    setShowBulkUpdateConfirm(false);
+                  }}
+                  disabled={bulkUpdateList.length === 0 || isUpdatingMods || selectedBulkUpdateIds.size === 0}
+                  className="px-4 py-2 rounded-xl text-sm font-medium bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isUpdatingMods && <Loader2 size={14} className="animate-spin" />}
+                  {isUpdatingMods ? t('modManager.updating') : `${t('modManager.updateAll')} (${selectedBulkUpdateIds.size})`}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Delete Confirmation */}
+      <AnimatePresence>
+        {showBulkDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0a0a0a]/90"
+            onClick={(e) => e.target === e.currentTarget && setShowBulkDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="p-6 w-full max-w-4xl mx-4 shadow-2xl glass-panel-static-solid"
+            >
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                    <Trash2 size={16} className="text-red-400" />
+                    {t('modManager.deleteMods')}
+                  </h3>
+                  <p className="text-white/60 text-sm mt-1">
+                    {bulkDeleteList.length > 0
+                      ? `${t('modManager.deleteSelected')} (${bulkDeleteList.length})`
+                      : t('modManager.noModsInstalled')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(false)}
+                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                  title={t('common.close')}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {bulkDeleteList.length > 0 && (
+                <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-4">
+                  {/* List */}
+                  <div className="rounded-2xl border border-white/10 bg-[#1c1c1e]/60 overflow-hidden">
+                    <div className="p-2 space-y-1">
+                      {bulkDeleteList.map((m) => {
+                        const details = modDetailsCache[m.id];
+                        const ss0 = (details?.screenshots as ModScreenshot[] | undefined)?.[0];
+                        const iconUrl = m.iconUrl || details?.iconUrl || details?.thumbnailUrl;
+                        const isChecked = selectedBulkDeleteIds.has(m.id);
+                        const isActive = bulkDeletePreviewId === m.id;
+                        const summary = details?.summary || m.description || '';
+
+                        return (
+                          <div key={m.id} className="rounded-xl">
+                            <div
+                              className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                                isActive ? 'bg-white/5 border border-white/10' : 'hover:bg-white/5'
+                              }`}
+                              onClick={() => setBulkDeletePreviewId((prev) => (prev === m.id ? null : m.id))}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedBulkDeleteIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(m.id)) next.delete(m.id);
+                                    else next.add(m.id);
+                                    return next;
+                                  });
+                                }}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                  isChecked ? '' : 'bg-transparent border-white/30 hover:border-white/50'
+                                }`}
+                                style={isChecked ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
+                                title={t('modManager.selected')}
+                              >
+                                {isChecked && <Check size={12} style={{ color: accentTextColor }} />}
+                              </button>
+
+                              <div className="w-12 h-12 rounded-lg bg-[#2c2c2e] overflow-hidden flex-shrink-0">
+                                {ss0?.thumbnailUrl ? (
+                                  <img src={ss0.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                ) : iconUrl ? (
+                                  <img src={iconUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package size={18} className="text-white/30" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="text-white font-medium truncate">{m.name}</div>
+                                <div className="text-white/40 text-xs truncate">{m.author || t('modManager.unknownAuthor')}</div>
+                              </div>
+                            </div>
+
+                            {isActive && (
+                              <div className="mt-2 px-4 pb-4">
+                                <div className="text-white/70 text-sm leading-relaxed">
+                                  {summary?.trim() ? summary : t('modManager.noDescription')}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 mt-5">
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(false)}
+                  className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleBulkDeleteMods(selectedBulkDeleteIds);
+                    setShowBulkDeleteConfirm(false);
+                  }}
+                  disabled={bulkDeleteList.length === 0 || isDeletingMod || selectedBulkDeleteIds.size === 0}
+                  className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isDeletingMod && <Loader2 size={14} className="animate-spin" />}
+                  {`${t('modManager.deleteSelected')} (${selectedBulkDeleteIds.size})`}
                 </button>
               </div>
             </motion.div>

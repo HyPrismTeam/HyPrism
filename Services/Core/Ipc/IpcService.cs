@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ElectronNET.API;
@@ -62,6 +63,8 @@ namespace HyPrism.Services.Core.Ipc;
 public class IpcService
 {
     private readonly IServiceProvider _services;
+
+    private static int _hasRegisteredAll;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -128,6 +131,12 @@ public class IpcService
 
     public void RegisterAll()
     {
+        if (Interlocked.Exchange(ref _hasRegisteredAll, 1) == 1)
+        {
+            Logger.Warning("IPC", "RegisterAll called more than once; skipping duplicate IPC handler registration");
+            return;
+        }
+
         Logger.Info("IPC", "Registering IPC handlers...");
 
         RegisterConfigHandlers();
@@ -1426,12 +1435,14 @@ public class IpcService
 
     // #region Mods
     // @ipc invoke hyprism:mods:list -> InstalledMod[]
-    // @ipc invoke hyprism:mods:search -> ModSearchResult 15000
+    // @ipc invoke hyprism:mods:search -> ModSearchResult 30000
     // @ipc invoke hyprism:mods:installed -> InstalledMod[]
     // @ipc invoke hyprism:mods:uninstall -> boolean
     // @ipc invoke hyprism:mods:checkUpdates -> InstalledMod[] 30000
-    // @ipc invoke hyprism:mods:install -> boolean 30000
+    // @ipc invoke hyprism:mods:install -> boolean 300000
     // @ipc invoke hyprism:mods:files -> ModFilesResult
+    // @ipc invoke hyprism:mods:info -> ModInfo 30000
+    // @ipc invoke hyprism:mods:changelog -> string
     // @ipc invoke hyprism:mods:categories -> ModCategory[]
     // @ipc invoke hyprism:mods:installLocal -> boolean
     // @ipc invoke hyprism:mods:installBase64 -> boolean
@@ -1687,6 +1698,47 @@ public class IpcService
             {
                 Logger.Error("IPC", $"Mods files failed: {ex.Message}");
                 Reply("hyprism:mods:files:reply", new { files = new List<object>(), totalCount = 0 });
+            }
+        });
+
+        // Get single mod metadata (by numeric id or slug)
+        Electron.IpcMain.On("hyprism:mods:info", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var modId = root.GetProperty("modId").GetString() ?? "";
+
+                var mod = await modService.GetModAsync(modId);
+                Reply("hyprism:mods:info:reply", mod ?? new ModInfo());
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Mods info failed: {ex.Message}");
+                Reply("hyprism:mods:info:reply", new ModInfo());
+            }
+        });
+
+        // Get changelog for a mod file
+        Electron.IpcMain.On("hyprism:mods:changelog", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var modId = root.GetProperty("modId").GetString() ?? "";
+                var fileId = root.GetProperty("fileId").GetString() ?? "";
+
+                var text = await modService.GetModFileChangelogAsync(modId, fileId);
+                Reply("hyprism:mods:changelog:reply", text ?? "");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Mods changelog failed: {ex.Message}");
+                Reply("hyprism:mods:changelog:reply", "");
             }
         });
         

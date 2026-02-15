@@ -728,6 +728,114 @@ public class ModService : IModService
     }
 
     /// <inheritdoc/>
+    public async Task<ModInfo?> GetModAsync(string modIdOrSlug)
+    {
+        if (!HasApiKey() || string.IsNullOrWhiteSpace(modIdOrSlug))
+            return null;
+
+        try
+        {
+            CurseForgeMod? cfMod = null;
+            var token = modIdOrSlug.Trim();
+
+            if (int.TryParse(token, out _))
+            {
+                var endpoint = $"/v1/mods/{token}";
+                using var request = CreateCurseForgeRequest(HttpMethod.Get, endpoint);
+                using var response = await _httpClient.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var modResponse = JsonSerializer.Deserialize<CurseForgeModResponse>(json, _jsonOptions);
+                    cfMod = modResponse?.Data;
+                }
+            }
+            else
+            {
+                var slugEndpoint = $"/v1/mods/search?gameId={HytaleGameId}&slug={Uri.EscapeDataString(token)}&index=0&pageSize=1";
+                using var slugRequest = CreateCurseForgeRequest(HttpMethod.Get, slugEndpoint);
+                using var slugResponse = await _httpClient.SendAsync(slugRequest);
+                if (slugResponse.IsSuccessStatusCode)
+                {
+                    var slugJson = await slugResponse.Content.ReadAsStringAsync();
+                    var searchResponse = JsonSerializer.Deserialize<CurseForgeSearchResponse>(slugJson, _jsonOptions);
+                    cfMod = searchResponse?.Data?.FirstOrDefault();
+                }
+
+                if (cfMod == null)
+                {
+                    var fallbackEndpoint = $"/v1/mods/search?gameId={HytaleGameId}&searchFilter={Uri.EscapeDataString(token)}&index=0&pageSize=20";
+                    using var fallbackRequest = CreateCurseForgeRequest(HttpMethod.Get, fallbackEndpoint);
+                    using var fallbackResponse = await _httpClient.SendAsync(fallbackRequest);
+                    if (fallbackResponse.IsSuccessStatusCode)
+                    {
+                        var fallbackJson = await fallbackResponse.Content.ReadAsStringAsync();
+                        var fallbackSearch = JsonSerializer.Deserialize<CurseForgeSearchResponse>(fallbackJson, _jsonOptions);
+                        cfMod = fallbackSearch?.Data?.FirstOrDefault(m =>
+                            string.Equals(m.Slug, token, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(m.Name, token, StringComparison.OrdinalIgnoreCase));
+                    }
+                }
+            }
+
+            return cfMod == null ? null : MapToModInfo(cfMod);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("ModService", $"Get mod failed for '{modIdOrSlug}': {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> GetModFileChangelogAsync(string modId, string fileId)
+    {
+        if (!HasApiKey() || string.IsNullOrWhiteSpace(modId) || string.IsNullOrWhiteSpace(fileId))
+            return string.Empty;
+
+        try
+        {
+            var endpoint = $"/v1/mods/{modId}/files/{fileId}/changelog";
+            using var request = CreateCurseForgeRequest(HttpMethod.Get, endpoint);
+            using var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.Warning("ModService", $"Get changelog returned {response.StatusCode} for mod={modId} file={fileId}");
+                return string.Empty;
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            var body = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(body))
+                return string.Empty;
+
+            if (contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                    doc.RootElement.TryGetProperty("data", out var dataElement) &&
+                    dataElement.ValueKind == JsonValueKind.String)
+                {
+                    return dataElement.GetString() ?? string.Empty;
+                }
+
+                if (doc.RootElement.ValueKind == JsonValueKind.String)
+                {
+                    return doc.RootElement.GetString() ?? string.Empty;
+                }
+            }
+
+            return body;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("ModService", $"Get changelog failed for mod={modId} file={fileId}: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<List<InstalledMod>> CheckInstanceModUpdatesAsync(string instancePath)
     {
         if (!HasApiKey())

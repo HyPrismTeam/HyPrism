@@ -526,52 +526,7 @@ public class GameLauncher : IGameLauncher
 
     private void QuarantineIncompatibleServerMods(string userDataDir)
     {
-        try
-        {
-            string modsDir = Path.Combine(userDataDir, "Mods");
-            if (!Directory.Exists(modsDir))
-                return;
-
-            string[] jarFiles = Directory.GetFiles(modsDir, "*.jar", SearchOption.TopDirectoryOnly);
-            if (jarFiles.Length == 0)
-                return;
-
-            string quarantineDir = Path.Combine(userDataDir, "DisabledMods", "IncompatibleServerVersion");
-            int quarantinedCount = 0;
-
-            foreach (string jarPath in jarFiles)
-            {
-                if (!TryReadServerVersionFromManifest(jarPath, out string? serverVersion))
-                    continue;
-
-                if (!IsKnownInvalidServerVersion(serverVersion))
-                    continue;
-
-                Directory.CreateDirectory(quarantineDir);
-
-                string fileName = Path.GetFileName(jarPath);
-                string destinationPath = Path.Combine(quarantineDir, fileName);
-                if (File.Exists(destinationPath))
-                {
-                    string suffix = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                    destinationPath = Path.Combine(quarantineDir, $"{Path.GetFileNameWithoutExtension(fileName)}-{suffix}{Path.GetExtension(fileName)}");
-                }
-
-                File.Move(jarPath, destinationPath);
-                quarantinedCount++;
-
-                Logger.Warning("Game", $"Disabled incompatible mod '{fileName}' (ServerVersion='{serverVersion}')");
-            }
-
-            if (quarantinedCount > 0)
-            {
-                Logger.Warning("Game", $"Moved {quarantinedCount} incompatible mod(s) to {quarantineDir} to prevent server boot failure");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Game", $"Failed to validate mod compatibility before launch: {ex.Message}");
-        }
+        return;
     }
 
     private static bool TryReadServerVersionFromManifest(string jarPath, out string? serverVersion)

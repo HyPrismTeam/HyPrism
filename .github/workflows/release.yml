@@ -115,7 +115,8 @@ jobs:
               },
               "windows": {
                 "x64": {
-                  "zip": "https://github.com/$REPO/releases/download/$TAG/HyPrism-win-x64-$VERSION.zip"
+                  "zip": "https://github.com/$REPO/releases/download/$TAG/HyPrism-win-x64-$VERSION.zip",
+                  "exe": "https://github.com/$REPO/releases/download/$TAG/HyPrism-win-x64-$VERSION.exe"
                 }
               },
               "macos": {
@@ -169,21 +170,22 @@ jobs:
             
             | Platform | Architecture | Format | Download |
             |----------|-------------|--------|----------|
-            | **Windows** | x64 | Portable ZIP | `HyPrism-win-x64-${{ steps.version.outputs.version }}.zip` |
-            | **macOS** | ARM64 (Apple Silicon) | DMG | `HyPrism-mac-arm64-${{ steps.version.outputs.version }}.dmg` |
-            | **Linux** | x64 | AppImage | `HyPrism-linux-x64-${{ steps.version.outputs.version }}.AppImage` |
-            | **Linux** | x64 | DEB | `HyPrism-linux-x64-${{ steps.version.outputs.version }}.deb` |
-            | **Linux** | x64 | RPM | `HyPrism-linux-x64-${{ steps.version.outputs.version }}.rpm` |
-            | **Linux** | x64 | tar.xz | `HyPrism-linux-x64-${{ steps.version.outputs.version }}.tar.xz` |
-            | **Linux** | x64 | Flatpak | `HyPrism-linux-x64-${{ steps.version.outputs.version }}.flatpak` |
+            | **Windows** | x64 | Portable ZIP | [HyPrism-win-x64-${{ steps.version.outputs.version }}.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-win-x64-${{ steps.version.outputs.version }}.zip) |
+            | **Windows** | x64 | Installer EXE (NSIS) | [HyPrism-win-x64-${{ steps.version.outputs.version }}.exe](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-win-x64-${{ steps.version.outputs.version }}.exe) |
+            | **macOS** | ARM64 (Apple Silicon) | DMG | [HyPrism-mac-arm64-${{ steps.version.outputs.version }}.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-mac-arm64-${{ steps.version.outputs.version }}.dmg) |
+            | **Linux** | x64 | AppImage | [HyPrism-linux-x64-${{ steps.version.outputs.version }}.AppImage](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-linux-x64-${{ steps.version.outputs.version }}.AppImage) |
+            | **Linux** | x64 | DEB | [HyPrism-linux-x64-${{ steps.version.outputs.version }}.deb](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-linux-x64-${{ steps.version.outputs.version }}.deb) |
+            | **Linux** | x64 | RPM | [HyPrism-linux-x64-${{ steps.version.outputs.version }}.rpm](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-linux-x64-${{ steps.version.outputs.version }}.rpm) |
+            | **Linux** | x64 | tar.xz | [HyPrism-linux-x64-${{ steps.version.outputs.version }}.tar.xz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-linux-x64-${{ steps.version.outputs.version }}.tar.xz) |
+            | **Linux** | x64 | Flatpak | [HyPrism-linux-x64-${{ steps.version.outputs.version }}.flatpak](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag_name }}/HyPrism-linux-x64-${{ steps.version.outputs.version }}.flatpak) |
             
             ### System Requirements
             
-            | OS | Supported Architectures |
-            |----|------------------------|
-            | Windows 10/11 | x64 |
-            | Linux | x64 |
-            | macOS | ARM64 (Apple Silicon) |
+            | OS | Minimum version | Supported Architectures |
+            |----|-----------------|------------------------|
+            | Windows | Windows 10 22H2 or Windows 11 (latest cumulative updates recommended) | x64 |
+            | Linux | Ubuntu 18.04+, Debian 10+, Fedora 32+ | x64 |
+            | macOS | Monterey (12)+ | ARM64 (Apple Silicon) |
             
             > **Note**: Windows ARM64 and macOS Intel (x86_64) are **not supported**.
             

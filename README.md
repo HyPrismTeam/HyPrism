@@ -11,7 +11,7 @@
 
 > Disclaimer: HyPrism has no any connection to [PrismLauncher](https://github.com/PrismLauncher/PrismLauncher). HyPrism is an application that is being developed **INDEPENDENTLY** of the PrismLauncher project or its team. Thank you for your understanding
 
-<img src="Frontend/src/assets/images/preview_launcher.png" alt="HyPrism Dashboard"/>
+<img src="Frontend/public/preview_launcher.png" alt="HyPrism Dashboard"/>
 
 ## Installation
 
@@ -37,21 +37,31 @@ dotnet build
 dotnet run
 ```
 
+## Docs
+
+We provide a comprehensive glossary of the basic principles of operation and interaction with the project in [English](Docs/English) and [Russian](Docs/Russian) languages:
+- **If you are a regular user**, be sure to familiarise yourself with [user-related docs](Docs/English/User)
+- **If you would like to contribute to the development** of the launcher, please refer to the [technical documentation](Docs/English/Technical)
+
 ## Credits & Contributors
 
-Special thanks to **Sanasol** for maintaining and creating the [auth server](https://github.com/sanasol/hytale-auth-server).
+Special thanks to **Sanasol** for maintaining and creating the [auth server](https://github.com/sanasol/hytale-auth-server)
 
 <a href="https://github.com/yyyumeniku/HyPrism/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=yyyumeniku/HyPrism" alt="Contributors" />
 </a>
 
-## Legal Notice
+## Legal Notice & Licenses
+
+HyPrism is licensed under the **GNU General Public License v3.0 (GPL-3.0)**
+- Full license text: [LICENSE](LICENSE)
+- Third-party licenses: [Licenses/COPYING.md](Licenses/COPYING.md)
 
 ### Unofficial Product
-**HyPrism** is an unofficial, open-source launcher for Hytale. This project is **not** affiliated with, endorsed by, sponsored by, or approved by **Hypixel Studios**, **Riot Games**, or any of their affiliates.
+**HyPrism** is an unofficial, open-source launcher for Hytale. This project is **not** affiliated with, endorsed by, sponsored by, or approved by **Hypixel Studios**, **Riot Games**, or any of their affiliates
 
 ### Intellectual Property
-"Hytale", "Hypixel Studios", and strictly related logos and assets are trademarks or registered trademarks of **Hypixel Studios Inc.**. All rights reserved by their respective owners. usage of this software is subject to the terms of the [Hytale End-User License Agreement (EULA)](https://hytale.com/eula)
+"Hytale", "Hypixel Studios", and strictly related logos and assets are trademarks or registered trademarks of **Hypixel Studios Inc**. All rights reserved by their respective owners. usage of this software is subject to the terms of the [Hytale End-User License Agreement (EULA)](https://hytale.com/eula)
 
 ### Game Files & Distribution
 
@@ -61,6 +71,10 @@ Special thanks to **Sanasol** for maintaining and creating the [auth server](htt
 2.  **Third-Party Mirrors:** The software is also capable of retrieving game files via third-party mirrors (e.g., repositories provided by [MobCat](https://github.com/MobCat))
 
 The developers of HyPrism constitute no control over the content hosted on external mirrors. The choice of download source and compliance with the applicable license agreements rests with the user
+
+### Third-Party Components
+
+HyPrism depends on third-party libraries distributed under licenses including MIT, Apache-2.0, BSD-style licenses, and CC-BY-4.0
 
 <div align="center">
   <sub>Made with ❤️ by the HyPrism Community</sub>

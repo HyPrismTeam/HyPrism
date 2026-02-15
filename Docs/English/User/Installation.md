@@ -2,8 +2,15 @@
 
 ## Requirements
 
-- **Windows 10/11** (x64), **Linux** (x64), or **macOS** (x64/arm64)
+- **Windows:** Windows 10 **22H2** or Windows 11 (x64)
+- **Linux:** x64 distribution compatible with modern Electron builds (tested baseline: Ubuntu 18.04+, Debian 10+, Fedora 32+)
+- **macOS:** Monterey (12)+, Apple Silicon (arm64)
 - Internet connection for first launch (authentication & game download)
+
+Runtime note:
+- HyPrism is currently built with **Electron 34.2.0** and `net10.0` self-contained publish.
+- No separate .NET runtime installation is required for release binaries.
+- On old Windows 10 builds (pre-22H2), startup can fail due to unsupported OS/runtime combinations.
 
 ## Download
 
@@ -11,9 +18,15 @@ Download the latest release from the [GitHub Releases](https://github.com/yyyume
 
 ### Windows
 
+Option A (portable):
 1. Download `HyPrism-win-x64.zip`
 2. Extract to any folder
 3. Run `HyPrism.exe`
+
+Option B (installer):
+1. Download `HyPrism-win-x64-<version>.exe`
+2. Run installer
+3. Launch HyPrism from Start menu or desktop shortcut
 
 ### Linux
 
@@ -30,9 +43,11 @@ HyPrism uses native Linux dialog tools for folder/file selection. Install at lea
 
 #### Flatpak
 ```bash
-flatpak install dev.hyprism.HyPrism
-flatpak run dev.hyprism.HyPrism
+flatpak install io.github.HyPrismTeam.HyPrism
+flatpak run io.github.HyPrismTeam.HyPrism
 ```
+
+Note: the Flatpak includes a small launcher wrapper that checks your per-user data directory (`$XDG_DATA_HOME/HyPrism` or `~/.local/share/HyPrism`) for an installed HyPrism release and runs it if present. If no release is found the wrapper will download the Linux release artifact from GitHub (it tries the `latest` release first, and falls back to the latest prerelease if no suitable asset exists), extract it into the app data directory, and then execute the launcher. Actions and errors are logged to `XDG_DATA_HOME/HyPrism/wrapper.log`. This behavior uses the Flatpak per‑app data area and requires no additional filesystem permissions.
 
 ### macOS
 

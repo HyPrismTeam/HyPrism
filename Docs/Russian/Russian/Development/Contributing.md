@@ -19,13 +19,13 @@
 
 ### Примечание по иконкам Linux-пакетов
 
-- Для корректной иконки в `.deb`/`.rpm` скрипт `Scripts/publish.sh` теперь готовит Linux icon-set в `Build/icons/` как набор файлов размеров (`16x16.png` … `512x512.png`) и `icon.png`.
-- Перед публикацией (`deb`, `rpm`, `linux`, `all`) убедитесь, что существует `Build/icon.png`.
-- Linux package app ID: `com.hyprismteam.hyprism`.
-- AppStream-метаданные для Linux-пакетов берутся из `Packaging/linux/com.hyprismteam.hyprism.metainfo.xml`.
+- `Build/` теперь генерируется во время упаковки; исходная иконка — `Frontend/public/icon.png`.
+- Для Linux-пакетов (включая Flatpak) `Scripts/publish.sh` генерирует `Build/icons/` в hicolor-формате с app-id иконками (`io.github.HyPrismTeam.HyPrism`), чтобы иконка корректно экспортировалась после установки.
+- Linux package app ID: `io.github.HyPrismTeam.HyPrism`.
+- AppStream-метаданные для Linux-пакетов берутся из `Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml`.
 - На этапе repack для RPM намеренно удаляется payload `/usr/lib/.build-id`, а системные директории (`/`, `/usr`, `/usr/lib`) не добавляются как владельцы пакета — это предотвращает конфликты установки на Fedora.
-- Для Flatpak используется runtime/base `24.08`; в CI перед сборкой Flathub подключается через `sudo flatpak remote-add`, а `org.freedesktop.Platform`, `org.freedesktop.Sdk` и `org.electronjs.Electron2.BaseApp` устанавливаются на **system**-уровень.
-- После установки Linux CI выводит диагностику remotes/runtimes Flatpak, чтобы упрощать разбор сбоев flatpak-bundler.
+- Для Flatpak используется runtime/base `24.08`; в CI перед сборкой Flathub подключается через `sudo`, а `org.freedesktop.Platform`, `org.freedesktop.Sdk` и `org.electronjs.Electron2.BaseApp` устанавливаются на system-уровень.
+- Linux CI выводит диагностику remotes/runtimes Flatpak, чтобы быстрее разбирать сбои flatpak-bundler.
 
 ## Добавление новой функции
 

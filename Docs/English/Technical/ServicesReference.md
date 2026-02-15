@@ -14,6 +14,7 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **Folder picker timeout:** `hyprism:file:browseFolder` uses extended timeout (300s) to allow manual directory selection without frontend timeout.
 - **Mods target resolution:** mod IPC handlers resolve the target from installed instance metadata (including latest) and avoid implicit `branch/latest` placeholder fallback.
 - **Mods exact targeting:** mod IPC accepts optional `instanceId`; when provided, it has priority over branch/version to prevent collisions between multiple instances with the same version.
+- **Mods changelog:** `hyprism:mods:changelog` returns the (best-effort) plaintext changelog for a specific CurseForge mod file (`modId` + `fileId`).
 - **Instance operations targeting:** instance delete/saves IPC handlers accept `instanceId` and resolve by GUID first, with branch/version kept only as backward-compatible fallback.
 - **Instance icon refresh:** `hyprism:instance:getIcon` returns a cache-busted file URL (`?v=<lastWriteTicks>`) so updated logos appear immediately after overwrite.
 - **Frontend icon loading rule:** instance list icon requests are executed sequentially (not in parallel) to avoid mixed responses on shared IPC reply channels.

@@ -59,11 +59,27 @@ public interface IModService
     Task<ModFilesResult> GetModFilesAsync(string modId, int page, int pageSize);
 
     /// <summary>
+    /// Gets a single mod's metadata from CurseForge by id or slug.
+    /// Used to backfill missing slug/icon/description for installed mods.
+    /// </summary>
+    /// <param name="modIdOrSlug">CurseForge numeric id or slug.</param>
+    /// <returns>Mod info when found; otherwise null.</returns>
+    Task<ModInfo?> GetModAsync(string modIdOrSlug);
+
+    /// <summary>
     /// Checks for available updates for mods installed in an instance.
     /// </summary>
     /// <param name="instancePath">The path to the game instance.</param>
     /// <returns>A list of mods that have updates available.</returns>
     Task<List<InstalledMod>> CheckInstanceModUpdatesAsync(string instancePath);
+
+    /// <summary>
+    /// Gets the changelog for a specific mod file.
+    /// </summary>
+    /// <param name="modId">The CurseForge mod ID (numeric).</param>
+    /// <param name="fileId">The CurseForge file ID (numeric).</param>
+    /// <returns>Changelog text (best-effort, may be empty).</returns>
+    Task<string> GetModFileChangelogAsync(string modId, string fileId);
 
     /// <summary>
     /// Installs a mod from a local file.

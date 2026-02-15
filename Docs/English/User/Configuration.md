@@ -125,7 +125,6 @@ Use the profile menu to:
 Before launch, HyPrism validates `UserData/Mods` for known-incompatible server mod metadata.
 
 - Mods with a `ServerVersion` in the format `YYYY.MM.DD-<build>` are automatically moved to:
-	- `UserData/DisabledMods/IncompatibleServerVersion`
 - This prevents Hytale's singleplayer server crash (`Invalid X-Range` / `Server failed to boot`).
 - You can re-enable a moved mod manually by moving the `.jar` back to `UserData/Mods`.
 
@@ -136,6 +135,16 @@ In both **Installed Mods** and **Browse Mods** tabs, HyPrism supports faster mul
 - **Click** selects a single mod.
 - **Ctrl/Cmd + Click** toggles a mod in the selection.
 - **Shift + Click** replaces the current selection with the range from your anchor mod to the clicked mod.
+
+When one or more mods are selected in **Installed Mods**, bulk actions (like **Enable Selected** / **Disable Selected**) apply to the entire selection.
+
+## Drag-and-Drop Mod Import
+
+- In **Installed Mods**, you can import mods by dragging files into the mods list.
+- Supported drop formats: `.jar`, `.zip`, `.disabled`.
+- Very large files and unsupported formats are skipped to prevent freezes.
+- After importing, the mods list refreshes automatically.
+- Selection does not persist when switching tabs or instances.
 
 ## Instances and Worlds Quick Actions
 

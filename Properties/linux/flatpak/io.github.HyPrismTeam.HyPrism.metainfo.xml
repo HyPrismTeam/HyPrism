@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.hyprismteam.hyprism</id>
+  <id>io.github.HyPrismTeam.HyPrism</id>
   <name>HyPrism</name>
   <summary>Cross-platform Hytale launcher</summary>
+  <icon type="cached">io.github.HyPrismTeam.HyPrism</icon>
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
 
@@ -19,7 +20,7 @@
     </ul>
   </description>
 
-  <launchable type="desktop-id">HyPrism.desktop</launchable>
+  <launchable type="desktop-id">io.github.HyPrismTeam.HyPrism.desktop</launchable>
 
   <screenshots>
     <screenshot type="default">

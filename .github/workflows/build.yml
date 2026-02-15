@@ -109,13 +109,16 @@ jobs:
             flatpak \
             flatpak-builder
 
-      - name: Prepare Flatpak runtimes
+      - name: Prepare Flatpak remotes
         run: |
-          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak install -y flathub \
-            org.freedesktop.Platform//24.08 \
-            org.freedesktop.Sdk//24.08 \
-            org.electronjs.Electron2.BaseApp//24.08
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
+
+      - name: Diagnose Flatpak environment
+        run: |
+          flatpak --version
+          flatpak remotes --system || true
+          flatpak list --system --runtime | grep -E 'freedesktop|electronjs|24\.08|Electron2' || true
 
       - name: Diagnose Flatpak environment
         run: |

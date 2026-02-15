@@ -64,10 +64,10 @@ HyPrism/
 │   ├── generate-ipc.mjs        # IPC codegen: C# annotations → ipc.ts
 │   └── publish.sh              # Build script
 │
-├── Packaging/                  # OS-specific packaging
-│   ├── flatpak/                # Flatpak manifest + metadata
-│   ├── macos/                  # macOS Info.plist
-│   └── windows/                # Windows specific files
+├── Properties/                 # Build/package metadata and platform assets
+│   ├── linux/                  # Linux metainfo + flatpak metadata
+│   ├── macos/                  # macOS Info.plist and assets
+│   └── windows/                # Windows icon/assets
 │
 ├── Docs/                       # Documentation
 │   ├── English/                # English documentation

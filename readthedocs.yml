@@ -1,9 +1,9 @@
 version: 2
 sphinx:
-  configuration: docs/conf.py
+  configuration: Docs/conf.py
 python:
   install:
-    - requirements: docs/requirements.txt
+    - requirements: Docs/requirements.txt
 formats: html
 build:
   image: latest

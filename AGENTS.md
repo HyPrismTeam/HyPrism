@@ -4,8 +4,8 @@ This file is intended for automation agents (bots, CI scripts, or assistant agen
 
 ## Read the docs to learn more 💡
 
-- Agents MAY read any files under `docs/` to learn about features, architecture, build processes, APIs, and packaging.
-- Prefer `docs/source/` Markdown pages and `docs/BUILD-LINUX.md` for platform-specific notes.
+- Agents MAY read any files under `Docs/` to learn about features, architecture, build processes, APIs, and packaging.
+- Prefer `Docs/` Markdown pages (see `Docs/English/` and `Docs/Russian/`) for platform-specific notes.
 
 ## Documentation responsibilities (required) ✅
 
@@ -19,8 +19,8 @@ An agent MUST:
 ## How to make a docs change 🔧
 
 - Create a branch named `docs/update-<short-description>` or include the documentation changes in the same feature branch as the code change.
-- Add or modify files under `docs/source/` and keep content clear and concise.
-- Validate changes locally: run `make html` in `docs/` or `sphinx-build` to ensure no build errors.
+- Add or modify files under `Docs/` and keep content clear and concise.
+- Validate changes locally: run `make html` in `Docs/` or `sphinx-build` to ensure no build errors.
 - Use commit messages starting with `docs:` (for example: `docs: add patcher instructions for ClientPatcher`).
 - Open a Pull Request including a short PR description and a checklist of the docs updated.
 
@@ -29,7 +29,7 @@ An agent MUST:
 Before merging changes, ensure the following:
 
 - [ ] Documentation updated (user / developer / API) for the change
-- [ ] Docs build passes locally or in CI (run `make html` in `docs/` or verify Read the Docs build)
+- [ ] Docs build passes locally or in CI (run `make html` in `Docs/` or verify Read the Docs build)
 - [ ] Spell-check or lint docs and code
 - [ ] README updated if needed
 

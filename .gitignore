@@ -15,6 +15,7 @@ obj/
 *.cache
 .vs/
 Build/icons/*
+Build/*
 
 # Rider IDE
 .idea/
@@ -25,7 +26,7 @@ Build/icons/*
 .vscode/
 
 # Frontend Build outputs
-Packaging/flatpak/bundle
+packaging-build
 wwwroot/
 node_modules/
 
