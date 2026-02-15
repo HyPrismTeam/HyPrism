@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Net;
 using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Core.App;
@@ -112,7 +113,39 @@ public class GameSessionService : IGameSessionService
             if (!versions.Contains(targetVersion))
                 targetVersion = versions[0];
 
-            string versionPath = _instanceService.ResolveInstancePath(branch, isLatestInstance ? 0 : targetVersion, preferExisting: true);
+            string versionPath;
+
+            // Strict selected-instance launch path resolution:
+            // if SelectedInstanceId exists, always use that instance path and never
+            // auto-pick another installed instance with the same branch/version.
+            var selectedInstance = _instanceService.GetSelectedInstance();
+            if (selectedInstance != null)
+            {
+                branch = UtilityService.NormalizeVersionType(selectedInstance.Branch);
+                isLatestInstance = selectedInstance.Version == 0;
+                targetVersion = isLatestInstance ? versions[0] : selectedInstance.Version;
+
+                var selectedPath = _instanceService.GetInstancePathById(selectedInstance.Id);
+                if (!string.IsNullOrWhiteSpace(selectedPath))
+                {
+                    versionPath = selectedPath;
+                }
+                else if (isLatestInstance)
+                {
+                    versionPath = _instanceService.GetLatestInstancePath(branch);
+                }
+                else
+                {
+                    versionPath = _instanceService.CreateInstanceDirectory(branch, selectedInstance.Id);
+                }
+
+                Logger.Info("Download", $"Using selected instance path by ID: {selectedInstance.Id} -> {versionPath}", false);
+            }
+            else
+            {
+                versionPath = _instanceService.ResolveInstancePath(branch, isLatestInstance ? 0 : targetVersion, preferExisting: true);
+            }
+
             Directory.CreateDirectory(versionPath);
 
             bool gameIsInstalled = _instanceService.IsClientPresent(versionPath);
@@ -513,6 +546,49 @@ public class GameSessionService : IGameSessionService
                     Logger.Warning("Download", $"Official download failed: {ex.Message}");
                     // Clean up partial file before mirror attempt
                     if (File.Exists(partPath)) try { File.Delete(partPath); } catch { }
+
+                    // 403 from official CDN usually means expired/invalid signed verify token.
+                    // Force-refresh version cache and retry official once with a new signed URL.
+                    if (IsHttpForbidden(ex))
+                    {
+                        try
+                        {
+                            Logger.Warning("Download", "Official URL returned 403. Forcing version cache refresh and retrying official download once...");
+                            await _versionService.ForceRefreshCacheAsync(branch, ct);
+
+                            var refreshedEntry = _versionService.GetVersionEntry(branch, version);
+                            var refreshedOfficialUrl = refreshedEntry?.PwrUrl;
+                            var hasRefreshedOfficialUrl =
+                                !string.IsNullOrEmpty(refreshedOfficialUrl)
+                                && refreshedOfficialUrl.Contains("game-patches.hytale.com")
+                                && refreshedOfficialUrl.Contains("verify=");
+
+                            if (hasRefreshedOfficialUrl)
+                            {
+                                Logger.Info("Download", $"Retrying official download after cache refresh: {refreshedOfficialUrl}");
+                                _progressService.ReportDownloadProgress("download", 5, "launch.detail.downloading_official", null, 0, 0);
+
+                                await _downloadService.DownloadFileAsync(refreshedOfficialUrl!, partPath, (progress, dl, total) =>
+                                {
+                                    int mappedProgress = 5 + (int)(progress * 0.60);
+                                    _progressService.ReportDownloadProgress("download", mappedProgress, "launch.detail.downloading_official", [progress], dl, total);
+                                }, ct);
+
+                                downloaded = true;
+                                Logger.Success("Download", "Downloaded from official successfully after token refresh");
+                            }
+                            else
+                            {
+                                Logger.Warning("Download", "No refreshed official signed URL found after cache refresh");
+                            }
+                        }
+                        catch (OperationCanceledException) { throw; }
+                        catch (Exception refreshRetryEx)
+                        {
+                            Logger.Warning("Download", $"Official retry after cache refresh failed: {refreshRetryEx.Message}");
+                            if (File.Exists(partPath)) try { File.Delete(partPath); } catch { }
+                        }
+                    }
                 }
             }
             else if (!skipOfficial)
@@ -569,6 +645,18 @@ public class GameSessionService : IGameSessionService
         {
             _progressService.ReportDownloadProgress("download", 65, "launch.detail.using_cached_installer", null, 0, 0);
         }
+    }
+
+    private static bool IsHttpForbidden(Exception ex)
+    {
+        if (ex is HttpRequestException hre && hre.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return true;
+        }
+
+        var message = ex.Message ?? string.Empty;
+        return message.Contains("HTTP 403", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("403 Forbidden", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task EnsureRuntimeDependenciesAsync(CancellationToken ct)

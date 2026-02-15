@@ -54,7 +54,7 @@ async function GetNick(): Promise<string> { return (await ipc.profile.get()).nic
 async function GetUUID(): Promise<string> { return (await ipc.profile.get()).uuid ?? ''; }
 
 // Game actions
-function LaunchGame(): void { ipc.game.launch(); }
+function LaunchGame(data?: unknown): void { ipc.game.launch(data); }
 
 // TODO: These need dedicated IPC channels in IpcService.cs
 const stub = <T,>(name: string, fallback: T) => async (..._args: any[]): Promise<T> => {
@@ -764,15 +764,41 @@ const App: React.FC = () => {
   };
 
   const doLaunch = async () => {
+    let launchTarget = selectedInstanceRef.current ?? selectedInstance;
+
+    // Pull latest backend-selected instance right before launch to avoid stale UI state.
+    try {
+      const backendSelected = await GetSelectedInstance();
+      if (backendSelected?.id) {
+        launchTarget = backendSelected;
+
+        const currentSelectedId = selectedInstanceRef.current?.id ?? selectedInstance?.id;
+        if (currentSelectedId !== backendSelected.id) {
+          setSelectedInstance(backendSelected);
+          selectedInstanceRef.current = backendSelected;
+        }
+      }
+    } catch (e) {
+      console.warn('[App] Failed to refresh selected instance before launch:', e);
+    }
+
     setIsDownloading(true);
     // Track which instance is downloading from the currently selected instance
-    if (selectedInstance) {
-      setDownloadingBranch(selectedInstance.branch);
-      setDownloadingVersion(selectedInstance.version);
+    if (launchTarget) {
+      setDownloadingBranch(launchTarget.branch);
+      setDownloadingVersion(launchTarget.version);
     }
     setDownloadState('downloading');
     try {
-      LaunchGame();
+      if (launchTarget) {
+        LaunchGame({
+          branch: launchTarget.branch,
+          version: launchTarget.version,
+          instanceId: launchTarget.id,
+        });
+      } else {
+        LaunchGame();
+      }
       // Button state will be managed by progress events:
       // - 'launch' event sets isGameRunning=true and isDownloading=false
       // - 'error' event sets isDownloading=false
@@ -783,10 +809,12 @@ const App: React.FC = () => {
   };
 
   // Launch a specific instance from the Instances page — properly tracks download state
-  const handleLaunchFromInstances = (branch: string, version: number) => {
+  const handleLaunchFromInstances = (branch: string, version: number, instanceId?: string) => {
     if (isGameRunning || isDownloading) return;
 
-    const launchingInstance = instances.find(inst => inst.branch === branch && inst.version === version) ?? null;
+    const launchingInstance = instanceId
+      ? (instances.find(inst => inst.id === instanceId) ?? null)
+      : (instances.find(inst => inst.branch === branch && inst.version === version) ?? null);
     if (launchingInstance) {
       setSelectedInstance(launchingInstance);
       selectedInstanceRef.current = launchingInstance;
@@ -799,7 +827,11 @@ const App: React.FC = () => {
     setDownloadingBranch(branch);
     setDownloadingVersion(version);
     setDownloadState('downloading');
-    send('hyprism:game:launch', { branch, version });
+    send('hyprism:game:launch', {
+      branch,
+      version,
+      ...(launchingInstance?.id ? { instanceId: launchingInstance.id } : {})
+    });
   };
 
   const handleGameUpdate = async () => {

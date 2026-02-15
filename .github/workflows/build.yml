@@ -109,10 +109,18 @@ jobs:
             flatpak \
             flatpak-builder
 
+      - name: Prepare Flatpak runtimes
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub \
+            org.freedesktop.Platform//24.08 \
+            org.freedesktop.Sdk//24.08 \
+            org.electronjs.Electron2.BaseApp//24.08
+
       - name: Build Linux ${{ matrix.arch }}
         run: |
           chmod +x Scripts/publish.sh
-          ./Scripts/publish.sh linux --arch ${{ matrix.arch }}
+          ./Scripts/publish.sh linux flatpak --arch ${{ matrix.arch }}
 
       - name: Build Flatpak ${{ matrix.arch }}
         run: |
@@ -157,6 +165,17 @@ jobs:
 
       - name: Install Electron.NET CLI
         run: dotnet tool install --global ElectronNET.CLI
+
+      - name: Generate Windows ICO icon
+        shell: bash
+        run: |
+          mkdir -p Build
+          if command -v magick >/dev/null 2>&1; then
+            magick Frontend/src/assets/images/appicon.png -define icon:auto-resize=16,24,32,48,64,128,256 Build/icon.ico
+            echo "Generated Build/icon.ico from appicon.png"
+          else
+            echo "magick not found; using existing Build/icon.ico"
+          fi
 
       - name: Build Windows x64
         shell: bash
@@ -248,9 +267,9 @@ jobs:
           WINDOWS="${{ needs.build-windows.result }}"
           MACOS="${{ needs.build-macos.result }}"
           
-          [[ "$LINUX" == "success" ]] && echo "| Linux (x64 + ARM64) | ✅ Success |" >> $GITHUB_STEP_SUMMARY || \
-          [[ "$LINUX" == "skipped" ]] && echo "| Linux (x64 + ARM64) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY || \
-          echo "| Linux (x64 + ARM64) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          [[ "$LINUX" == "success" ]] && echo "| Linux (x64) | ✅ Success |" >> $GITHUB_STEP_SUMMARY || \
+          [[ "$LINUX" == "skipped" ]] && echo "| Linux (x64) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY || \
+          echo "| Linux (x64) | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
           
           [[ "$WINDOWS" == "success" ]] && echo "| Windows (x64) | ✅ Success |" >> $GITHUB_STEP_SUMMARY || \
           [[ "$WINDOWS" == "skipped" ]] && echo "| Windows (x64) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY || \

@@ -640,34 +640,33 @@ export const ModManager: React.FC<ModManagerProps> = ({
     if (activeTab === 'browse' && selectedBrowseMods.size > 0) {
       const selected = Array.from(selectedBrowseMods);
       console.log(`[ModManager] Preparing download for ${selected.length} selected mods`);
-      
-      const resolved = await Promise.all(
-        selected.map(async (modId) => {
-          const mod = searchResults.find((m) => m.id === modId);
-          const modKey = normalizeModKey(modId);
-          
-          // Check cache first, then selectedVersions
-          let fileId = selectedVersions.get(modKey);
-          
-          // If no fileId, load the files and get the first one directly
-          if (!fileId) {
-            console.log(`[ModManager] Loading files for mod ${modId} (${mod?.name})`);
+
+      const resolved: Array<{ id: string | number; name: string; fileId?: string | number }> = [];
+      for (const modId of selected) {
+        const mod = searchResults.find((m) => m.id === modId);
+        const modKey = normalizeModKey(modId);
+        let fileId = selectedVersions.get(modKey);
+
+        if (!fileId) {
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            console.log(`[ModManager] Loading files for mod ${modId} (${mod?.name}) attempt ${attempt}/3`);
             const files = await loadModFiles(modId);
-            // Use the first file directly from the returned array (not from state which might not be updated yet)
             fileId = files?.[0]?.id;
-            console.log(`[ModManager] Mod ${modId} files loaded, using fileId: ${fileId}`);
+            if (fileId) break;
+            await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
           }
+        }
 
-          if (!fileId) {
-            console.warn(`[ModManager] No file found for mod ${modId} (${mod?.name})`);
-            return null;
-          }
-          return { id: modId, name: mod?.name || 'Unknown', fileId } as { id: string | number; name: string; fileId: string | number };
-        })
-      );
+        if (!fileId) {
+          console.warn(`[ModManager] No file found for mod ${modId} (${mod?.name}), backend will resolve latest file`);
+        }
 
-      items = resolved.filter((x): x is { id: string | number; name: string; fileId: string | number } => x !== null);
-      console.log(`[ModManager] ${items.length}/${selected.length} mods have valid fileIds`);
+        resolved.push({ id: modId, name: mod?.name || `Mod ${modId}`, fileId });
+      }
+
+      items = resolved;
+      const withFile = items.filter((i) => !!i.fileId).length;
+      console.log(`[ModManager] ${withFile}/${selected.length} mods resolved with explicit fileIds`);
     } else if (activeTab === 'installed' && selectedInstalledMods.size > 0) {
       const installedItems = Array.from(selectedInstalledMods)
         .map((modId) => {
@@ -704,7 +703,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
     setConfirmModal({ type: 'delete', items });
   };
 
-  const runDownloadQueue = async (items: Array<{ id: string | number; name: string; fileId: string | number }>) => {
+  const runDownloadQueue = async (items: Array<{ id: string | number; name: string; fileId?: string | number }>) => {
     // Reduce concurrency to 1 to avoid race conditions and rate limiting
     const maxConcurrency = 1;
     const maxRetries = 3;
@@ -717,12 +716,12 @@ export const ModManager: React.FC<ModManagerProps> = ({
     let successCount = 0;
     const queue = [...items];
 
-    const runJob = async (item: { id: string | number; name: string; fileId: string | number }): Promise<boolean> => {
+    const runJob = async (item: { id: string | number; name: string; fileId?: string | number }): Promise<boolean> => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         setDownloadJobs((prev) => prev.map((j) => j.id === item.id ? { ...j, status: 'running', attempts: attempt } : j));
         try {
           console.log(`[ModManager] Downloading ${item.name} (attempt ${attempt}/${maxRetries})`);
-          const ok = await InstallModFileToInstance(String(item.id), String(item.fileId), currentBranch, currentVersion);
+          const ok = await InstallModFileToInstance(String(item.id), String(item.fileId ?? ''), currentBranch, currentVersion);
           if (!ok) {
             throw new Error(t('modManager.backendRefused'));
           }
@@ -766,22 +765,18 @@ export const ModManager: React.FC<ModManagerProps> = ({
   const handleConfirmDownload = async () => {
     if (!confirmModal || confirmModal.type !== 'download') return;
 
-    const items = confirmModal.items.filter((i) => i.fileId);
+    const items = confirmModal.items;
     console.log(`[ModManager] Starting download of ${items.length} mods (original: ${confirmModal.items.length})`);
-    if (items.length !== confirmModal.items.length) {
-      console.warn(`[ModManager] ${confirmModal.items.length - items.length} mods filtered out due to missing fileId`);
-      confirmModal.items.forEach(item => {
-        if (!item.fileId) {
-          console.warn(`[ModManager] Missing fileId for: ${item.name} (id: ${item.id})`);
-        }
-      });
+    const missingFileIds = items.filter((item) => !item.fileId).length;
+    if (missingFileIds > 0) {
+      console.warn(`[ModManager] ${missingFileIds} mods do not have explicit fileId, backend will resolve latest file`);
     }
     setConfirmModal(null);
     const errors: string[] = [];
 
     try {
       // No need to check if game is installed - mods can be downloaded anytime
-      await runDownloadQueue(items as Array<{ id: string | number; name: string; fileId: string | number }>);
+      await runDownloadQueue(items as Array<{ id: string | number; name: string; fileId?: string | number }>);
     } catch (err: any) {
       errors.push(err?.message || 'Failed to download one or more mods');
     }

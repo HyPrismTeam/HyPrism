@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Zap, Download, HardDrive, Package, Box, Wifi, Server, Edit3, FileText } from 'lucide-react';
+import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Server, Edit3, FileText } from 'lucide-react';
 import { ipc, on } from '@/lib/ipc';
 import { changeLanguage } from '../i18n';
 
@@ -10,6 +10,7 @@ const BrowserOpenURL = (url: string) => ipc.browser.open(url);
 
 // InstalledVersionInfo type (was in api/backend)
 export interface InstalledVersionInfo {
+    id?: string;
   branch: string;
   version: number;
   path: string;
@@ -48,12 +49,22 @@ async function BrowseFolder(initialPath?: string): Promise<string> { return (awa
 // TODO: These still need dedicated IPC channels
 const _stub = <T,>(name: string, fb: T) => async (..._a: any[]): Promise<T> => { console.warn(`[IPC] ${name}: no channel`); return fb; };
 const DeleteLauncherData = _stub('DeleteLauncherData', true);
-const GetInstalledVersionsDetailed = _stub<InstalledVersionInfo[]>('GetInstalledVersionsDetailed', []);
+const GetInstalledVersionsDetailed = async (): Promise<InstalledVersionInfo[]> => {
+    const instances = await ipc.game.instances();
+    return (instances || []).map((inst) => ({
+        id: inst.id,
+        branch: inst.branch,
+        version: inst.version,
+        path: inst.path,
+        sizeBytes: inst.totalSize,
+        isLatest: inst.version === 0,
+        isLatestInstance: inst.version === 0,
+    }));
+};
 const ExportInstance = _stub('ExportInstance', '');
 const DeleteGame = _stub('DeleteGame', false);
 const ResetOnboarding = _stub('ResetOnboarding', undefined as void);
 const ImportInstanceFromZip = _stub('ImportInstanceFromZip', true);
-const InstallOptimizationMods = _stub('InstallOptimizationMods', true);
 import { useAccentColor } from '../contexts/AccentColorContext';
 
 import { DiscordIcon } from './icons/DiscordIcon';
@@ -134,8 +145,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [backgroundMode, setBackgroundModeState] = useState('slideshow');
     const [showAllBackgrounds, setShowAllBackgrounds] = useState(false);
     const [launcherDataDir, setLauncherDataDir] = useState('');
-    const [isInstallingOptMods, setIsInstallingOptMods] = useState(false);
-    const [optModsMessage, setOptModsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [gpuPreference, setGpuPreferenceState] = useState<string>('dedicated');
     const [gpuAdapters, setGpuAdapters] = useState<Array<{ name: string; vendor: string; type: string }>>([]);
     const [hasSingleGpu, setHasSingleGpu] = useState(false);
@@ -171,7 +180,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [importTargetVersion, setImportTargetVersion] = useState<number>(0);
     const [showInstanceExportModal, setShowInstanceExportModal] = useState<InstalledVersionInfo | null>(null);
     const [instanceExportPath, setInstanceExportPath] = useState<string>('');
-    const [showOptModsInstanceModal, setShowOptModsInstanceModal] = useState(false);
 
 
     // Profile state
@@ -525,39 +533,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return `${branchLabel} ${versionLabel}`;
     };
 
-    const handleInstallOptimizationMods = async () => {
-        if (installedInstances.length === 0 && !isLoadingInstances) {
-            await loadInstances();
-        }
-        setShowOptModsInstanceModal(true);
-    };
-
-    const handleInstallOptimizationModsForInstance = async (instance: InstalledVersionInfo) => {
-        setShowOptModsInstanceModal(false);
-        setIsInstallingOptMods(true);
-        setOptModsMessage(null);
-        try {
-            try {
-                await ipc.instance.select({ instanceId: `${instance.branch}-${instance.version}` });
-            } catch {
-                // Continue even if selection IPC fails
-            }
-
-            const success = await InstallOptimizationMods();
-            if (success) {
-                setOptModsMessage({ type: 'success', text: t('settings.graphicsSettings.optModsInstalled') });
-            } else {
-                setOptModsMessage({ type: 'error', text: t('settings.graphicsSettings.optModsFailed') });
-            }
-        } catch (err) {
-            console.error('Failed to install optimization mods:', err);
-            setOptModsMessage({ type: 'error', text: t('settings.graphicsSettings.optModsFailed') });
-        }
-        setIsInstallingOptMods(false);
-        
-        // Clear message after 3 seconds
-        setTimeout(() => setOptModsMessage(null), 3000);
-    };
 
     const handleGpuPreferenceChange = async (preference: string) => {
         setGpuPreferenceState(preference);
@@ -1178,46 +1153,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* Optimization Mods */}
-                                    <div>
-                                        <label className="block text-sm text-white/60 mb-2">{t('settings.graphicsSettings.optimizationMods')}</label>
-                                        <p className="text-xs text-white/40 mb-4">{t('settings.graphicsSettings.optimizationModsHint')}</p>
-                                        <button
-                                            onClick={handleInstallOptimizationMods}
-                                            disabled={isInstallingOptMods}
-                                            className="w-full p-4 rounded-xl border border-white/10 hover:border-white/20 transition-all flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
-                                            style={{ backgroundColor: '#151515' }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div 
-                                                    className="w-10 h-10 rounded-xl flex items-center justify-center"
-                                                    style={{ backgroundColor: `${accentColor}20` }}
-                                                >
-                                                    <Zap size={20} style={{ color: accentColor }} />
-                                                </div>
-                                                <div className="text-left">
-                                                    <div className="text-white font-medium">{t('settings.graphicsSettings.enableOptimizationMods')}</div>
-                                                    <div className="text-xs text-white/40">
-                                                        {isInstallingOptMods ? t('settings.graphicsSettings.installingOptMods') : t('settings.graphicsSettings.installOptModsAction')}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {isInstallingOptMods && (
-                                                <Loader2 size={20} className="animate-spin text-white/40" />
-                                            )}
-                                        </button>
-                                        {optModsMessage && (
-                                            <div 
-                                                className={`mt-2 p-3 rounded-lg text-sm ${
-                                                    optModsMessage.type === 'success' 
-                                                        ? 'bg-green-500/20 text-green-400' 
-                                                        : 'bg-red-500/20 text-red-400'
-                                                }`}
-                                            >
-                                                {optModsMessage.text}
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
                             )}
 
@@ -1784,57 +1719,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 ) : (
                                     t('common.import')
                                 )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Optimization Mods Instance Picker */}
-            {showOptModsInstanceModal && (
-                <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
-                    <div className={`p-6 max-w-md w-full mx-4 glass-panel-static-solid`}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${accentColor}20` }}>
-                                <AlertTriangle size={20} style={{ color: accentColor }} />
-                            </div>
-                            <h3 className="text-lg font-bold text-white">Install Optimization Mods</h3>
-                        </div>
-
-                        <p className="text-white/75 text-sm mb-1">
-                            To what instance do you want to install optimization mods?
-                        </p>
-                        <p className="text-white/45 text-xs mb-4">
-                            Select one instance from the list below.
-                        </p>
-
-                        <div className="max-h-64 overflow-y-auto space-y-2 mb-5">
-                            {installedInstances.length > 0 ? installedInstances.map((instance) => {
-                                const key = `${instance.branch}-${instance.version}`;
-                                return (
-                                    <button
-                                        key={key}
-                                        onClick={() => handleInstallOptimizationModsForInstance(instance)}
-                                        className="w-full px-3 py-2.5 rounded-xl bg-[#151515] border border-white/10 hover:border-white/20 hover:bg-white/5 transition-colors text-left"
-                                    >
-                                        <div className="text-sm text-white font-medium">{getInstanceLabel(instance)}</div>
-                                        <div className="text-[11px] text-white/45 truncate">{instance.path}</div>
-                                    </button>
-                                );
-                            }) : (
-                                <div className="text-sm text-white/55 rounded-xl border border-white/10 bg-[#151515] px-3 py-3">
-                                    No installed instances were found.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowOptModsInstanceModal(false)}
-                                disabled={isInstallingOptMods}
-                                className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
-                            >
-                                {t('common.cancel')}
                             </button>
                         </div>
                     </div>

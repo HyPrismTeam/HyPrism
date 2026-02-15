@@ -98,3 +98,8 @@ public class CurseForgeFileResponse
 {
     public CurseForgeFile? Data { get; set; }
 }
+
+public class CurseForgeDownloadUrlResponse
+{
+    public string? Data { get; set; }
+}

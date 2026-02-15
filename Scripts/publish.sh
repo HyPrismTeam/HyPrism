@@ -344,6 +344,17 @@ inject_rpm_appstream() {
     mkdir -p "$root_dir/usr/share/metainfo"
     cp "$metainfo_src" "$root_dir/usr/share/metainfo/com.hyprismteam.hyprism.metainfo.xml"
 
+    # Remove build-id symlink tree if present (can conflict with filesystem package on Fedora)
+    rm -rf "$root_dir/usr/lib/.build-id"
+
+    # Generate file list with payload files only (avoid owning system directories like /usr or /usr/lib)
+    local files_manifest
+    files_manifest="$tmp_dir/files.list"
+    (
+        cd "$root_dir"
+        find . -mindepth 1 \( -type f -o -type l \) | LC_ALL=C sort | sed 's#^\.##'
+    ) > "$files_manifest"
+
     local pkg_name pkg_version pkg_release pkg_arch pkg_summary pkg_license
     pkg_name=$(rpm -qp --qf '%{NAME}' "$rpm_path" 2>/dev/null || echo "com.hyprismteam.hyprism")
     pkg_version=$(rpm -qp --qf '%{VERSION}' "$rpm_path" 2>/dev/null || echo "3.0.0")
@@ -370,8 +381,7 @@ HyPrism is a cross-platform Hytale launcher with instance and mod management.
 mkdir -p %{buildroot}
 cp -a $root_dir/. %{buildroot}/
 
-%files
-/
+%files -f %{_topdir}/files.list
 EOF
 
     if ! rpmbuild --define "_topdir $tmp_dir" -bb "$tmp_dir/SPECS/repack.spec" >/dev/null 2>&1; then
@@ -450,8 +460,8 @@ INNER
         flatpak_block=$(cat <<'FLATPAK'
 ,
   "flatpak": {
-    "runtimeVersion": "25.08",
-    "baseVersion": "25.08",
+        "runtimeVersion": "24.08",
+        "baseVersion": "24.08",
     "useWaylandFlags": true
   }
 FLATPAK

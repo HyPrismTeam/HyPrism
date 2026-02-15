@@ -11,6 +11,8 @@
 
 > Disclaimer: HyPrism has no any connection to [PrismLauncher](https://github.com/PrismLauncher/PrismLauncher). HyPrism is an application that is being developed **INDEPENDENTLY** of the PrismLauncher project or its team. Thank you for your understanding
 
+<img src="Frontend/src/assets/images/preview_launcher.png" alt="HyPrism Dashboard"/>
+
 ## Installation
 
 Downloads are available in [Releases](https://github.com/yyyumeniku/HyPrism/releases).

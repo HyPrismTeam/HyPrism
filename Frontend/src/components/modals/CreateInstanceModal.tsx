@@ -39,13 +39,20 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   const branchRef = useRef<HTMLDivElement>(null);
   const versionRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const versionsRequestIdRef = useRef(0);
 
   // Load versions when branch changes
   useEffect(() => {
     const loadVersions = async () => {
+      const requestId = ++versionsRequestIdRef.current;
       setIsLoadingVersions(true);
+      setAvailableVersions([]);
       try {
         const response = await ipc.game.versionsWithSources({ branch: selectedBranch });
+        if (requestId !== versionsRequestIdRef.current || !isOpen) {
+          return;
+        }
+
         const versions = response.versions || [];
         // Add "Latest" entry at the beginning if not already present
         const hasLatest = versions.some(v => v.version === 0);
@@ -57,10 +64,16 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
         // Default to "Latest" (version 0) when changing branches
         setSelectedVersion(0);
       } catch (err) {
+        if (requestId !== versionsRequestIdRef.current || !isOpen) {
+          return;
+        }
         console.error('Failed to load versions:', err);
         setAvailableVersions([{ version: 0, source: 'Mirror', isLatest: true }]);
+      } finally {
+        if (requestId === versionsRequestIdRef.current && isOpen) {
+          setIsLoadingVersions(false);
+        }
       }
-      setIsLoadingVersions(false);
     };
 
     if (isOpen) {

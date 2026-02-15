@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using HyPrism.Models;
 
 namespace HyPrism.Services.Core.Infrastructure;
 
@@ -8,6 +9,8 @@ namespace HyPrism.Services.Core.Infrastructure;
 /// </summary>
 public class UtilityService
 {
+    private const string ProfileMigrationMarkerFileName = ".hyprism-profile-migrated";
+
     /// <summary>
     /// Normalizes version type strings to canonical forms.
     /// "prerelease" or "pre-release" -> "pre-release"
@@ -33,6 +36,117 @@ public class UtilityService
         var invalid = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
         return string.IsNullOrWhiteSpace(sanitized) ? "default" : sanitized;
+    }
+
+    /// <summary>
+    /// Gets the profiles root directory inside app data.
+    /// </summary>
+    public static string GetProfilesRoot(string appDir)
+    {
+        var profilesDir = Path.Combine(appDir, "Profiles");
+        Directory.CreateDirectory(profilesDir);
+        return profilesDir;
+    }
+
+    /// <summary>
+    /// Resolves profile folder path using ID-first layout and attempts to migrate
+    /// legacy name-based folders when possible.
+    /// </summary>
+    public static string GetProfileFolderPath(string appDir, Profile profile, bool createIfMissing = true, bool migrateLegacyByName = true)
+    {
+        var profilesDir = GetProfilesRoot(appDir);
+        var legacyPath = Path.Combine(profilesDir, SanitizeFileName(profile.Name ?? string.Empty));
+
+        var hasValidId = !string.IsNullOrWhiteSpace(profile.Id) && Guid.TryParse(profile.Id, out _);
+        if (!hasValidId)
+        {
+            if (createIfMissing && !Directory.Exists(legacyPath))
+            {
+                Directory.CreateDirectory(legacyPath);
+            }
+            return legacyPath;
+        }
+
+        var idPath = Path.Combine(profilesDir, profile.Id);
+        var samePath = string.Equals(Path.GetFullPath(idPath), Path.GetFullPath(legacyPath), StringComparison.OrdinalIgnoreCase);
+
+        if (migrateLegacyByName && !samePath)
+        {
+            TryMigrateLegacyProfileFolder(legacyPath, idPath);
+        }
+
+        if (createIfMissing && !Directory.Exists(idPath))
+        {
+            Directory.CreateDirectory(idPath);
+        }
+
+        return idPath;
+    }
+
+    /// <summary>
+    /// Best-effort migration from a specific legacy profile folder to target ID folder.
+    /// </summary>
+    public static void TryMigrateSpecificProfileFolder(string sourceFolder, string targetFolder)
+    {
+        TryMigrateLegacyProfileFolder(sourceFolder, targetFolder);
+    }
+
+    private static void TryMigrateLegacyProfileFolder(string legacyPath, string idPath)
+    {
+        try
+        {
+            if (!Directory.Exists(legacyPath))
+            {
+                return;
+            }
+
+            if (!Directory.Exists(idPath))
+            {
+                Directory.Move(legacyPath, idPath);
+                Logger.Info("Profile", $"Migrated profile folder to ID format: {legacyPath} -> {idPath}");
+                return;
+            }
+
+            var markerPath = Path.Combine(legacyPath, ProfileMigrationMarkerFileName);
+            if (File.Exists(markerPath))
+            {
+                return;
+            }
+
+            MergeDirectoryContentsMissingOnly(legacyPath, idPath);
+            File.WriteAllText(markerPath, $"Migrated to {idPath} at {DateTime.UtcNow:o}");
+            Logger.Warning("Profile", $"Legacy profile folder still exists after merge (left for safety): {legacyPath}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Profile", $"Failed to migrate profile folder '{legacyPath}' to '{idPath}': {ex.Message}");
+        }
+    }
+
+    private static void MergeDirectoryContentsMissingOnly(string sourceDir, string destDir)
+    {
+        var source = new DirectoryInfo(sourceDir);
+        if (!source.Exists)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(destDir);
+
+        foreach (var file in source.GetFiles())
+        {
+            var targetFilePath = Path.Combine(destDir, file.Name);
+            if (!File.Exists(targetFilePath))
+            {
+                file.CopyTo(targetFilePath, false);
+            }
+        }
+
+        foreach (var subDir in source.GetDirectories())
+        {
+            var newDestDir = Path.Combine(destDir, subDir.Name);
+            MergeDirectoryContentsMissingOnly(subDir.FullName, newDestDir);
+        }
     }
 
     /// <summary>

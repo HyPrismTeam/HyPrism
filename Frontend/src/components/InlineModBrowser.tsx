@@ -59,6 +59,7 @@ interface InlineModBrowserProps {
   installedFileIds?: Set<string>;
   onModsInstalled?: () => void;
   onBack?: () => void;
+  refreshSignal?: number;
 }
 
 // ------- Component -------
@@ -71,9 +72,11 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
   installedFileIds,
   onModsInstalled,
   onBack,
+  refreshSignal,
 }) => {
   const { t } = useTranslation();
   const { accentColor, accentTextColor } = useAccentColor();
+  const normalizeId = (value: string | number | null | undefined) => String(value ?? '');
 
   // --- Search state ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +110,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
 
   // --- Download ---
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number; currentMod: string } | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<{ processed: number; total: number; currentMod: string; success: number; failed: number } | null>(null);
   const [downloadJobs, setDownloadJobs] = useState<DownloadJob[]>([]);
 
   // --- Import ---
@@ -192,6 +195,13 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
     return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
   }, [searchQuery, selectedCategory, selectedSortField, handleSearch]);
 
+  // Force refresh when the parent tells us the Browse tab became active again.
+  useEffect(() => {
+    if (refreshSignal == null) return;
+    if (!hasSearched) return;
+    void handleSearch(0, false);
+  }, [refreshSignal, hasSearched, handleSearch]);
+
   // Infinite scroll handler
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
@@ -225,12 +235,13 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
     setActiveScreenshot(0);
     setIsLoadingModFiles(true);
 
-    if (mod.id) {
-      const files = await loadModFiles(mod.id);
-      const selectedFileId = selectedVersions.get(mod.id) || files[0]?.id;
+    const modId = normalizeId(mod.id);
+    if (modId) {
+      const files = await loadModFiles(modId);
+      const selectedFileId = selectedVersions.get(modId) || files[0]?.id;
       setSelectedModFiles(files);
       setDetailSelectedFileId(selectedFileId);
-      if (selectedFileId) setSelectedVersions(prev => new Map(prev).set(mod.id, selectedFileId));
+      if (selectedFileId) setSelectedVersions(prev => new Map(prev).set(modId, selectedFileId));
     } else {
       setSelectedModFiles([]);
       setDetailSelectedFileId(undefined);
@@ -252,20 +263,21 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
   }, [getCurseForgeUrl]);
 
   const toggleModSelection = (mod: ModInfo, index: number) => {
+    const modId = normalizeId(mod.id);
     let shouldPrefetch = false;
     setSelectedMods((prev) => {
       const next = new Set(prev);
-      if (next.has(mod.id)) {
-        next.delete(mod.id);
+      if (next.has(modId)) {
+        next.delete(modId);
       } else {
-        next.add(mod.id);
+        next.add(modId);
         shouldPrefetch = true;
       }
       return next;
     });
     browseSelectionAnchorRef.current = index;
     if (shouldPrefetch) {
-      void loadModFiles(mod.id);
+      void loadModFiles(modId);
     }
   };
 
@@ -283,27 +295,53 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
     const anchor = browseSelectionAnchorRef.current ?? index;
     const start = Math.min(anchor, index);
     const end = Math.max(anchor, index);
-    const ids = searchResults.slice(start, end + 1).map((mod) => mod.id);
+    const ids = searchResults.slice(start, end + 1).map((mod) => normalizeId(mod.id));
 
     setSelectedMods(new Set(ids));
+    ids.forEach((id) => { void loadModFiles(id); });
   };
 
   // ------- Download -------
 
+  const getInstalledModIdSet = useCallback(async (): Promise<Set<string>> => {
+    try {
+      const installed = await ipc.mods.installed({
+        branch: currentBranch,
+        version: currentVersion,
+        instanceId: currentInstanceId,
+      });
+
+      const ids = new Set<string>();
+      for (const m of installed || []) {
+        if (m?.id) ids.add(String(m.id));
+      }
+      return ids;
+    } catch {
+      return new Set();
+    }
+  }, [currentBranch, currentInstanceId, currentVersion]);
+
   const runDownloadQueue = async (items: Array<{ id: string; name: string; fileId: string }>) => {
     const maxRetries = 3;
     setIsDownloading(true);
-    setDownloadProgress({ current: 0, total: items.length, currentMod: '' });
+    setDownloadProgress({ processed: 0, total: items.length, currentMod: '', success: 0, failed: 0 });
     setDownloadJobs(items.map(i => ({ id: i.id, name: i.name, status: 'pending' as const, attempts: 0 })));
 
-    let completed = 0;
+    const beforeInstalled = await getInstalledModIdSet();
+    const expectedIds = items.map((i) => `cf-${i.id}`);
+
+    let processed = 0;
+    let success = 0;
+    let failed = 0;
     for (const item of items) {
+      let itemSucceeded = false;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         setDownloadJobs(prev => prev.map(j => j.id === item.id ? { ...j, status: 'running', attempts: attempt } : j));
         try {
           const ok = await ipc.mods.install({ modId: item.id, fileId: item.fileId, branch: currentBranch, version: currentVersion, instanceId: currentInstanceId });
           if (!ok) throw new Error(t('modManager.backendRefused'));
           setDownloadJobs(prev => prev.map(j => j.id === item.id ? { ...j, status: 'success' } : j));
+          itemSucceeded = true;
           break;
         } catch (err: unknown) {
           const e = err as Error;
@@ -312,59 +350,120 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
           if (!isLast) await new Promise(r => setTimeout(r, 500 * attempt));
         }
       }
-      completed++;
-      setDownloadProgress({ current: completed, total: items.length, currentMod: item.name });
+
+      processed++;
+      if (itemSucceeded) success++;
+      else failed++;
+
+      setDownloadProgress({ processed, total: items.length, currentMod: item.name, success, failed });
     }
+
+    // Reconcile against actual installed mods so the counter reflects reality.
+    // Poll briefly to cover cases where the backend is still finalizing writes.
+    let stableCount = -1;
+    let stableHits = 0;
+    let afterInstalled = new Set<string>();
+    for (let i = 0; i < 8; i++) {
+      afterInstalled = await getInstalledModIdSet();
+      const verifiedNow = expectedIds.filter((id) => afterInstalled.has(id)).length;
+      if (verifiedNow === stableCount) stableHits++;
+      else {
+        stableCount = verifiedNow;
+        stableHits = 0;
+      }
+      if (verifiedNow === expectedIds.length) break;
+      if (stableHits >= 2) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    const verifiedInstalled = expectedIds.filter((id) => afterInstalled.has(id)).length;
+    const verifiedNew = expectedIds.filter((id) => afterInstalled.has(id) && !beforeInstalled.has(id)).length;
+
+    setDownloadJobs((prev) => {
+      // Mark jobs as success only if the mod is actually present after the queue.
+      return prev.map((j) => {
+        const expected = `cf-${j.id}`;
+        if (afterInstalled.has(expected)) {
+          return { ...j, status: 'success' as const };
+        }
+        // If it was already error, keep error; otherwise mark as error.
+        if (j.status === 'error') return j;
+        return { ...j, status: 'error' as const, error: t('modManager.downloadFailed') };
+      });
+    });
+
+    // Prefer showing *verified* installed count for accuracy.
+    // If some were already installed before, verifiedInstalled may exceed verifiedNew.
+    setDownloadProgress({
+      processed: items.length,
+      total: items.length,
+      currentMod: items[items.length - 1]?.name ?? '',
+      success: verifiedInstalled,
+      failed: Math.max(0, items.length - verifiedInstalled),
+    });
+
+    // Keep console signal for debugging: how many were newly added.
+    console.log('[ModBrowser] Queue reconciliation:', { total: items.length, verifiedInstalled, verifiedNew });
   };
 
   const handleDownloadSelected = async () => {
     if (selectedMods.size === 0) return;
+    if (isDownloading) return;
+    try {
+      console.log('[ModBrowser] handleDownloadSelected called, selectedMods:', Array.from(selectedMods));
 
-    console.log('[ModBrowser] handleDownloadSelected called, selectedMods:', Array.from(selectedMods));
+      const items: Array<{ id: string; name: string; fileId: string }> = [];
+      for (const modId of selectedMods) {
+        console.log('[ModBrowser] Processing mod:', modId);
+        const mod = searchResults.find(m => m.id === modId);
+        console.log('[ModBrowser] Found mod in searchResults:', mod?.name || 'NOT FOUND');
+        let fileId = selectedVersions.get(modId);
+        console.log('[ModBrowser] Selected version fileId:', fileId || 'NOT SET');
+        if (!fileId) {
+          console.log('[ModBrowser] Loading files for mod:', modId);
+          const files = await loadModFiles(modId);
+          console.log('[ModBrowser] Loaded files:', files?.length || 0);
+          fileId = files?.[0]?.id;
+          console.log('[ModBrowser] Using first file:', fileId);
+        }
+        if (fileId && mod) {
+          items.push({ id: modId, name: mod.name, fileId });
+          console.log('[ModBrowser] Added to items:', { id: modId, name: mod.name, fileId });
+        } else {
+          console.log('[ModBrowser] SKIPPED mod (missing fileId or mod):', { modId, hasFileId: !!fileId, hasMod: !!mod });
+        }
+      }
 
-    const items: Array<{ id: string; name: string; fileId: string }> = [];
-    for (const modId of selectedMods) {
-      console.log('[ModBrowser] Processing mod:', modId);
-      const mod = searchResults.find(m => m.id === modId);
-      console.log('[ModBrowser] Found mod in searchResults:', mod?.name || 'NOT FOUND');
-      let fileId = selectedVersions.get(modId);
-      console.log('[ModBrowser] Selected version fileId:', fileId || 'NOT SET');
-      if (!fileId) {
-        console.log('[ModBrowser] Loading files for mod:', modId);
-        const files = await loadModFiles(modId);
-        console.log('[ModBrowser] Loaded files:', files?.length || 0);
-        fileId = files?.[0]?.id;
-        console.log('[ModBrowser] Using first file:', fileId);
+      console.log('[ModBrowser] Final items array:', items);
+      if (items.length === 0) {
+        setError(t('modManager.noDownloadableFiles'));
+        return;
       }
-      if (fileId && mod) {
-        items.push({ id: modId, name: mod.name, fileId });
-        console.log('[ModBrowser] Added to items:', { id: modId, name: mod.name, fileId });
-      } else {
-        console.log('[ModBrowser] SKIPPED mod (missing fileId or mod):', { modId, hasFileId: !!fileId, hasMod: !!mod });
-      }
+
+      await runDownloadQueue(items);
+    } catch (err: unknown) {
+      setError((err as Error)?.message || t('modManager.downloadFailed'));
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(null);
+      setDownloadJobs([]);
+      setSelectedMods(new Set());
+      onModsInstalled?.();
     }
-
-    console.log('[ModBrowser] Final items array:', items);
-    if (items.length === 0) { setError(t('modManager.noDownloadableFiles')); return; }
-
-    try { await runDownloadQueue(items); }
-    catch (err: unknown) { setError((err as Error)?.message || t('modManager.downloadFailed')); }
-
-    setIsDownloading(false);
-    setDownloadProgress(null);
-    setDownloadJobs([]);
-    setSelectedMods(new Set());
-    onModsInstalled?.();
   };
 
   const handleInstallSingleMod = async (modId: string, fileId: string, name: string) => {
+    if (isDownloading) return;
     try {
       await runDownloadQueue([{ id: modId, name, fileId }]);
-    } catch { /* handled in queue */ }
-    setIsDownloading(false);
-    setDownloadProgress(null);
-    setDownloadJobs([]);
-    onModsInstalled?.();
+    } catch {
+      /* handled in queue */
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(null);
+      setDownloadJobs([]);
+      onModsInstalled?.();
+    }
   };
 
   // ------- Drag & Drop -------
@@ -444,6 +543,13 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  (e.currentTarget as HTMLInputElement).select();
+                }
+              }}
               placeholder={t('modManager.searchMods')}
               className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#2c2c2e] border border-white/[0.08] text-white text-sm placeholder-white/40 focus:outline-none focus:border-white/20"
               autoFocus
@@ -539,14 +645,14 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
           <div className="px-3 py-2 rounded-xl border border-white/[0.08] bg-[#2c2c2e] space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-white/70">
-                {t('modManager.downloading')} ({downloadProgress.current}/{downloadProgress.total})
+                {t('modManager.downloading')} ({downloadProgress.success}/{downloadProgress.total})
               </span>
               <span className="text-white/50 text-xs truncate ml-2">{downloadProgress.currentMod}</span>
             </div>
             <div className="h-1.5 bg-[#1c1c1e] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${(downloadProgress.current / downloadProgress.total) * 100}%`, backgroundColor: accentColor }}
+                style={{ width: `${(downloadProgress.processed / downloadProgress.total) * 100}%`, backgroundColor: accentColor }}
               />
             </div>
             {downloadJobs.length > 0 && (
@@ -620,9 +726,10 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
           ) : (
             <div className="grid grid-cols-1 gap-2">
               {searchResults.map((mod, index) => {
-                const isSelected = selectedMods.has(mod.id);
-                const isDetailSelected = selectedMod?.id === mod.id;
-                const isInstalled = installedModIds?.has(`cf-${mod.id}`) ?? false;
+                const modId = normalizeId(mod.id);
+                const isSelected = selectedMods.has(modId);
+                const isDetailSelected = normalizeId(selectedMod?.id) === modId;
+                const isInstalled = installedModIds?.has(`cf-${modId}`) ?? false;
 
                 return (
                   <div
@@ -811,15 +918,20 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                   ) : (
                     <div className="space-y-1.5 max-h-40 overflow-y-auto">
                       {selectedModFiles.slice(0, 10).map(file => {
-                        const isFileInstalled = installedFileIds?.has(file.id) ?? false;
+                        const fileId = normalizeId(file.id);
+                        const isFileInstalled = installedFileIds?.has(fileId) ?? false;
                         return (
                         <button
                           key={file.id}
-                          onClick={() => { setDetailSelectedFileId(file.id); setSelectedVersions(prev => new Map(prev).set(selectedMod.id, file.id)); }}
+                          onClick={() => {
+                            const selectedModId = normalizeId(selectedMod.id);
+                            setDetailSelectedFileId(fileId);
+                            setSelectedVersions(prev => new Map(prev).set(selectedModId, fileId));
+                          }}
                           className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all border ${
                             isFileInstalled
                               ? 'border-green-500/30 bg-green-500/10'
-                              : detailSelectedFileId === file.id
+                              : detailSelectedFileId === fileId
                                 ? 'border-white/20 bg-[#2c2c2e]'
                                 : 'border-transparent hover:bg-[#252527]'
                           }`}
@@ -853,12 +965,15 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
 
                 {/* Install button */}
                 {(() => {
-                  const fileId = detailSelectedFileId || selectedModFiles[0]?.id;
+                  const fileId = detailSelectedFileId || normalizeId(selectedModFiles[0]?.id);
                   const isSelectedFileInstalled = fileId ? (installedFileIds?.has(fileId) ?? false) : false;
                   return (
                     <button
                       onClick={() => {
-                        if (fileId && !isSelectedFileInstalled) handleInstallSingleMod(selectedMod.id, fileId, selectedMod.name);
+                        const selectedModId = normalizeId(selectedMod.id);
+                        if (fileId && !isSelectedFileInstalled && selectedModId) {
+                          handleInstallSingleMod(selectedModId, fileId, selectedMod.name);
+                        }
                       }}
                       disabled={isDownloading || selectedModFiles.length === 0 || isSelectedFileInstalled}
                       className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-40 ${

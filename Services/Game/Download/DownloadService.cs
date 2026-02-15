@@ -1,4 +1,5 @@
 using HyPrism.Services.Core.Infrastructure;
+using System.Net;
 
 namespace HyPrism.Services.Game.Download;
 
@@ -9,6 +10,7 @@ namespace HyPrism.Services.Game.Download;
 public class DownloadService : IDownloadService
 {
     private readonly HttpClient _httpClient;
+    private const int MaxDownloadAttempts = 4;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DownloadService"/> class.
@@ -26,96 +28,144 @@ public class DownloadService : IDownloadService
         Action<int, long, long> progressCallback, 
         CancellationToken cancellationToken = default)
     {
-        long existingLength = 0;
-        if (File.Exists(destinationPath))
+        for (int attempt = 1; attempt <= MaxDownloadAttempts; attempt++)
         {
-            existingLength = new FileInfo(destinationPath).Length;
-        }
+            cancellationToken.ThrowIfCancellationRequested();
 
-        // 1. Get total size (HEAD)
-        long totalBytes = -1;
-        try 
-        {
-            totalBytes = await GetFileSizeAsync(url, cancellationToken);
-        }
-        catch 
-        {
-             // Ignore, fallback to normal download if HEAD fails
-        }
-
-        bool canResume = false;
-        if (existingLength > 0 && totalBytes > 0 && existingLength < totalBytes)
-        {
-            canResume = true;
-            Logger.Info("Download", $"Resuming download from byte {existingLength} of {totalBytes}");
-        }
-        else if (existingLength >= totalBytes && totalBytes > 0)
-        {
-             // Already done?
-             Logger.Info("Download", "File already downloaded fully.");
-             progressCallback?.Invoke(100, totalBytes, totalBytes);
-             return;
-        }
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        
-        if (canResume)
-        {
-            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
-        }
-        else
-        {
-            // Reset if we can't resume
-            existingLength = 0; 
-        }
-
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        
-        // If server doesn't support range, it sends 200 OK instead of 206 Partial Content
-        if (canResume && response.StatusCode != System.Net.HttpStatusCode.PartialContent)
-        {
-            Logger.Warning("Download", "Server did not accept Range header, restarting download.");
-            canResume = false;
-            existingLength = 0;
-        }
-        else if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            Logger.Error("Download", $"Download failed from {url}: HTTP {(int)response.StatusCode} {response.StatusCode}. Response: {errorBody?.Substring(0, Math.Min(500, errorBody?.Length ?? 0))}");
-            throw new HttpRequestException($"Download failed: HTTP {(int)response.StatusCode} {response.StatusCode}");
-        }
-        
-        // If we didn't get totalBytes from HEAD earlier (e.g. -1), try getting it from response
-        if (totalBytes <= 0)
-        {
-            totalBytes = response.Content.Headers.ContentLength ?? -1;
-            // If resumes, add existing length to content length (since content-length is just the part)
-            if (canResume && totalBytes != -1) totalBytes += existingLength;
-        }
-
-        // File Mode
-        FileMode fileMode = canResume ? FileMode.Append : FileMode.Create;
-        
-        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var fileStream = new FileStream(destinationPath, fileMode, FileAccess.Write, FileShare.None, 8192, true);
-        
-        var buffer = new byte[8192];
-        long totalRead = existingLength; // Start counter at existing
-        int bytesRead;
-        
-        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
-        {
-            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
-            totalRead += bytesRead;
-            
-            if (totalBytes > 0)
+            long existingLength = 0;
+            if (File.Exists(destinationPath))
             {
-                var progress = (int)((totalRead * 100) / totalBytes);
-                progressCallback?.Invoke(progress, totalRead, totalBytes);
+                existingLength = new FileInfo(destinationPath).Length;
+            }
+
+            long totalBytes = await GetFileSizeAsync(url, cancellationToken);
+            bool canResume = existingLength > 0 && totalBytes > 0 && existingLength < totalBytes;
+
+            if (canResume)
+            {
+                Logger.Info("Download", $"Resuming download from byte {existingLength} of {totalBytes}");
+            }
+            else if (existingLength >= totalBytes && totalBytes > 0)
+            {
+                Logger.Info("Download", "File already downloaded fully.");
+                progressCallback?.Invoke(100, totalBytes, totalBytes);
+                return;
+            }
+            else
+            {
+                existingLength = 0;
+            }
+
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                if (canResume)
+                {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
+                }
+
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+                if (canResume && response.StatusCode != HttpStatusCode.PartialContent)
+                {
+                    Logger.Warning("Download", "Server did not accept Range header, restarting download.");
+                    canResume = false;
+                    existingLength = 0;
+                }
+                else if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    Logger.Error("Download", $"Download failed from {url}: HTTP {(int)response.StatusCode} {response.StatusCode}. Response: {errorBody?.Substring(0, Math.Min(500, errorBody?.Length ?? 0))}");
+                    throw new HttpRequestException(
+                        $"Download failed: HTTP {(int)response.StatusCode} {response.StatusCode}",
+                        null,
+                        response.StatusCode);
+                }
+
+                if (totalBytes <= 0)
+                {
+                    totalBytes = response.Content.Headers.ContentLength ?? -1;
+                    if (canResume && totalBytes > 0)
+                    {
+                        totalBytes += existingLength;
+                    }
+                }
+
+                FileMode fileMode = canResume ? FileMode.Append : FileMode.Create;
+
+                using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var fileStream = new FileStream(destinationPath, fileMode, FileAccess.Write, FileShare.None, 8192, true);
+
+                var buffer = new byte[8192];
+                long totalRead = existingLength;
+                int bytesRead;
+
+                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                    totalRead += bytesRead;
+
+                    if (totalBytes > 0)
+                    {
+                        var progress = (int)((totalRead * 100) / totalBytes);
+                        progressCallback?.Invoke(progress, totalRead, totalBytes);
+                    }
+                }
+
+                await fileStream.FlushAsync(cancellationToken);
+
+                // Defensive check for truncated payloads that ended without a clean HTTP error.
+                if (totalBytes > 0 && totalRead < totalBytes)
+                {
+                    throw new IOException($"Unexpected end of stream: downloaded {totalRead} of {totalBytes} bytes");
+                }
+
+                Logger.Info("Download", $"Download finished. {totalRead / 1024 / 1024} MB to {destinationPath}");
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < MaxDownloadAttempts && IsRetryableDownloadException(ex))
+            {
+                var delayMs = 800 * attempt;
+                Logger.Warning("Download", $"Transient download error on attempt {attempt}/{MaxDownloadAttempts}: {ex.Message}. Retrying in {delayMs}ms...");
+                await Task.Delay(delayMs, cancellationToken);
+            }
+            catch
+            {
+                throw;
             }
         }
-        
-        Logger.Info("Download", $"Download finished. {totalRead / 1024 / 1024} MB to {destinationPath}");
+
+        throw new Exception("Download failed after maximum retry attempts.");
+    }
+
+    private static bool IsRetryableDownloadException(Exception ex)
+    {
+        if (ex is IOException)
+        {
+            return true;
+        }
+
+        if (ex is HttpRequestException hre)
+        {
+            if (hre.StatusCode == HttpStatusCode.Forbidden)
+            {
+                return false;
+            }
+
+            if (hre.StatusCode == null)
+            {
+                return true;
+            }
+
+            var code = (int)hre.StatusCode.Value;
+            return code == 408 || code == 429 || code >= 500;
+        }
+
+        return false;
     }
 
     /// <summary>

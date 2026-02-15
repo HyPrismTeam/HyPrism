@@ -306,7 +306,6 @@ public class HytaleAuthService : IHytaleAuthService
                 else
                 {
                     responseHtml = "<html><body><h1>Waiting for authorization...</h1></body></html>";
-                    continue;
                 }
 
                 var buffer = Encoding.UTF8.GetBytes(responseHtml);
@@ -314,7 +313,9 @@ public class HytaleAuthService : IHytaleAuthService
                 response.ContentLength64 = buffer.Length;
                 await response.OutputStream.WriteAsync(buffer, ct);
                 response.Close();
-                break;
+
+                if (!string.IsNullOrEmpty(code) || !string.IsNullOrEmpty(error))
+                    break;
             }
         }
         catch (ObjectDisposedException) { /* listener stopped */ }
@@ -550,9 +551,7 @@ public class HytaleAuthService : IHytaleAuthService
         }
 
         var profile = config.Profiles[config.ActiveProfileIndex];
-        var safeName = SanitizeFileName(profile.Name);
-        var profilesDir = Path.Combine(_appDir, "Profiles");
-        return Path.Combine(profilesDir, safeName);
+        return UtilityService.GetProfileFolderPath(_appDir, profile);
     }
 
     /// <summary>
@@ -674,8 +673,7 @@ public class HytaleAuthService : IHytaleAuthService
         // Try to load and validate session from each official profile
         foreach (var profile in officialProfiles)
         {
-            var safeName = SanitizeFileName(profile.Name);
-            var profileDir = Path.Combine(_appDir, "Profiles", safeName);
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile, createIfMissing: false, migrateLegacyByName: true);
             var sessionPath = Path.Combine(profileDir, "hytale_session.json");
 
             if (!File.Exists(sessionPath))
@@ -763,12 +761,6 @@ public class HytaleAuthService : IHytaleAuthService
             Logger.Error("HytaleAuth", $"Token refresh exception: {ex.Message}");
             return false;
         }
-    }
-
-    private static string SanitizeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        return new string(name.Where(c => !invalid.Contains(c)).ToArray());
     }
 
     private void SaveSession()

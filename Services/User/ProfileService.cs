@@ -50,9 +50,6 @@ public class ProfileService : IProfileService
             {
                 activeProfile.Name = nick;
                 Logger.Info("Profile", $"Updated active profile name from '{oldNick}' to '{nick}'");
-                
-                // Rename the profile folder if it exists
-                RenameProfileFolder(oldNick, nick);
             }
         }
         
@@ -60,46 +57,6 @@ public class ProfileService : IProfileService
         return true;
     }
     
-    /// <summary>
-    /// Renames the profile folder from old name to new name.
-    /// </summary>
-    private void RenameProfileFolder(string oldName, string newName)
-    {
-        try
-        {
-            var profilesDir = Path.Combine(_appDataPath, "Profiles");
-            if (!Directory.Exists(profilesDir))
-                return;
-                
-            var oldSafeName = SanitizeFileName(oldName);
-            var newSafeName = SanitizeFileName(newName);
-            
-            if (oldSafeName == newSafeName)
-                return;
-                
-            var oldPath = Path.Combine(profilesDir, oldSafeName);
-            var newPath = Path.Combine(profilesDir, newSafeName);
-            
-            if (Directory.Exists(oldPath) && !Directory.Exists(newPath))
-            {
-                Directory.Move(oldPath, newPath);
-                Logger.Info("Profile", $"Renamed profile folder from '{oldSafeName}' to '{newSafeName}'");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("Profile", $"Failed to rename profile folder: {ex.Message}");
-        }
-    }
-    
-    /// <summary>
-    /// Sanitizes a filename by removing invalid characters.
-    /// </summary>
-    private static string SanitizeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        return string.Concat(name.Where(c => !invalid.Contains(c)));
-    }
 
     /// <inheritdoc/>
     public string GetUUID() => GetCurrentUuid();
@@ -168,9 +125,7 @@ public class ProfileService : IProfileService
             var profile = _configService.Configuration.Profiles?.FirstOrDefault(p => p.UUID == uuid);
             if (profile != null)
             {
-                var profilesDir = Path.Combine(_appDataPath, "Profiles");
-                var safeName = UtilityService.SanitizeFileName(profile.Name);
-                var profileDir = Path.Combine(profilesDir, safeName);
+                var profileDir = UtilityService.GetProfileFolderPath(_appDataPath, profile);
                 var profileAvatarPath = Path.Combine(profileDir, "avatar.png");
 
                 if (File.Exists(profileAvatarPath) && new FileInfo(profileAvatarPath).Length > 100)
@@ -237,9 +192,7 @@ public class ProfileService : IProfileService
         if (profile == null) return;
         try
         {
-            var profilesDir = Path.Combine(_appDataPath, "Profiles");
-            var safeName = UtilityService.SanitizeFileName(profile.Name);
-            var profileDir = Path.Combine(profilesDir, safeName);
+            var profileDir = UtilityService.GetProfileFolderPath(_appDataPath, profile);
             Directory.CreateDirectory(profileDir);
             File.WriteAllBytes(Path.Combine(profileDir, "avatar.png"), avatarBytes);
         }
@@ -397,7 +350,6 @@ public class ProfileService : IProfileService
     /// <inheritdoc/>
     public string GetProfilePath(Profile profile)
     {
-        var safeName = UtilityService.SanitizeFileName(profile.Name);
-        return Path.Combine(_appDataPath, "Profiles", safeName);
+        return UtilityService.GetProfileFolderPath(_appDataPath, profile);
     }
 }

@@ -17,6 +17,7 @@ public class ProfileManagementService : IProfileManagementService
     private readonly SkinService _skinService;
     private readonly InstanceService _instanceService;
     private readonly UserIdentityService _userIdentityService;
+    private bool _profileFolderMigrationAttempted;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProfileManagementService"/> class.
@@ -38,6 +39,8 @@ public class ProfileManagementService : IProfileManagementService
         _skinService = skinService;
         _instanceService = instanceService;
         _userIdentityService = userIdentityService;
+
+        EnsureProfileStorageUpgraded();
     }
 
 
@@ -45,6 +48,8 @@ public class ProfileManagementService : IProfileManagementService
     /// <remarks>Filters out any profiles with null/empty names or UUIDs.</remarks>
     public List<Profile> GetProfiles()
     {
+        EnsureProfileStorageUpgraded();
+
         var config = _configService.Configuration;
         
         // Clean up any null/empty profiles first
@@ -65,6 +70,168 @@ public class ProfileManagementService : IProfileManagementService
         var profiles = config.Profiles ?? new List<Profile>();
         Logger.Info("Profile", $"GetProfiles returning {profiles.Count} profiles");
         return profiles;
+    }
+
+    private void EnsureProfileStorageUpgraded()
+    {
+        if (_profileFolderMigrationAttempted)
+        {
+            return;
+        }
+
+        _profileFolderMigrationAttempted = true;
+
+        try
+        {
+            var config = _configService.Configuration;
+            config.Profiles ??= new List<Profile>();
+
+            bool changed = false;
+            foreach (var profile in config.Profiles)
+            {
+                if (string.IsNullOrWhiteSpace(profile.Id) || !Guid.TryParse(profile.Id, out _))
+                {
+                    profile.Id = Guid.NewGuid().ToString();
+                    changed = true;
+                    Logger.Info("Profile", $"Assigned missing profile ID for '{profile.Name}': {profile.Id}");
+                }
+
+                UtilityService.GetProfileFolderPath(_appDir, profile, createIfMissing: false, migrateLegacyByName: true);
+            }
+
+            TryMigrateUnresolvedProfileFolders(config.Profiles);
+
+            if (changed)
+            {
+                _configService.SaveConfig();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Profile", $"Profile storage migration check failed: {ex.Message}");
+        }
+    }
+
+    private void TryMigrateUnresolvedProfileFolders(List<Profile> profiles)
+    {
+        var profilesDir = GetProfilesFolder();
+        if (!Directory.Exists(profilesDir))
+        {
+            return;
+        }
+
+        foreach (var folder in Directory.GetDirectories(profilesDir))
+        {
+            var folderName = Path.GetFileName(folder);
+            if (Guid.TryParse(folderName, out _))
+            {
+                continue;
+            }
+
+            var matchedByName = profiles.FirstOrDefault(p =>
+                string.Equals(UtilityService.SanitizeFileName(p.Name ?? string.Empty), folderName, StringComparison.OrdinalIgnoreCase));
+
+            if (matchedByName != null)
+            {
+                var target = UtilityService.GetProfileFolderPath(_appDir, matchedByName, createIfMissing: true, migrateLegacyByName: false);
+                UtilityService.TryMigrateSpecificProfileFolder(folder, target);
+                continue;
+            }
+
+            var matchedByMetadata = TryMatchProfileByFolderMetadata(folder, profiles);
+            if (matchedByMetadata != null)
+            {
+                var target = UtilityService.GetProfileFolderPath(_appDir, matchedByMetadata, createIfMissing: true, migrateLegacyByName: false);
+                UtilityService.TryMigrateSpecificProfileFolder(folder, target);
+                continue;
+            }
+
+            Logger.Info("Profile", $"Found unknown profile folder, migration skipped: {folder}");
+        }
+    }
+
+    private static Profile? TryMatchProfileByFolderMetadata(string folder, List<Profile> profiles)
+    {
+        try
+        {
+            var profileJsonPath = Path.Combine(folder, "profile.json");
+            if (File.Exists(profileJsonPath))
+            {
+                var json = File.ReadAllText(profileJsonPath);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("uuid", out var uuidEl))
+                {
+                    var uuid = uuidEl.GetString();
+                    if (!string.IsNullOrWhiteSpace(uuid))
+                    {
+                        var byUuid = profiles.FirstOrDefault(p => string.Equals(p.UUID, uuid, StringComparison.OrdinalIgnoreCase));
+                        if (byUuid != null)
+                        {
+                            return byUuid;
+                        }
+                    }
+                }
+            }
+
+            var shFile = Directory.GetFiles(folder, "*.sh").FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(shFile))
+            {
+                var lines = File.ReadAllLines(shFile);
+                string? profileId = null;
+                string? uuid = null;
+
+                foreach (var line in lines)
+                {
+                    if (line.Contains("HYPRISM_PROFILE_ID=", StringComparison.Ordinal))
+                    {
+                        profileId = ExtractQuotedValue(line);
+                    }
+                    else if (line.Contains("HYPRISM_PROFILE_UUID=", StringComparison.Ordinal))
+                    {
+                        uuid = ExtractQuotedValue(line);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(profileId))
+                {
+                    var byId = profiles.FirstOrDefault(p => string.Equals(p.Id, profileId, StringComparison.OrdinalIgnoreCase));
+                    if (byId != null)
+                    {
+                        return byId;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(uuid))
+                {
+                    var byUuid = profiles.FirstOrDefault(p => string.Equals(p.UUID, uuid, StringComparison.OrdinalIgnoreCase));
+                    if (byUuid != null)
+                    {
+                        return byUuid;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Best effort only
+        }
+
+        return null;
+    }
+
+    private static string ExtractQuotedValue(string line)
+    {
+        var start = line.IndexOf('"');
+        var end = line.LastIndexOf('"');
+        if (start >= 0 && end > start)
+        {
+            return line.Substring(start + 1, end - start - 1);
+        }
+
+        var parts = line.Split('=', 2);
+        return parts.Length == 2 ? parts[1].Trim() : string.Empty;
     }
 
     /// <inheritdoc/>
@@ -109,7 +276,7 @@ public class ProfileManagementService : IProfileManagementService
             };
             
             var config = _configService.Configuration;
-            config.Profiles ??= new List<Profile>();
+            config.Profiles ??= [];
             config.Profiles.Add(profile);
             
             // Auto-activate the first profile created
@@ -212,6 +379,13 @@ public class ProfileManagementService : IProfileManagementService
             config.UUID = profile.UUID;
             config.Nick = profile.Name;
             config.ActiveProfileIndex = index;
+
+            // If user switched to an official profile, force official auth server.
+            if (profile.IsOfficial)
+            {
+                config.AuthDomain = "sessionserver.hytale.com";
+                Logger.Info("Profile", "Official profile selected: auth domain switched to sessionserver.hytale.com");
+            }
             
             // Ensure mods stay in the active instance folder (no profile symlink/junction)
             EnsureInstanceModsDirectory(profile);
@@ -373,25 +547,28 @@ public class ProfileManagementService : IProfileManagementService
             // Copy UserData from source profile if it exists
             try
             {
-                #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-                var branch = UtilityService.NormalizeVersionType(config.VersionType);
-                #pragma warning restore CS0618
-                var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
-                var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
-                
-                if (Directory.Exists(userDataPath))
+                var versionPath = TryGetCurrentExistingInstancePath();
+                if (string.IsNullOrWhiteSpace(versionPath))
                 {
-                    var profilesDir = GetProfilesFolder();
-                    var sourceProfileFolder = Path.Combine(profilesDir, SanitizeFileName(sourceProfile.Name));
-                    var sourceUserDataBackup = Path.Combine(sourceProfileFolder, "UserData");
-                    var destProfileFolder = Path.Combine(profilesDir, SanitizeFileName(newProfile.Name));
-                    var destUserDataBackup = Path.Combine(destProfileFolder, "UserData");
-                    
-                    // If source profile has a UserData backup, copy it
-                    if (Directory.Exists(sourceUserDataBackup))
+                    Logger.Info("Profile", "No existing instance selected, skipping UserData copy during duplication");
+                }
+                else
+                {
+                    var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
+                
+                    if (Directory.Exists(userDataPath))
                     {
-                        CopyDirectory(sourceUserDataBackup, destUserDataBackup);
-                        Logger.Info("Profile", $"Copied UserData from '{sourceProfile.Name}' to '{newProfile.Name}'");
+                        var sourceProfileFolder = UtilityService.GetProfileFolderPath(_appDir, sourceProfile);
+                        var sourceUserDataBackup = Path.Combine(sourceProfileFolder, "UserData");
+                        var destProfileFolder = UtilityService.GetProfileFolderPath(_appDir, newProfile);
+                        var destUserDataBackup = Path.Combine(destProfileFolder, "UserData");
+                        
+                        // If source profile has a UserData backup, copy it
+                        if (Directory.Exists(sourceUserDataBackup))
+                        {
+                            CopyDirectory(sourceUserDataBackup, destUserDataBackup);
+                            Logger.Info("Profile", $"Copied UserData from '{sourceProfile.Name}' to '{newProfile.Name}'");
+                        }
                     }
                 }
             }
@@ -403,9 +580,8 @@ public class ProfileManagementService : IProfileManagementService
             // Copy skin/avatar data
             try
             {
-                var profilesDir = GetProfilesFolder();
-                var sourceProfileDir = Path.Combine(profilesDir, SanitizeFileName(sourceProfile.Name));
-                var destProfileDir = Path.Combine(profilesDir, SanitizeFileName(newProfile.Name));
+                var sourceProfileDir = UtilityService.GetProfileFolderPath(_appDir, sourceProfile);
+                var destProfileDir = UtilityService.GetProfileFolderPath(_appDir, newProfile);
                 
                 // Copy skin.png if exists
                 var sourceSkin = Path.Combine(sourceProfileDir, "skin.png");
@@ -504,9 +680,8 @@ public class ProfileManagementService : IProfileManagementService
             // Copy skin/avatar data (but NOT UserData)
             try
             {
-                var profilesDir = GetProfilesFolder();
-                var sourceProfileDir = Path.Combine(profilesDir, SanitizeFileName(sourceProfile.Name));
-                var destProfileDir = Path.Combine(profilesDir, SanitizeFileName(newProfile.Name));
+                var sourceProfileDir = UtilityService.GetProfileFolderPath(_appDir, sourceProfile);
+                var destProfileDir = UtilityService.GetProfileFolderPath(_appDir, newProfile);
                 
                 // Copy skin.png if exists
                 var sourceSkin = Path.Combine(sourceProfileDir, "skin.png");
@@ -577,9 +752,7 @@ public class ProfileManagementService : IProfileManagementService
                 Logger.Warning("Profile", "No active profile to open folder for");
                 return false;
             }
-            var profilesDir = GetProfilesFolder();
-            var safeName = SanitizeFileName(profile.Name);
-            var profileDir = Path.Combine(profilesDir, safeName);
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile);
             
             if (!Directory.Exists(profileDir))
             {
@@ -665,9 +838,7 @@ public class ProfileManagementService : IProfileManagementService
     /// <inheritdoc/>
     public string GetProfilesFolder()
     {
-        var profilesDir = Path.Combine(_appDir, "Profiles");
-        Directory.CreateDirectory(profilesDir);
-        return profilesDir;
+        return UtilityService.GetProfilesRoot(_appDir);
     }
 
     // ========== Private Helper Methods ==========
@@ -677,9 +848,7 @@ public class ProfileManagementService : IProfileManagementService
     /// </summary>
     private string GetProfileModsFolder(Profile profile)
     {
-        var profilesDir = GetProfilesFolder();
-        var safeName = SanitizeFileName(profile.Name);
-        var profileDir = Path.Combine(profilesDir, safeName);
+        var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile);
         var modsDir = Path.Combine(profileDir, "Mods");
         Directory.CreateDirectory(modsDir);
         return modsDir;
@@ -693,22 +862,11 @@ public class ProfileManagementService : IProfileManagementService
     {
         try
         {
-            var config = _configService.Configuration;
-
-            string? versionPath = null;
-            var selected = _instanceService.GetSelectedInstance();
-            if (selected != null)
-            {
-                versionPath = _instanceService.GetInstancePathById(selected.Id)
-                              ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
-            }
-
+            var versionPath = TryGetCurrentExistingInstancePath();
             if (string.IsNullOrWhiteSpace(versionPath))
             {
-                #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-                var branch = UtilityService.NormalizeVersionType(config.VersionType);
-                #pragma warning restore CS0618
-                versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+                Logger.Info("Mods", "No existing instance found for mods directory initialization");
+                return;
             }
 
             var userDataPath = Path.Combine(versionPath, "UserData");
@@ -786,6 +944,37 @@ public class ProfileManagementService : IProfileManagementService
             Logger.Warning("Mods", $"Failed to ensure instance mods directory: {ex.Message}");
         }
     }
+
+    private string? TryGetCurrentExistingInstancePath()
+    {
+        var config = _configService.Configuration;
+        var selected = _instanceService.GetSelectedInstance();
+        if (selected != null)
+        {
+            var selectedPath = _instanceService.GetInstancePathById(selected.Id)
+                               ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
+            if (!string.IsNullOrWhiteSpace(selectedPath))
+            {
+                return selectedPath;
+            }
+        }
+
+        #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
+        var branch = UtilityService.NormalizeVersionType(config.VersionType);
+        var configuredVersion = config.SelectedVersion;
+        #pragma warning restore CS0618
+
+        var configuredPath = _instanceService.FindExistingInstancePath(branch, configuredVersion);
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return configuredPath;
+        }
+
+        return _instanceService
+            .GetInstalledInstances()
+            .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
+            ?.Path;
+    }
     
     /// <summary>
     /// Saves a profile to disk as a .sh file with name and UUID, plus avatar if available.
@@ -794,10 +983,7 @@ public class ProfileManagementService : IProfileManagementService
     {
         try
         {
-            var profilesDir = GetProfilesFolder();
-            // Use profile name as folder name (sanitize for filesystem)
-            var safeName = SanitizeFileName(profile.Name);
-            var profileDir = Path.Combine(profilesDir, safeName);
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile);
             Directory.CreateDirectory(profileDir);
             
             // Create the Mods folder for this profile
@@ -837,16 +1023,7 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
     {
         try
         {
-            var profilesDir = GetProfilesFolder();
-            var safeName = SanitizeFileName(profile.Name);
-            var profileDir = Path.Combine(profilesDir, safeName);
-            
-            // Also check for old folder with ID and rename it
-            var oldProfileDir = Path.Combine(profilesDir, profile.Id);
-            if (Directory.Exists(oldProfileDir) && !Directory.Exists(profileDir))
-            {
-                Directory.Move(oldProfileDir, profileDir);
-            }
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile);
             
             if (!Directory.Exists(profileDir))
             {
@@ -896,13 +1073,12 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
             // Try to delete by name first if provided
             if (!string.IsNullOrEmpty(profileName))
             {
-                var safeName = SanitizeFileName(profileName);
+                var safeName = UtilityService.SanitizeFileName(profileName);
                 var profileDirByName = Path.Combine(profilesDir, safeName);
                 if (Directory.Exists(profileDirByName))
                 {
                     Directory.Delete(profileDirByName, true);
                     Logger.Info("Profile", $"Deleted profile from disk: {profileDirByName}");
-                    return;
                 }
             }
             
@@ -918,14 +1094,6 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
         {
             Logger.Warning("Profile", $"Failed to delete profile from disk: {ex.Message}");
         }
-    }
-    
-    /// <summary>
-    /// Sanitizes a string to be safe for use as a filename.
-    /// </summary>
-    private string SanitizeFileName(string name)
-    {
-        return UtilityService.SanitizeFileName(name);
     }
     
     /// <summary>

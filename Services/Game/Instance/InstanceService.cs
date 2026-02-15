@@ -256,8 +256,13 @@ public class InstanceService : IInstanceService
     /// </summary>
     public string GetLatestInfoPath(string branch)
     {
-        return Path.Combine(GetLatestInstancePath(branch), "latest.json");
+            return Path.Combine(GetBranchPath(branch), "latest.json");
     }
+
+        private string GetLegacyLatestInfoPath(string branch)
+        {
+            return Path.Combine(GetLatestInstancePath(branch), "latest.json");
+        }
 
     /// <summary>
     /// Load latest instance info from latest.json.
@@ -266,8 +271,12 @@ public class InstanceService : IInstanceService
     {
         try
         {
-            var path = GetLatestInfoPath(branch);
-            if (!File.Exists(path)) return null;
+                var path = GetLatestInfoPath(branch);
+                if (!File.Exists(path))
+                {
+                    path = GetLegacyLatestInfoPath(branch);
+                    if (!File.Exists(path)) return null;
+                }
             var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<LatestInstanceInfo>(json, JsonOptions);
         }
@@ -1079,6 +1088,45 @@ public class InstanceService : IInstanceService
     }
 
     /// <summary>
+    /// Deletes a game instance by unique ID.
+    /// </summary>
+    public bool DeleteGameById(string instanceId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                return false;
+            }
+
+            var info = FindInstanceById(instanceId);
+            var versionPath = GetInstancePathById(instanceId);
+            if (string.IsNullOrWhiteSpace(versionPath) || !Directory.Exists(versionPath))
+            {
+                return false;
+            }
+
+            Directory.Delete(versionPath, true);
+
+            if (info?.Version == 0)
+            {
+                var infoPath = GetLatestInfoPath(info.Branch);
+                if (File.Exists(infoPath))
+                {
+                    File.Delete(infoPath);
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Game", $"Error deleting game by id: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Scan for all installed instances in the standard hierarchy.
     /// </summary>
     public List<InstalledInstance> GetInstalledInstances()
@@ -1689,9 +1737,26 @@ public class InstanceService : IInstanceService
     public void SetSelectedInstance(string instanceId)
     {
         var config = GetConfig();
+        config.Instances ??= new List<InstanceInfo>();
+
+        var selected = FindInstanceById(instanceId);
+        if (selected == null)
+        {
+            Logger.Warning("InstanceService", $"SetSelectedInstance ignored: instance not found ({instanceId})");
+            return;
+        }
+
         config.SelectedInstanceId = instanceId;
+
+        // Keep legacy launch config in sync with selected instance so launch paths
+        // that still read VersionType/SelectedVersion target the same instance.
+        #pragma warning disable CS0618 // Backward compatibility: VersionType and SelectedVersion kept for migration
+        config.VersionType = NormalizeVersionType(selected.Branch);
+        config.SelectedVersion = selected.Version;
+        #pragma warning restore CS0618
+
         SaveConfig(config);
-        Logger.Info("InstanceService", $"Selected instance: {instanceId}");
+        Logger.Info("InstanceService", $"Selected instance: {instanceId} ({selected.Branch} v{selected.Version})");
     }
 
     /// <inheritdoc/>

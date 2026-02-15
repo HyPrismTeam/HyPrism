@@ -78,19 +78,13 @@ public class HytaleVersionSource : IVersionSource
         // Check if any profile is official and has session file
         foreach (var profile in config.Profiles.Where(p => p.IsOfficial))
         {
-            var safeName = SanitizeFileName(profile.Name);
-            var sessionPath = Path.Combine(_appDir, "Profiles", safeName, "hytale_session.json");
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile, createIfMissing: false, migrateLegacyByName: true);
+            var sessionPath = Path.Combine(profileDir, "hytale_session.json");
             if (File.Exists(sessionPath))
                 return true;
         }
 
         return false;
-    }
-
-    private static string SanitizeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        return new string(name.Where(c => !invalid.Contains(c)).ToArray());
     }
 
     /// <inheritdoc/>

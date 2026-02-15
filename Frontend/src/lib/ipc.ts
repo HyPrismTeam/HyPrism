@@ -372,12 +372,14 @@ const _browser = {
 
 const _mods = {
   list: () => invoke<InstalledMod[]>('hyprism:mods:list'),
-  search: (data?: unknown) => invoke<ModSearchResult>('hyprism:mods:search', data, 15000),
+  search: (data?: unknown) => invoke<ModSearchResult>('hyprism:mods:search', data, 30000),
   installed: (data?: unknown) => invoke<InstalledMod[]>('hyprism:mods:installed', data),
   uninstall: (data?: unknown) => invoke<boolean>('hyprism:mods:uninstall', data),
   checkUpdates: (data?: unknown) => invoke<InstalledMod[]>('hyprism:mods:checkUpdates', data, 30000),
-  install: (data?: unknown) => invoke<boolean>('hyprism:mods:install', data, 30000),
+  install: (data?: unknown) => invoke<boolean>('hyprism:mods:install', data, 300000),
   files: (data?: unknown) => invoke<ModFilesResult>('hyprism:mods:files', data),
+  info: (data?: unknown) => invoke<ModInfo>('hyprism:mods:info', data, 30000),
+  changelog: (data?: unknown) => invoke<string>('hyprism:mods:changelog', data),
   categories: (data?: unknown) => invoke<ModCategory[]>('hyprism:mods:categories', data),
   installLocal: (data?: unknown) => invoke<boolean>('hyprism:mods:installLocal', data),
   installBase64: (data?: unknown) => invoke<boolean>('hyprism:mods:installBase64', data),

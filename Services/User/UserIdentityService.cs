@@ -239,10 +239,32 @@ public class UserIdentityService : IUserIdentityService
             }
             
             // If the current UUID already has a skin, don't overwrite
-            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-            var branch = UtilityService.NormalizeVersionType(config.VersionType);
-            #pragma warning restore CS0618
-            var versionPath = _instanceService.ResolveInstancePath(branch, 0, true);
+            string? versionPath = null;
+            var selected = _instanceService.GetSelectedInstance();
+            if (selected != null)
+            {
+                versionPath = _instanceService.GetInstancePathById(selected.Id)
+                              ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
+            }
+
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
+                var branch = UtilityService.NormalizeVersionType(config.VersionType);
+                var configuredVersion = config.SelectedVersion;
+                #pragma warning restore CS0618
+                versionPath = _instanceService.FindExistingInstancePath(branch, configuredVersion)
+                              ?? _instanceService.GetInstalledInstances()
+                                  .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
+                                  ?.Path;
+            }
+
+            if (string.IsNullOrWhiteSpace(versionPath))
+            {
+                Logger.Info("UUID", "No existing instance found, skipping orphaned skin recovery copy");
+                return false;
+            }
+
             var userDataPath = _instanceService.GetInstanceUserDataPath(versionPath);
             var skinCacheDir = Path.Combine(userDataPath, "CachedPlayerSkins");
             var avatarCacheDir = Path.Combine(userDataPath, "CachedAvatarPreviews");
