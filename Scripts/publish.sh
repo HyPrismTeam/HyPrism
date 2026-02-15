@@ -679,7 +679,7 @@ do_flatpak_publish() {
     rm -rf "$build_dir"
     mkdir -p "$build_dir"
 
-    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" com.hyprismteam.hyprism.json); then
+    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" com.hyprismteam.hyprism.yml); then
         log_error "flatpak-builder failed for $arch"
         rm -rf "$bundle_dir" "$build_dir"
         FAIL_COUNT=$((FAIL_COUNT + 1))

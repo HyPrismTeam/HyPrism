@@ -14,11 +14,10 @@ mkdir -p "$DATA_DIR"
 
 log() { printf "%s %s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
 
-# If a user-installed launcher exists, run it
-if [ -x "$DATA_DIR/HyPrism" ]; then
-  log "Found user release at $DATA_DIR/HyPrism — exec"
-  exec "$DATA_DIR/HyPrism" "$@"
-fi
+# Defer checking/running a user-installed launcher until we know the remote latest version.
+# This enables automatic updates: if a newer release exists on GitHub the wrapper will
+# download and replace the installed copy before launching.
+# (The actual check happens after querying GitHub releases.)
 
 # Determine asset name by architecture
 case "$(uname -m)" in
@@ -48,6 +47,31 @@ download_file() {
   fi
 }
 
+# Helper: normalize a GitHub tag (strip leading v/V, beta- prefixes, trailing metadata)
+normalize_version() {
+  # examples: v1.2.3 -> 1.2.3    beta3-3.0.0 -> 3.0.0
+  printf '%s' "$1" | sed -E 's/^[vV]//; s/^beta[^-]*-//; s/[^0-9.].*$//'
+}
+
+# Return 0 if version $1 is less than version $2 (semantic numeric compare)
+version_lt() {
+  [ "$1" = "$2" ] && return 1
+  local i ai bi
+  for i in 1 2 3 4 5; do
+    ai=$(printf '%s' "$1" | cut -d. -f$i)
+    bi=$(printf '%s' "$2" | cut -d. -f$i)
+    ai=${ai:-0}
+    bi=${bi:-0}
+    ai=$(printf '%s' "$ai" | sed 's/[^0-9].*//')
+    bi=$(printf '%s' "$bi" | sed 's/[^0-9].*//')
+    ai=${ai:-0}
+    bi=${bi:-0}
+    if [ "$ai" -lt "$bi" ]; then return 0; fi
+    if [ "$ai" -gt "$bi" ]; then return 1; fi
+  done
+  return 1
+}
+
 # Try GitHub API: latest → prereleases
 REPO="yyyumeniku/HyPrism"
 log "Looking for release asset matching: $ASSET_RE"
@@ -61,6 +85,9 @@ else
 fi
 if [ -n "$json" ]; then
   asset_url=$(get_asset_url "$json")
+  # extract tag_name (e.g. "v2.3.4") and normalize to "2.3.4"
+  REMOTE_TAG=$(printf "%s" "$json" | grep -E '"tag_name"' | sed -E 's/.*"tag_name" *: *"([^"]+)".*/\1/' | head -n1 || true)
+  REMOTE_VERSION=$(normalize_version "$REMOTE_TAG")
 fi
 
 # fallback: search releases for first prerelease with matching asset
@@ -70,7 +97,51 @@ if [ -z "$asset_url" ]; then
     if [ -n "$json_all" ]; then
       # prefer non-draft releases; pick first release with matching asset
       asset_url=$(printf "%s" "$json_all" | get_asset_url -)
+      if [ -n "$asset_url" ]; then
+        # find the tag_name for the release that contains the matched asset
+        lineno=$(printf "%s" "$json_all" | grep -nF "$asset_url" | head -n1 | cut -d: -f1 || true)
+        if [ -n "$lineno" ]; then
+          REMOTE_TAG=$(printf "%s" "$json_all" | head -n "$lineno" | grep -E '"tag_name"' | tail -n1 | sed -E 's/.*"tag_name" *: *"([^"]+)".*/\1/' || true)
+          REMOTE_VERSION=$(normalize_version "$REMOTE_TAG")
+        fi
+      fi
     fi
+  fi
+fi
+
+# If a user-installed launcher exists, check its version and auto-update if a newer
+# release is available on GitHub. If we cannot determine versions, fall back to running
+# the installed binary.
+if [ -x "$DATA_DIR/HyPrism" ]; then
+  INSTALLED_VER=""
+  if [ -f "$DATA_DIR/version.txt" ]; then
+    INSTALLED_VER=$(sed -n '1p' "$DATA_DIR/version.txt" 2>/dev/null || true)
+    INSTALLED_VER=$(normalize_version "$INSTALLED_VER")
+  else
+    # Try common CLI version flags; these are best-effort and optional.
+    if "$DATA_DIR/HyPrism" --version >/dev/null 2>&1; then
+      INSTALLED_VER=$("$DATA_DIR/HyPrism" --version 2>/dev/null | head -n1 | sed -E 's/[^0-9.].*$//' || true)
+    elif "$DATA_DIR/HyPrism" -v >/dev/null 2>&1; then
+      INSTALLED_VER=$("$DATA_DIR/HyPrism" -v 2>/dev/null | head -n1 | sed -E 's/[^0-9.].*$//' || true)
+    fi
+    if [ -n "$INSTALLED_VER" ]; then
+      INSTALLED_VER=$(normalize_version "$INSTALLED_VER")
+      printf "%s\n" "$INSTALLED_VER" > "$DATA_DIR/version.txt" 2>/dev/null || true
+    fi
+  fi
+
+  # If we know both versions, compare and update if needed.
+  if [ -n "$REMOTE_VERSION" ] && [ -n "$INSTALLED_VER" ]; then
+    if version_lt "$INSTALLED_VER" "$REMOTE_VERSION"; then
+      log "Installed launcher version $INSTALLED_VER is older than latest $REMOTE_VERSION — will update"
+      # continue to download/extract branch below
+    else
+      log "Installed launcher is up-to-date ($INSTALLED_VER) — exec"
+      exec "$DATA_DIR/HyPrism" "$@"
+    fi
+  else
+    log "Found user release at $DATA_DIR/HyPrism (version unknown) — exec"
+    exec "$DATA_DIR/HyPrism" "$@"
   fi
 fi
 
@@ -108,6 +179,10 @@ if tar -xJf "$TMP_TAR" -C "$TMP_DIR" 2>>"$LOG"; then
     # copy extracted tree into DATA_DIR preserving structure
     cp -a "$TMP_DIR"/* "$DATA_DIR/" 2>>"$LOG" || true
     chmod +x "$DATA_DIR/HyPrism" 2>>"$LOG" || true
+    # save normalized remote version so wrapper can check before next run
+    if [ -n "$REMOTE_VERSION" ]; then
+      printf "%s\n" "$REMOTE_VERSION" > "$DATA_DIR/version.txt" 2>>"$LOG" || true
+    fi
     rm -rf "$TMP_DIR" "$TMP_TAR"
     log "Extraction complete — exec $DATA_DIR/HyPrism"
     exec "$DATA_DIR/HyPrism" "$@"

@@ -109,13 +109,10 @@ jobs:
             flatpak \
             flatpak-builder
 
-      - name: Prepare Flatpak runtimes
+      - name: Prepare Flatpak remotes
         run: |
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub \
-            org.freedesktop.Platform//24.08 \
-            org.freedesktop.Sdk//24.08 \
-            org.electronjs.Electron2.BaseApp//24.08
+          flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
 
       - name: Build Linux ${{ matrix.arch }}
         run: |

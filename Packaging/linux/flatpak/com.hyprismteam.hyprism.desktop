@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=HyPrism
-Comment=A modern launcher for Hytale
+Comment=All in one launcher and mod manager fotr Hytale
 Exec=hyprism-launcher-wrapper.sh
-Icon=dev.hyprism.HyPrism
+Icon=com.hyprismteam.hyprism
 Terminal=false
 Type=Application
 Categories=Game;

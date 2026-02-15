@@ -71,10 +71,10 @@ dotnet build
 dotnet publish -c Release -r linux-x64
 
 # Flatpak
-- Build manifest (canonical source): `Packaging/linux/flatpak/com.hyprismteam.hyprism.json`
+- Build manifest (canonical source): `Packaging/linux/flatpak/com.hyprismteam.hyprism.yml`
 - Flatpak metadata (desktop, metainfo, icon, wrapper) are canonicalized under `Packaging/linux/flatpak/` — edit those files there.
 
-flatpak-builder build Packaging/linux/flatpak/com.hyprismteam.hyprism.json
+flatpak-builder build Packaging/linux/flatpak/com.hyprismteam.hyprism.yml
 ```
 
 Release CI (`.github/workflows/release.yml`) publishes Linux artifacts for `linux-x64` only. Linux `arm64` release builds are not supported.
