@@ -53,7 +53,7 @@ Special thanks to **Sanasol** for maintaining and creating the [auth server](htt
 
 ## Legal Notice & Licenses
 
-HyPrism is licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+HyPrism is licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**
 
 - Full license text: [LICENSE](LICENSE)
 - Third-party licenses: [Licenses/COPYING.md](Licenses/COPYING.md)
@@ -62,7 +62,7 @@ HyPrism is licensed under **Creative Commons Attribution-NonCommercial-ShareAlik
 **HyPrism** is an unofficial, open-source launcher for Hytale. This project is **not** affiliated with, endorsed by, sponsored by, or approved by **Hypixel Studios**, **Riot Games**, or any of their affiliates
 
 ### Intellectual Property
-"Hytale", "Hypixel Studios", and strictly related logos and assets are trademarks or registered trademarks of **Hypixel Studios Inc.**. All rights reserved by their respective owners. usage of this software is subject to the terms of the [Hytale End-User License Agreement (EULA)](https://hytale.com/eula)
+"Hytale", "Hypixel Studios", and strictly related logos and assets are trademarks or registered trademarks of **Hypixel Studios Inc**. All rights reserved by their respective owners. usage of this software is subject to the terms of the [Hytale End-User License Agreement (EULA)](https://hytale.com/eula)
 
 ### Game Files & Distribution
 
