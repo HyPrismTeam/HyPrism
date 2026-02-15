@@ -53,8 +53,7 @@ Special thanks to **Sanasol** for maintaining and creating the [auth server](htt
 
 ## Legal Notice & Licenses
 
-HyPrism is licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**
-
+HyPrism is licensed under the **GNU General Public License v3.0 (GPL-3.0)**
 - Full license text: [LICENSE](LICENSE)
 - Third-party licenses: [Licenses/COPYING.md](Licenses/COPYING.md)
 

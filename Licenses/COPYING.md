@@ -4,7 +4,7 @@ This directory contains third-party license information for dependencies used by
 
 ## Project License
 
-- HyPrism source code license: [../LICENSE](../LICENSE) (CC BY-NC-SA 4.0)
+- HyPrism source code license: [../LICENSE](../LICENSE) (GNU GPL v3.0)
 
 ## Included license texts
 
