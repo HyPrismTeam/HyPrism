@@ -249,3 +249,44 @@ button:focus-visible {
   border: 1px solid rgba(255,255,255,0.06);
   background: rgba(38, 38, 40, 0.98);
 }
+
+.java-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+}
+
+.java-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.java-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: none;
+  background: currentColor;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+
+.java-range::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+}
+
+.java-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: none;
+  background: currentColor;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}

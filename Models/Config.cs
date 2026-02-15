@@ -90,6 +90,22 @@ public class Config
     /// Auth server domain for online mode (e.g., "sessions.sanasol.ws").
     /// </summary>
     public string AuthDomain { get; set; } = "sessions.sanasol.ws";
+
+    /// <summary>
+    /// Custom JVM arguments passed through JAVA_TOOL_OPTIONS for Java processes started by the game client.
+    /// Example: "-Xmx4G -Dfile.encoding=UTF-8".
+    /// </summary>
+    public string JavaArguments { get; set; } = "";
+
+    /// <summary>
+    /// If true, launcher uses CustomJavaPath instead of bundled JRE.
+    /// </summary>
+    public bool UseCustomJava { get; set; } = false;
+
+    /// <summary>
+    /// Absolute path to custom Java executable (java/java.exe).
+    /// </summary>
+    public string CustomJavaPath { get; set; } = "";
     
     /// <summary>
     /// Last directory used for mod export. Defaults to Desktop.

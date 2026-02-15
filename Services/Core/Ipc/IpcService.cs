@@ -3,8 +3,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Runtime.InteropServices;
 using ElectronNET.API;
 using Microsoft.Extensions.DependencyInjection;
 using SixLabors.ImageSharp;
@@ -43,7 +45,7 @@ namespace HyPrism.Services.Core.Ipc;
 /// @type Profile { id: string; name: string; uuid?: string; isOfficial?: boolean; avatar?: string; folderName?: string; }
 /// @type HytaleAuthStatus { loggedIn: boolean; username?: string; uuid?: string; error?: string; errorType?: string; }
 /// @type ProfileSnapshot { nick: string; uuid: string; avatarPath?: string; }
-/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
+/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; javaArguments?: string; useCustomJava?: boolean; customJavaPath?: string; systemMemoryMb?: number; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
 /// @type ModScreenshot { id: number; title: string; thumbnailUrl: string; url: string; }
 /// @type ModInfo { id: string; name: string; slug: string; summary: string; author: string; downloadCount: number; iconUrl: string; thumbnailUrl: string; categories: string[]; dateUpdated: string; latestFileId: string; screenshots: ModScreenshot[]; }
 /// @type ModSearchResult { mods: ModInfo[]; totalCount: number; }
@@ -128,6 +130,91 @@ public class IpcService
         if (win == null) return;
         Electron.IpcMain.Send(win, channel, raw);
     }
+
+    private static int GetSystemMemoryMb()
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var memoryStatus = new MemoryStatusEx();
+                if (GlobalMemoryStatusEx(memoryStatus) && memoryStatus.ullTotalPhys > 0)
+                {
+                    return (int)(memoryStatus.ullTotalPhys / (1024 * 1024));
+                }
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                const string memInfoPath = "/proc/meminfo";
+                if (File.Exists(memInfoPath))
+                {
+                    var memTotalLine = File.ReadLines(memInfoPath).FirstOrDefault(line => line.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase));
+                    if (!string.IsNullOrWhiteSpace(memTotalLine))
+                    {
+                        var parts = memTotalLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 2 && long.TryParse(parts[1], out var kb) && kb > 0)
+                        {
+                            return (int)(kb / 1024);
+                        }
+                    }
+                }
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/usr/sbin/sysctl",
+                    Arguments = "-n hw.memsize",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process != null)
+                {
+                    var output = process.StandardOutput.ReadToEnd().Trim();
+                    process.WaitForExit(2000);
+                    if (process.ExitCode == 0 && long.TryParse(output, out var bytes) && bytes > 0)
+                    {
+                        return (int)(bytes / (1024 * 1024));
+                    }
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        var fallback = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+        if (fallback > 0)
+        {
+            return (int)Math.Max(1024, fallback / (1024 * 1024));
+        }
+
+        return 8192;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+    private sealed class MemoryStatusEx
+    {
+        public uint dwLength = (uint)Marshal.SizeOf<MemoryStatusEx>();
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx([In, Out] MemoryStatusEx lpBuffer);
 
     public void RegisterAll()
     {
@@ -1304,6 +1391,10 @@ public class IpcService
                 hasCompletedOnboarding = settings.GetHasCompletedOnboarding(),
                 onlineMode = settings.GetOnlineMode(),
                 authDomain = settings.GetAuthDomain(),
+                javaArguments = settings.GetJavaArguments(),
+                useCustomJava = settings.GetUseCustomJava(),
+                customJavaPath = settings.GetCustomJavaPath(),
+                systemMemoryMb = GetSystemMemoryMb(),
                 dataDirectory = appPath.AppDir,
                 instanceDirectory = settings.GetInstanceDirectory(),
                 gpuPreference = settings.GetGpuPreference(),
@@ -1347,6 +1438,9 @@ public class IpcService
             case "accentColor": s.SetAccentColor(val.GetString() ?? "#7C5CFC"); break;
             case "onlineMode": s.SetOnlineMode(val.GetBoolean()); break;
             case "authDomain": s.SetAuthDomain(val.GetString() ?? ""); break;
+            case "javaArguments": s.SetJavaArguments(val.GetString() ?? ""); break;
+            case "useCustomJava": s.SetUseCustomJava(val.GetBoolean()); break;
+            case "customJavaPath": s.SetCustomJavaPath(val.GetString() ?? ""); break;
             case "gpuPreference": s.SetGpuPreference(val.GetString() ?? "dedicated"); break;
             case "hasCompletedOnboarding": s.SetHasCompletedOnboarding(val.GetBoolean()); break;
             default: Logger.Warning("IPC", $"Unknown setting key: {key}"); break;
@@ -2061,7 +2155,9 @@ public class IpcService
 
     // #region File Dialog
     // @ipc invoke hyprism:file:browseFolder -> string | null 300000
+    // @ipc invoke hyprism:file:browseJavaExecutable -> string | null 300000
     // @ipc invoke hyprism:file:browseModFiles -> string[]
+    // @ipc invoke hyprism:file:exists -> boolean
     // @ipc invoke hyprism:mods:exportToFolder -> string
     // @ipc invoke hyprism:mods:importList -> number
     // @ipc invoke hyprism:settings:launcherPath -> string
@@ -2088,6 +2184,37 @@ public class IpcService
             {
                 Logger.Error("IPC", $"Failed to browse mod files: {ex.Message}");
                 Reply("hyprism:file:browseModFiles:reply", Array.Empty<string>());
+            }
+        });
+
+        // Browse Java executable
+        Electron.IpcMain.On("hyprism:file:browseJavaExecutable", async (_) =>
+        {
+            try
+            {
+                var selected = await fileDialog.BrowseJavaExecutableAsync();
+                Reply("hyprism:file:browseJavaExecutable:reply", selected ?? "");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to browse Java executable: {ex.Message}");
+                Reply("hyprism:file:browseJavaExecutable:reply", "");
+            }
+        });
+
+        // Check file existence
+        Electron.IpcMain.On("hyprism:file:exists", (args) =>
+        {
+            try
+            {
+                var path = ArgsToString(args)?.Trim() ?? string.Empty;
+                var exists = !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+                Reply("hyprism:file:exists:reply", exists);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Failed to check file existence: {ex.Message}");
+                Reply("hyprism:file:exists:reply", false);
             }
         });
 

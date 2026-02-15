@@ -29,11 +29,22 @@ Access settings through the **Settings** page (gear icon in sidebar).
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Resolution | Game window resolution | 1920x1080 |
-| RAM allocation | Memory for game (MB) | 4096 |
 | Sound | Game sound enabled | true |
 | GPU preference | Graphics adapter selection | auto |
 
 - **Optimization mods installer** now asks which instance should receive optimization mods before installation.
+
+### Java
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Java runtime | Bundled Java or custom executable path | Bundled Java |
+| Max RAM | Graphical slider for Java max heap (`-Xmx`) | 4096 MB |
+| Initial RAM | Graphical slider for Java initial heap (`-Xms`) | 1024 MB |
+| Garbage collector | Auto profile or explicit G1GC profile | Auto |
+| Advanced JVM arguments | Optional extra JVM flags passed through JAVA_TOOL_OPTIONS (unsafe launch flags are filtered) | empty |
+
+- When custom Java is enabled, use the **Select** button to pick an executable and save only after path validation.
 
 #### GPU Preference Options
 

@@ -96,6 +96,104 @@ public class FileDialogService : IFileDialogService
         }
     }
 
+    /// <summary>
+    /// Opens a native file picker to select a Java executable.
+    /// </summary>
+    public async Task<string?> BrowseJavaExecutableAsync()
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return await BrowseJavaExecutableWindowsAsync();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return await BrowseJavaExecutableMacOSAsync();
+            }
+            else
+            {
+                return await BrowseJavaExecutableLinuxAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Files", $"Failed to browse Java executable: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static async Task<string?> BrowseJavaExecutableWindowsAsync()
+    {
+        var script = @"Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.OpenFileDialog; $dialog.Filter = 'Java executable (java.exe;javaw.exe)|java.exe;javaw.exe|Executable files (*.exe)|*.exe|All Files (*.*)|*.*'; $dialog.Multiselect = $false; $dialog.Title = 'Select Java executable'; if ($dialog.ShowDialog() -eq 'OK') { $dialog.FileName }";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "powershell",
+            Arguments = $"-NoProfile -Command \"{script}\"",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return null;
+
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return string.IsNullOrWhiteSpace(output) ? null : output.Trim();
+    }
+
+    private static async Task<string?> BrowseJavaExecutableMacOSAsync()
+    {
+        var script = @"tell application ""Finder""
+            activate
+            set theFile to choose file with prompt ""Select Java executable""
+            return POSIX path of theFile
+        end tell";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "osascript",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return null;
+
+        await process.StandardInput.WriteAsync(script);
+        process.StandardInput.Close();
+
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output) ? output.Trim() : null;
+    }
+
+    private static async Task<string?> BrowseJavaExecutableLinuxAsync()
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "zenity",
+            Arguments = "--file-selection --title=\"Select Java executable\"",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return null;
+
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output) ? output.Trim() : null;
+    }
+
     private static async Task<string?> BrowseFolderLinuxAsync(string? initialPath)
     {
         var safeInitialPath = !string.IsNullOrEmpty(initialPath) && Directory.Exists(initialPath)

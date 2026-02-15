@@ -128,6 +128,10 @@ export interface SettingsSnapshot {
   hasCompletedOnboarding: boolean;
   onlineMode: boolean;
   authDomain: string;
+  javaArguments?: string;
+  useCustomJava?: boolean;
+  customJavaPath?: string;
+  systemMemoryMb?: number;
   dataDirectory: string;
   instanceDirectory: string;
   gpuPreference?: string;
@@ -405,7 +409,9 @@ const _logs = {
 
 const _file = {
   browseFolder: (data?: unknown) => invoke<string | null>('hyprism:file:browseFolder', data, 300000),
+  browseJavaExecutable: (data?: unknown) => invoke<string | null>('hyprism:file:browseJavaExecutable', data, 300000),
   browseModFiles: (data?: unknown) => invoke<string[]>('hyprism:file:browseModFiles', data),
+  exists: (data?: unknown) => invoke<boolean>('hyprism:file:exists', data),
 };
 
 // #endregion

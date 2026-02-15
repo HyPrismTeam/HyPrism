@@ -12,6 +12,12 @@ public interface IFileDialogService
     /// <param name="initialPath">Optional initial directory path to start the dialog in.</param>
     /// <returns>The selected folder path, or <c>null</c> if the user cancelled the dialog.</returns>
     Task<string?> BrowseFolderAsync(string? initialPath = null);
+
+    /// <summary>
+    /// Opens a file picker dialog configured for selecting a Java executable.
+    /// </summary>
+    /// <returns>The selected executable path, or <c>null</c> if the user cancelled.</returns>
+    Task<string?> BrowseJavaExecutableAsync();
     
     /// <summary>
     /// Opens a file picker dialog configured for selecting mod files (.jar, .zip).

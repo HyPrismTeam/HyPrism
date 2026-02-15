@@ -279,6 +279,15 @@ public class SettingsService : ISettingsService
     
     /// <inheritdoc/>
     public string GetAuthDomain() => _configService.Configuration.AuthDomain;
+
+    /// <inheritdoc/>
+    public string GetJavaArguments() => _configService.Configuration.JavaArguments;
+
+    /// <inheritdoc/>
+    public bool GetUseCustomJava() => _configService.Configuration.UseCustomJava;
+
+    /// <inheritdoc/>
+    public string GetCustomJavaPath() => _configService.Configuration.CustomJavaPath;
     
     /// <inheritdoc/>
     public bool SetAuthDomain(string domain)
@@ -290,6 +299,30 @@ public class SettingsService : ISettingsService
         _configService.Configuration.AuthDomain = domain;
         _configService.SaveConfig();
         Logger.Info("Config", $"Auth domain set to: {domain}");
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool SetJavaArguments(string args)
+    {
+        _configService.Configuration.JavaArguments = args?.Trim() ?? "";
+        _configService.SaveConfig();
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool SetUseCustomJava(bool enabled)
+    {
+        _configService.Configuration.UseCustomJava = enabled;
+        _configService.SaveConfig();
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool SetCustomJavaPath(string path)
+    {
+        _configService.Configuration.CustomJavaPath = path?.Trim() ?? "";
+        _configService.SaveConfig();
         return true;
     }
 

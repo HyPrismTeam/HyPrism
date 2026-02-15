@@ -152,7 +152,7 @@ public class GameLauncher : IGameLauncher
         var (identityToken, sessionToken, authPlayerName) = await AuthenticateAsync(sessionUuid);
         string launchPlayerName = ResolveLaunchPlayerName(authPlayerName, identityToken);
 
-        string javaPath = _launchService.GetJavaPath();
+        string javaPath = ResolveJavaPath();
         if (!File.Exists(javaPath)) throw new Exception($"Java not found at {javaPath}");
 
         string userDataDir = _instanceService.GetInstanceUserDataPath(versionPath);
@@ -193,6 +193,30 @@ public class GameLauncher : IGameLauncher
             Path.Combine(versionPath, "Client", "HytaleClient"),
             Path.Combine(versionPath, "Client")
         );
+    }
+
+    private string ResolveJavaPath()
+    {
+        if (_config.UseCustomJava)
+        {
+            var customJavaPath = _config.CustomJavaPath?.Trim();
+            if (string.IsNullOrWhiteSpace(customJavaPath))
+            {
+                throw new Exception("Custom Java is enabled, but no executable path is configured.");
+            }
+
+            if (!File.Exists(customJavaPath))
+            {
+                throw new Exception($"Custom Java executable was not found: {customJavaPath}");
+            }
+
+            Logger.Info("Game", $"Using custom Java executable: {customJavaPath}");
+            return customJavaPath;
+        }
+
+        var bundledJavaPath = _launchService.GetJavaPath();
+        Logger.Info("Game", $"Using bundled Java executable: {bundledJavaPath}");
+        return bundledJavaPath;
     }
 
     /// <summary>
@@ -598,10 +622,70 @@ public class GameLauncher : IGameLauncher
             var startInfo = BuildWindowsStartInfo(executable, workingDir, versionPath, userDataDir, javaPath, sessionUuid, identityToken, sessionToken, launchPlayerName);
             ApplyGpuEnvironment(startInfo);
             ApplyDualAuthEnvironment(startInfo);
+            ApplyUserJavaArguments(startInfo);
             return startInfo;
         }
 
-        return BuildUnixStartInfo(executable, workingDir, versionPath, userDataDir, javaPath, sessionUuid, identityToken, sessionToken, launchPlayerName);
+        var unixStartInfo = BuildUnixStartInfo(executable, workingDir, versionPath, userDataDir, javaPath, sessionUuid, identityToken, sessionToken, launchPlayerName);
+        ApplyUserJavaArguments(unixStartInfo);
+        return unixStartInfo;
+    }
+
+    private static string MergeJavaToolOptions(string? existing, string additional)
+    {
+        if (string.IsNullOrWhiteSpace(existing))
+            return additional;
+
+        return $"{existing} {additional}";
+    }
+
+    /// <summary>
+    /// Applies user-provided Java arguments via JAVA_TOOL_OPTIONS.
+    /// This affects Java processes started by the game client while preserving existing flags (for example DualAuth javaagent).
+    /// </summary>
+    private void ApplyUserJavaArguments(ProcessStartInfo startInfo)
+    {
+        var userJavaArgs = _config.JavaArguments?.Trim();
+        if (string.IsNullOrWhiteSpace(userJavaArgs))
+            return;
+
+        var sanitized = SanitizeUserJavaArguments(userJavaArgs);
+        if (string.IsNullOrWhiteSpace(sanitized))
+            return;
+
+        startInfo.Environment.TryGetValue("JAVA_TOOL_OPTIONS", out var current);
+        startInfo.Environment["JAVA_TOOL_OPTIONS"] = MergeJavaToolOptions(current, sanitized);
+        Logger.Info("Game", "Applied custom Java arguments from settings");
+    }
+
+    private static string SanitizeUserJavaArguments(string args)
+    {
+        var sanitized = args;
+
+        var blockedPatterns = new[]
+        {
+            @"(?:^|\s)-javaagent:\S+",
+            @"(?:^|\s)-agentlib:\S+",
+            @"(?:^|\s)-agentpath:\S+",
+            @"(?:^|\s)-Xbootclasspath(?::\S+)?",
+            @"(?:^|\s)-jar(?:\s+\S+)?",
+            @"(?:^|\s)-cp(?:\s+\S+)?",
+            @"(?:^|\s)-classpath(?:\s+\S+)?",
+            @"(?:^|\s)--class-path(?:\s+\S+)?",
+            @"(?:^|\s)--module-path(?:\s+\S+)?",
+            @"(?:^|\s)-Djava\.home=\S+",
+            @"(?:^|\s)-Xmx\S+",
+            @"(?:^|\s)-Xms\S+",
+            @"(?:^|\s)-XX:[+-]UseG1GC",
+        };
+
+        foreach (var pattern in blockedPatterns)
+        {
+            sanitized = Regex.Replace(sanitized, pattern, " ", RegexOptions.IgnoreCase);
+        }
+
+        sanitized = Regex.Replace(sanitized, @"\s+", " ").Trim();
+        return sanitized;
     }
 
     /// <summary>
@@ -740,6 +824,7 @@ public class GameLauncher : IGameLauncher
 CLIENT_DIR=""{clientDir}""
 
 {BuildGpuEnvLines()}{BuildDualAuthEnvLines()}
+{BuildUserJavaEnvLines()}
 # Build env args for a clean process environment
 ENV_ARGS=()
 ENV_ARGS+=(HOME=""{homeDir}"")
@@ -749,9 +834,20 @@ ENV_ARGS+=(SHELL=""/bin/zsh"")
 ENV_ARGS+=(TMPDIR=""{Path.GetTempPath().TrimEnd('/')}"")
 ENV_ARGS+=(LD_LIBRARY_PATH=""$CLIENT_DIR:$LD_LIBRARY_PATH"")
 
-# Add DualAuth env vars if set (JAVA_TOOL_OPTIONS needs special handling for paths with spaces)
+# Add Java tool options (DualAuth + user-defined args)
+COMBINED_JAVA_TOOL_OPTIONS=""
 if [[ -n ""$DUALAUTH_JAVA_TOOL_OPTIONS"" ]]; then
-    ENV_ARGS+=(""JAVA_TOOL_OPTIONS=$DUALAUTH_JAVA_TOOL_OPTIONS"")
+    COMBINED_JAVA_TOOL_OPTIONS=""$DUALAUTH_JAVA_TOOL_OPTIONS""
+fi
+if [[ -n ""$USER_JAVA_TOOL_OPTIONS"" ]]; then
+    if [[ -n ""$COMBINED_JAVA_TOOL_OPTIONS"" ]]; then
+        COMBINED_JAVA_TOOL_OPTIONS=""$COMBINED_JAVA_TOOL_OPTIONS $USER_JAVA_TOOL_OPTIONS""
+    else
+        COMBINED_JAVA_TOOL_OPTIONS=""$USER_JAVA_TOOL_OPTIONS""
+    fi
+fi
+if [[ -n ""$COMBINED_JAVA_TOOL_OPTIONS"" ]]; then
+    ENV_ARGS+=(""JAVA_TOOL_OPTIONS=$COMBINED_JAVA_TOOL_OPTIONS"")
 fi
 [[ -n ""$DUALAUTH_AUTH_DOMAIN"" ]] && ENV_ARGS+=(""HYTALE_AUTH_DOMAIN=$DUALAUTH_AUTH_DOMAIN"")
 [[ -n ""$DUALAUTH_TRUST_ALL"" ]] && ENV_ARGS+=(""HYTALE_TRUST_ALL_ISSUERS=$DUALAUTH_TRUST_ALL"")
@@ -894,6 +990,32 @@ DUALAUTH_TRUST_ALL=""true""
 DUALAUTH_TRUST_OFFICIAL=""true""
 
 ";
+    }
+
+    private string BuildUserJavaEnvLines()
+    {
+        var userJavaArgs = _config.JavaArguments?.Trim();
+        if (string.IsNullOrWhiteSpace(userJavaArgs))
+            return "# No custom user Java args\nUSER_JAVA_TOOL_OPTIONS=\"\"\n\n";
+
+        userJavaArgs = SanitizeUserJavaArguments(userJavaArgs);
+        if (string.IsNullOrWhiteSpace(userJavaArgs))
+            return "# No custom user Java args\nUSER_JAVA_TOOL_OPTIONS=\"\"\n\n";
+
+        var escaped = EscapeForBashDoubleQuoted(userJavaArgs);
+        return $@"# Custom user Java arguments from Settings
+USER_JAVA_TOOL_OPTIONS=""{escaped}""
+
+";
+    }
+
+    private static string EscapeForBashDoubleQuoted(string value)
+    {
+        return value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("$", "\\$")
+            .Replace("`", "\\`");
     }
 
     private async Task StartAndMonitorProcessAsync(ProcessStartInfo startInfo, string sessionUuid)

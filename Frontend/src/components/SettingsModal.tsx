@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Server, Edit3, FileText } from 'lucide-react';
+import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Coffee, Server, Edit3, FileText } from 'lucide-react';
 import { ipc, on } from '@/lib/ipc';
 import { changeLanguage } from '../i18n';
 
@@ -45,6 +45,8 @@ async function SetInstanceDirectory(path: string): Promise<{ success: boolean, p
     return result;
 }
 async function BrowseFolder(initialPath?: string): Promise<string> { return (await ipc.file.browseFolder(initialPath)) ?? ''; }
+async function BrowseJavaExecutable(): Promise<string> { return (await ipc.file.browseJavaExecutable()) ?? ''; }
+async function FileExists(path: string): Promise<boolean> { return await ipc.file.exists(path); }
 
 // TODO: These still need dedicated IPC channels
 const _stub = <T,>(name: string, fb: T) => async (..._a: any[]): Promise<T> => { console.warn(`[IPC] ${name}: no channel`); return fb; };
@@ -111,7 +113,7 @@ interface SettingsModalProps {
     onMovingDataChange?: (isMoving: boolean) => void;
 }
 
-type SettingsTab = 'general' | 'visual' | 'network' | 'graphics' | 'logs' | 'language' | 'data' | 'instances' | 'about' | 'developer';
+type SettingsTab = 'general' | 'java' | 'visual' | 'network' | 'graphics' | 'logs' | 'language' | 'data' | 'instances' | 'about' | 'developer';
 
 // Auth server base URL for avatar/skin head
 const DEFAULT_AUTH_DOMAIN = 'sessions.sanasol.ws';
@@ -137,6 +139,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const [selectedLauncherBranch, setSelectedLauncherBranch] = useState(launcherBranch);
     const [closeAfterLaunch, setCloseAfterLaunch] = useState(false);
+    const [javaArguments, setJavaArguments] = useState('');
+    const [javaRamMb, setJavaRamMb] = useState(4096);
+    const [javaInitialRamMb, setJavaInitialRamMb] = useState(1024);
+    const [javaGcMode, setJavaGcMode] = useState<'auto' | 'g1'>('auto');
+    const [javaRuntimeMode, setJavaRuntimeMode] = useState<'bundled' | 'custom'>('bundled');
+    const [customJavaPath, setCustomJavaPath] = useState('');
+    const [javaCustomPathError, setJavaCustomPathError] = useState('');
+    const [javaArgumentsError, setJavaArgumentsError] = useState('');
+    const [systemMemoryMb, setSystemMemoryMb] = useState(8192);
     const [launcherFolderPath, setLauncherFolderPath] = useState('');
     const [instanceDir, setInstanceDir] = useState('');
     const [devModeEnabled, setDevModeEnabled] = useState(false);
@@ -148,6 +159,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [gpuPreference, setGpuPreferenceState] = useState<string>('dedicated');
     const [gpuAdapters, setGpuAdapters] = useState<Array<{ name: string; vendor: string; type: string }>>([]);
     const [hasSingleGpu, setHasSingleGpu] = useState(false);
+
+    const detectedSystemRamMb = Math.max(4096, systemMemoryMb);
+    const minJavaRamMb = 1024;
+    const maxJavaRamMb = Math.max(minJavaRamMb, Math.floor((detectedSystemRamMb * 0.75) / 256) * 256);
     
     // Data move progress state
     const [isMovingData, setIsMovingData] = useState(false);
@@ -192,6 +207,93 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [customAuthDomain, setCustomAuthDomain] = useState('');
     const [_localAvatar, setLocalAvatar] = useState<string | null>(null);
 
+    const parseJavaHeapMb = (args: string, flag: 'xmx' | 'xms'): number | null => {
+        const match = args.match(new RegExp(`(?:^|\\s)-${flag}(\\d+(?:\\.\\d+)?)([kKmMgG])(?:\\s|$)`, 'i'));
+        if (!match) {
+            return null;
+        }
+
+        const value = Number.parseFloat(match[1]);
+        if (!Number.isFinite(value) || value <= 0) {
+            return null;
+        }
+
+        const unit = match[2].toUpperCase();
+        if (unit === 'G') {
+            return Math.round(value * 1024);
+        }
+        if (unit === 'K') {
+            return Math.max(1, Math.round(value / 1024));
+        }
+
+        return Math.round(value);
+    };
+
+    const upsertJavaHeapArgument = (args: string, flag: 'Xmx' | 'Xms', ramMb: number): string => {
+        const pattern = new RegExp(`(?:^|\\s)-${flag}\\S+`, 'gi');
+        const sanitized = args.replace(pattern, ' ').replace(/\s+/g, ' ').trim();
+        const heapArg = `-${flag}${ramMb}M`;
+        return sanitized.length > 0 ? `${heapArg} ${sanitized}` : heapArg;
+    };
+
+    const removeJavaFlag = (args: string, pattern: RegExp): string => {
+        return args.replace(pattern, ' ').replace(/\s+/g, ' ').trim();
+    };
+
+    const upsertJavaGcMode = (args: string, mode: 'auto' | 'g1'): string => {
+        const withoutGc = removeJavaFlag(args, /(?:^|\s)-XX:[+-]UseG1GC(?:\s|$)/gi);
+        if (mode === 'auto') {
+            return withoutGc;
+        }
+
+        return withoutGc.length > 0 ? `-XX:+UseG1GC ${withoutGc}` : '-XX:+UseG1GC';
+    };
+
+    const detectJavaGcMode = (args: string): 'auto' | 'g1' => {
+        return /(?:^|\s)-XX:\+UseG1GC(?:\s|$)/i.test(args) ? 'g1' : 'auto';
+    };
+
+    const sanitizeAdvancedJavaArguments = (args: string): { sanitized: string; blocked: boolean } => {
+        let result = args;
+
+        const blockedPatterns = [
+            /(?:^|\s)-javaagent:\S+/gi,
+            /(?:^|\s)-agentlib:\S+/gi,
+            /(?:^|\s)-agentpath:\S+/gi,
+            /(?:^|\s)-Xbootclasspath(?::\S+)?/gi,
+            /(?:^|\s)-jar(?:\s+\S+)?/gi,
+            /(?:^|\s)-cp(?:\s+\S+)?/gi,
+            /(?:^|\s)-classpath(?:\s+\S+)?/gi,
+            /(?:^|\s)--class-path(?:\s+\S+)?/gi,
+            /(?:^|\s)--module-path(?:\s+\S+)?/gi,
+            /(?:^|\s)-Djava\.home=\S+/gi,
+        ];
+
+        const managedPatterns = [
+            /(?:^|\s)-Xmx\S+/gi,
+            /(?:^|\s)-Xms\S+/gi,
+            /(?:^|\s)-XX:[+-]UseG1GC/gi,
+        ];
+
+        const hadBlocked = blockedPatterns.some((pattern) => pattern.test(result));
+
+        for (const pattern of blockedPatterns) {
+            result = result.replace(pattern, ' ');
+        }
+
+        for (const pattern of managedPatterns) {
+            result = result.replace(pattern, ' ');
+        }
+
+        result = result.replace(/\s+/g, ' ').trim();
+        return { sanitized: result, blocked: hadBlocked };
+    };
+
+    const formatRamLabel = (ramMb: number): string => {
+        const gb = ramMb / 1024;
+        return Number.isInteger(gb) ? `${gb} GB` : `${gb.toFixed(1)} GB`;
+    };
+
     useEffect(() => {
         const loadSettings = async () => {
             try {
@@ -205,8 +307,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 const defaultInstanceDir = await GetDefaultInstanceDir();
                 setInstanceDir(customDir || defaultInstanceDir); // Show real path
 
-                const online = (await ipc.settings.get()).onlineMode ?? true;
+                const settingsSnapshot = await ipc.settings.get();
+                const online = settingsSnapshot.onlineMode ?? true;
                 setOnlineMode(online);
+
+                const loadedJavaArgs = settingsSnapshot.javaArguments;
+                const normalizedJavaArgs = typeof loadedJavaArgs === 'string' ? loadedJavaArgs : '';
+                setJavaArguments(normalizedJavaArgs);
+
+                const loadedSystemMemoryMb = typeof settingsSnapshot.systemMemoryMb === 'number' && settingsSnapshot.systemMemoryMb > 0
+                    ? settingsSnapshot.systemMemoryMb
+                    : systemMemoryMb;
+                setSystemMemoryMb(loadedSystemMemoryMb);
+                const loadedDetectedSystemRamMb = Math.max(4096, loadedSystemMemoryMb);
+                const loadedMaxJavaRamMb = Math.max(minJavaRamMb, Math.floor((loadedDetectedSystemRamMb * 0.75) / 256) * 256);
+
+                const parsedJavaRamMb = parseJavaHeapMb(normalizedJavaArgs, 'xmx');
+                const targetJavaRamMb = parsedJavaRamMb ?? 4096;
+                const clampedJavaRamMb = Math.min(loadedMaxJavaRamMb, Math.max(minJavaRamMb, Math.round(targetJavaRamMb / 256) * 256));
+                setJavaRamMb(clampedJavaRamMb);
+
+                const parsedJavaInitialRamMb = parseJavaHeapMb(normalizedJavaArgs, 'xms');
+                const fallbackInitial = Math.max(minJavaRamMb, Math.min(clampedJavaRamMb, Math.floor(clampedJavaRamMb / 2 / 256) * 256 || minJavaRamMb));
+                const initialRamTarget = parsedJavaInitialRamMb ?? fallbackInitial;
+                const clampedInitial = Math.min(clampedJavaRamMb, Math.max(minJavaRamMb, Math.round(initialRamTarget / 256) * 256));
+                setJavaInitialRamMb(clampedInitial);
+
+                setJavaGcMode(detectJavaGcMode(normalizedJavaArgs));
+                setJavaRuntimeMode(settingsSnapshot.useCustomJava ? 'custom' : 'bundled');
+                setCustomJavaPath(typeof settingsSnapshot.customJavaPath === 'string' ? settingsSnapshot.customJavaPath : '');
                 
                 const bgMode = await GetBackgroundMode();
                 setBackgroundModeState(bgMode);
@@ -214,7 +343,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 setLauncherDataDir(folderPath);
                 
                 // Load GPU preference and adapters
-                const gpu = (await ipc.settings.get()).gpuPreference ?? 'dedicated';
+                const gpu = settingsSnapshot.gpuPreference ?? 'dedicated';
                 setGpuPreferenceState(gpu);
                 
                 try {
@@ -451,6 +580,130 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         await SetCloseAfterLaunch(newValue);
     };
 
+    const handleSaveJavaArguments = async () => {
+        const { sanitized, blocked } = sanitizeAdvancedJavaArguments(javaArguments);
+
+        if (blocked) {
+            setJavaArgumentsError(t('settings.javaSettings.jvmArgumentsBlocked'));
+        } else {
+            setJavaArgumentsError('');
+        }
+
+        setJavaArguments(sanitized);
+
+        try {
+            await ipc.settings.update({ javaArguments: sanitized });
+            const parsedJavaRamMb = parseJavaHeapMb(sanitized, 'xmx');
+            if (parsedJavaRamMb != null) {
+                const clampedJavaRamMb = Math.min(maxJavaRamMb, Math.max(minJavaRamMb, Math.round(parsedJavaRamMb / 256) * 256));
+                setJavaRamMb(clampedJavaRamMb);
+
+                const parsedJavaInitialRamMb = parseJavaHeapMb(sanitized, 'xms');
+                if (parsedJavaInitialRamMb != null) {
+                    const clampedInitial = Math.min(clampedJavaRamMb, Math.max(minJavaRamMb, Math.round(parsedJavaInitialRamMb / 256) * 256));
+                    setJavaInitialRamMb(clampedInitial);
+                }
+            }
+
+            setJavaGcMode(detectJavaGcMode(sanitized));
+        } catch (err) {
+            console.error('Failed to update Java arguments:', err);
+        }
+    };
+
+    const handleJavaRamChange = async (value: number) => {
+        const clampedJavaRamMb = Math.min(maxJavaRamMb, Math.max(minJavaRamMb, value));
+        setJavaRamMb(clampedJavaRamMb);
+
+        const clampedInitial = Math.min(clampedJavaRamMb, javaInitialRamMb);
+        if (clampedInitial !== javaInitialRamMb) {
+            setJavaInitialRamMb(clampedInitial);
+        }
+
+        const withMaxHeap = upsertJavaHeapArgument(javaArguments, 'Xmx', clampedJavaRamMb);
+        const updatedJavaArgs = upsertJavaHeapArgument(withMaxHeap, 'Xms', clampedInitial);
+        setJavaArguments(updatedJavaArgs);
+
+        try {
+            await ipc.settings.update({ javaArguments: updatedJavaArgs });
+        } catch (err) {
+            console.error('Failed to update Java RAM arguments:', err);
+        }
+    };
+
+    const handleJavaInitialRamChange = async (value: number) => {
+        const clampedInitial = Math.min(javaRamMb, Math.max(minJavaRamMb, value));
+        setJavaInitialRamMb(clampedInitial);
+
+        const updatedJavaArgs = upsertJavaHeapArgument(javaArguments, 'Xms', clampedInitial);
+        setJavaArguments(updatedJavaArgs);
+
+        try {
+            await ipc.settings.update({ javaArguments: updatedJavaArgs });
+        } catch (err) {
+            console.error('Failed to update Java initial RAM arguments:', err);
+        }
+    };
+
+    const handleJavaGcModeChange = async (mode: 'auto' | 'g1') => {
+        setJavaGcMode(mode);
+        const updatedJavaArgs = upsertJavaGcMode(javaArguments, mode);
+        setJavaArguments(updatedJavaArgs);
+
+        try {
+            await ipc.settings.update({ javaArguments: updatedJavaArgs });
+        } catch (err) {
+            console.error('Failed to update Java GC mode:', err);
+        }
+    };
+
+    const handleJavaRuntimeModeChange = async (mode: 'bundled' | 'custom') => {
+        setJavaRuntimeMode(mode);
+        setJavaCustomPathError('');
+
+        try {
+            await ipc.settings.update({ useCustomJava: mode === 'custom' });
+        } catch (err) {
+            console.error('Failed to update Java runtime mode:', err);
+        }
+    };
+
+    const handleCustomJavaPathSave = async () => {
+        const normalizedPath = customJavaPath.trim();
+        setCustomJavaPath(normalizedPath);
+
+        if (!normalizedPath) {
+            setJavaCustomPathError(t('settings.javaSettings.customJavaPathRequired'));
+            return;
+        }
+
+        const exists = await FileExists(normalizedPath);
+        if (!exists) {
+            setJavaCustomPathError(t('settings.javaSettings.customJavaPathNotFound'));
+            return;
+        }
+
+        setJavaCustomPathError('');
+
+        try {
+            await ipc.settings.update({ customJavaPath: normalizedPath, useCustomJava: true });
+            setJavaRuntimeMode('custom');
+        } catch (err) {
+            console.error('Failed to save custom Java path:', err);
+        }
+    };
+
+    const handleBrowseCustomJavaPath = async () => {
+        try {
+            const picked = await BrowseJavaExecutable();
+            if (!picked) return;
+            setCustomJavaPath(picked);
+            setJavaCustomPathError('');
+        } catch (err) {
+            console.error('Failed to browse Java executable:', err);
+        }
+    };
+
     const handleOpenLauncherFolder = async () => {
         try {
             const path = launcherFolderPath || await GetLauncherFolderPath();
@@ -566,6 +819,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const tabs = [
         { id: 'general' as const, icon: Settings, label: t('settings.general') },
+        { id: 'java' as const, icon: Coffee, label: t('settings.java') },
         { id: 'visual' as const, icon: Image, label: t('settings.visual') },
         { id: 'network' as const, icon: Wifi, label: t('settings.network') },
         { id: 'graphics' as const, icon: Monitor, label: t('settings.graphics') },
@@ -827,6 +1081,216 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
                                         </div>
 
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Java Tab */}
+                            {activeTab === 'java' && (
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.javaSettings.javaRuntime')}</label>
+                                        <p className="text-xs text-white/40 mb-4">{t('settings.javaSettings.javaRuntimeHint')}</p>
+
+                                        <div className="space-y-2">
+                                            <div
+                                                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
+                                                    javaRuntimeMode === 'bundled'
+                                                        ? 'border-white/20'
+                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                }`}
+                                                style={javaRuntimeMode === 'bundled' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
+                                                onClick={() => handleJavaRuntimeModeChange('bundled')}
+                                            >
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: javaRuntimeMode === 'bundled' ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}>
+                                                    <Coffee size={16} className={javaRuntimeMode === 'bundled' ? '' : 'text-white/70'} style={javaRuntimeMode === 'bundled' ? { color: accentColor } : undefined} />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <span className="text-white text-sm font-medium">{t('settings.javaSettings.useBundledJava')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.javaSettings.useBundledJavaHint')}</p>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${javaRuntimeMode === 'bundled' ? '' : 'border-white/30'}`} style={javaRuntimeMode === 'bundled' ? { borderColor: accentColor, backgroundColor: accentColor } : undefined}>
+                                                    {javaRuntimeMode === 'bundled' && <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />}
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className={`rounded-xl border transition-all ${
+                                                    javaRuntimeMode === 'custom'
+                                                        ? 'border-white/20'
+                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                }`}
+                                                style={javaRuntimeMode === 'custom' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
+                                            >
+                                                <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => handleJavaRuntimeModeChange('custom')}>
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: javaRuntimeMode === 'custom' ? `${accentColor}25` : 'rgba(255,255,255,0.06)' }}>
+                                                        <Coffee size={16} className={javaRuntimeMode === 'custom' ? '' : 'text-white/70'} style={javaRuntimeMode === 'custom' ? { color: accentColor } : undefined} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <span className="text-white text-sm font-medium">{t('settings.javaSettings.useCustomJava')}</span>
+                                                        <p className="text-xs text-white/40">{t('settings.javaSettings.useCustomJavaHint')}</p>
+                                                    </div>
+                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${javaRuntimeMode === 'custom' ? '' : 'border-white/30'}`} style={javaRuntimeMode === 'custom' ? { borderColor: accentColor, backgroundColor: accentColor } : undefined}>
+                                                        {javaRuntimeMode === 'custom' && <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />}
+                                                    </div>
+                                                </div>
+
+                                                {javaRuntimeMode === 'custom' && (
+                                                    <div className="px-4 pb-4">
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={customJavaPath}
+                                                                onChange={(event) => setCustomJavaPath(event.target.value)}
+                                                                onKeyDown={async (event) => {
+                                                                    if (event.key === 'Enter' && customJavaPath.trim()) {
+                                                                        await handleCustomJavaPathSave();
+                                                                    }
+                                                                }}
+                                                                placeholder={t('settings.javaSettings.customJavaPathPlaceholder')}
+                                                                className={`flex-1 h-12 px-4 rounded-xl ${gc} text-white text-sm placeholder-white/30 focus:outline-none`}
+                                                            />
+                                                            <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                                <button
+                                                                    onClick={handleBrowseCustomJavaPath}
+                                                                    className="h-12 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                                    title={t('common.select')}
+                                                                >
+                                                                    <FolderOpen size={18} />
+                                                                    <span className="ml-2 text-sm">{t('common.select')}</span>
+                                                                </button>
+                                                                <div className="w-px bg-white/10" />
+                                                                <button
+                                                                    onClick={handleCustomJavaPathSave}
+                                                                    disabled={!customJavaPath.trim()}
+                                                                    className="h-12 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
+                                                                    title={t('common.save')}
+                                                                >
+                                                                    <Check size={18} />
+                                                                    <span className="ml-2 text-sm">{t('common.save')}</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        {javaCustomPathError && (
+                                                            <p className="mt-2 text-xs text-red-300">{javaCustomPathError}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={`p-4 rounded-2xl ${gc}`}>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                                <HardDrive size={16} className="text-white/70" />
+                                            </div>
+                                            <div>
+                                                <span className="text-white text-sm font-medium">{t('settings.javaSettings.ramAllocation')}</span>
+                                                <p className="text-xs text-white/40">{t('settings.javaSettings.ramAllocationHint')}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between mb-2 text-xs text-white/60">
+                                            <span>{t('settings.javaSettings.detectedMemory', { value: formatRamLabel(detectedSystemRamMb) })}</span>
+                                            <span>{t('settings.javaSettings.maxRecommended', { value: formatRamLabel(maxJavaRamMb) })}</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className={`p-3 rounded-xl ${gc}`}>
+                                                <div className="flex items-center justify-between mb-2 text-xs text-white/50">
+                                                    <span>{t('settings.javaSettings.maxRam')}</span>
+                                                    <span>{formatRamLabel(javaRamMb)}</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min={minJavaRamMb}
+                                                    max={maxJavaRamMb}
+                                                    step={256}
+                                                    value={javaRamMb}
+                                                    onChange={(event) => handleJavaRamChange(Number.parseInt(event.target.value, 10) || minJavaRamMb)}
+                                                    className="java-range w-full accent-current appearance-none border-0 outline-none focus:outline-none focus:ring-0"
+                                                    style={{ color: accentColor }}
+                                                />
+                                            </div>
+
+                                            <div className={`p-3 rounded-xl ${gc}`}>
+                                                <div className="flex items-center justify-between mb-2 text-xs text-white/50">
+                                                    <span>{t('settings.javaSettings.initialRam')}</span>
+                                                    <span>{formatRamLabel(javaInitialRamMb)}</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min={minJavaRamMb}
+                                                    max={javaRamMb}
+                                                    step={256}
+                                                    value={javaInitialRamMb}
+                                                    onChange={(event) => handleJavaInitialRamChange(Number.parseInt(event.target.value, 10) || minJavaRamMb)}
+                                                    className="java-range w-full accent-current appearance-none border-0 outline-none focus:outline-none focus:ring-0"
+                                                    style={{ color: accentColor }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.javaSettings.gcMode')}</label>
+                                        <p className="text-xs text-white/40 mb-3">{t('settings.javaSettings.gcModeHint')}</p>
+                                        <div className="space-y-2">
+                                            {(['auto', 'g1'] as const).map((mode) => (
+                                                <button
+                                                    key={mode}
+                                                    onClick={() => handleJavaGcModeChange(mode)}
+                                                    className="w-full p-3 rounded-xl border transition-all text-left"
+                                                    style={{
+                                                        backgroundColor: javaGcMode === mode ? `${accentColor}15` : '#151515',
+                                                        borderColor: javaGcMode === mode ? `${accentColor}50` : 'rgba(255,255,255,0.08)'
+                                                    }}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <div className="text-white text-sm font-medium">{t(`settings.javaSettings.gc_${mode}`)}</div>
+                                                            <div className="text-[11px] text-white/35 mt-0.5">{t(`settings.javaSettings.gc_${mode}Hint`)}</div>
+                                                        </div>
+                                                        {javaGcMode === mode && (
+                                                            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: accentColor }}>
+                                                                <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.javaSettings.jvmArguments')}</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={javaArguments}
+                                                onChange={(event) => {
+                                                    setJavaArguments(event.target.value);
+                                                    if (javaArgumentsError) setJavaArgumentsError('');
+                                                }}
+                                                placeholder={t('settings.javaSettings.jvmArgumentsPlaceholder')}
+                                                className={`flex-1 h-12 px-4 rounded-xl ${gc} text-white text-sm placeholder-white/35 focus:outline-none`}
+                                            />
+                                            <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                <button
+                                                    onClick={handleSaveJavaArguments}
+                                                    className="h-12 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                                                    title={t('common.save')}
+                                                >
+                                                    <Check size={18} />
+                                                    <span className="ml-2 text-sm">{t('common.save')}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p className="mt-2 text-xs text-white/40">{t('settings.javaSettings.jvmArgumentsHint')}</p>
+                                        {javaArgumentsError && (
+                                            <p className="mt-2 text-xs text-yellow-300">{javaArgumentsError}</p>
+                                        )}
                                     </div>
                                 </div>
                             )}

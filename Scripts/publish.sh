@@ -379,7 +379,7 @@ inject_rpm_appstream() {
     pkg_release=$(rpm -qp --qf '%{RELEASE}' "$rpm_path" 2>/dev/null || echo "1")
     pkg_arch=$(rpm -qp --qf '%{ARCH}' "$rpm_path" 2>/dev/null || echo "x86_64")
     pkg_summary=$(rpm -qp --qf '%{SUMMARY}' "$rpm_path" 2>/dev/null || echo "Cross-platform Hytale launcher")
-    pkg_license=$(rpm -qp --qf '%{LICENSE}' "$rpm_path" 2>/dev/null || echo "MIT")
+    pkg_license=$(rpm -qp --qf '%{LICENSE}' "$rpm_path" 2>/dev/null || echo "GPL-3.0-only")
 
     cat > "$tmp_dir/SPECS/repack.spec" <<EOF
 Name: $pkg_name
