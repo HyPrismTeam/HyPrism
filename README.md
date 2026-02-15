@@ -37,6 +37,12 @@ dotnet build
 dotnet run
 ```
 
+## Docs
+
+We provide a comprehensive glossary of the basic principles of operation and interaction with the project in [English](Docs/English) and [Russian](Docs/Russian) languages:
+- **If you are a regular user**, be sure to familiarise yourself with [user-related docs](Docs/English/User)
+- **If you would like to contribute to the development** of the launcher, please refer to the [technical documentation](Docs/English/Technical)
+
 ## Credits & Contributors
 
 Special thanks to **Sanasol** for maintaining and creating the [auth server](https://github.com/sanasol/hytale-auth-server).
