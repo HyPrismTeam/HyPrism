@@ -674,9 +674,6 @@ public class GameLauncher : IGameLauncher
             @"(?:^|\s)--class-path(?:\s+\S+)?",
             @"(?:^|\s)--module-path(?:\s+\S+)?",
             @"(?:^|\s)-Djava\.home=\S+",
-            @"(?:^|\s)-Xmx\S+",
-            @"(?:^|\s)-Xms\S+",
-            @"(?:^|\s)-XX:[+-]UseG1GC",
         };
 
         foreach (var pattern in blockedPatterns)
@@ -835,7 +832,7 @@ ENV_ARGS+=(TMPDIR=""{Path.GetTempPath().TrimEnd('/')}"")
 ENV_ARGS+=(LD_LIBRARY_PATH=""$CLIENT_DIR:$LD_LIBRARY_PATH"")
 
 # Add Java tool options (DualAuth + user-defined args)
-COMBINED_JAVA_TOOL_OPTIONS=""
+COMBINED_JAVA_TOOL_OPTIONS=
 if [[ -n ""$DUALAUTH_JAVA_TOOL_OPTIONS"" ]]; then
     COMBINED_JAVA_TOOL_OPTIONS=""$DUALAUTH_JAVA_TOOL_OPTIONS""
 fi
@@ -1084,7 +1081,11 @@ USER_JAVA_TOOL_OPTIONS=""{escaped}""
                 }
             };
 
-            process.ErrorDataReceived += (_, _) => { };
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(e.Data)) return;
+                Logger.Warning("Game", $"stderr: {e.Data}");
+            };
 
             if (!process.Start())
             {

@@ -269,19 +269,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             /(?:^|\s)-Djava\.home=\S+/gi,
         ];
 
-        const managedPatterns = [
-            /(?:^|\s)-Xmx\S+/gi,
-            /(?:^|\s)-Xms\S+/gi,
-            /(?:^|\s)-XX:[+-]UseG1GC/gi,
-        ];
-
         const hadBlocked = blockedPatterns.some((pattern) => pattern.test(result));
 
         for (const pattern of blockedPatterns) {
-            result = result.replace(pattern, ' ');
-        }
-
-        for (const pattern of managedPatterns) {
             result = result.replace(pattern, ' ');
         }
 
