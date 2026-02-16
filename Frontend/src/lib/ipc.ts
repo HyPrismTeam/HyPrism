@@ -395,6 +395,7 @@ const _mods = {
 
 const _system = {
   gpuAdapters: () => invoke<GpuAdapterInfo[]>('hyprism:system:gpuAdapters'),
+  platform: (data?: unknown) => invoke<{ os: string; isLinux: boolean; isWindows: boolean; isMacOS: boolean }>('hyprism:system:platform', data),
 };
 
 const _console = {

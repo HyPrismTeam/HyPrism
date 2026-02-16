@@ -139,6 +139,13 @@ public class Config
     public string GpuPreference { get; set; } = "dedicated";
     
     /// <summary>
+    /// Custom environment variables for game launch in KEY=VALUE format (one per line).
+    /// These are applied to the game process and can override default variables.
+    /// Example: "SDL_VIDEODRIVER=x11" or "VK_ICD_FILENAMES=/path/to/icd.json"
+    /// </summary>
+    public string GameEnvironmentVariables { get; set; } = "";
+    
+    /// <summary>
     /// CurseForge API key for mod manager functionality.
     /// Automatically fetched on first launch if not set.
     /// </summary>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Coffee, Server, Edit3, FileText } from 'lucide-react';
+import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Coffee, Server, Edit3, FileText, Terminal } from 'lucide-react';
 import { ipc, on } from '@/lib/ipc';
 import { changeLanguage } from '../i18n';
 
@@ -113,7 +113,7 @@ interface SettingsModalProps {
     onMovingDataChange?: (isMoving: boolean) => void;
 }
 
-type SettingsTab = 'general' | 'java' | 'visual' | 'network' | 'graphics' | 'logs' | 'language' | 'data' | 'instances' | 'about' | 'developer';
+type SettingsTab = 'general' | 'java' | 'visual' | 'network' | 'graphics' | 'variables' | 'logs' | 'language' | 'data' | 'instances' | 'about' | 'developer';
 
 // Auth server base URL for avatar/skin head
 const DEFAULT_AUTH_DOMAIN = 'sessions.sanasol.ws';
@@ -159,6 +159,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [gpuPreference, setGpuPreferenceState] = useState<string>('dedicated');
     const [gpuAdapters, setGpuAdapters] = useState<Array<{ name: string; vendor: string; type: string }>>([]);
     const [hasSingleGpu, setHasSingleGpu] = useState(false);
+    const [gameEnvVars, setGameEnvVars] = useState('');
+    const [gameEnvVarsError, setGameEnvVarsError] = useState('');
+    
+    // Environment variable presets state
+    const [envForceX11, setEnvForceX11] = useState(false);
+    const [envDisableVkLayers, setEnvDisableVkLayers] = useState(false);
+    const [envForceAmdVulkan, setEnvForceAmdVulkan] = useState(false);
+    
+    // Platform detection (for showing/hiding Linux-only features)
+    const [isLinux, setIsLinux] = useState(false);
 
     const detectedSystemRamMb = Math.max(4096, systemMemoryMb);
     const minJavaRamMb = 1024;
@@ -287,6 +297,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     useEffect(() => {
         const loadSettings = async () => {
             try {
+                // Load platform info first
+                try {
+                    const platformInfo = await ipc.system.platform();
+                    setIsLinux(platformInfo.isLinux);
+                } catch (err) {
+                    console.error('Failed to load platform info:', err);
+                }
+                
                 const closeAfter = await GetCloseAfterLaunch();
                 setCloseAfterLaunch(closeAfter);
                 
@@ -335,6 +353,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 // Load GPU preference and adapters
                 const gpu = settingsSnapshot.gpuPreference ?? 'dedicated';
                 setGpuPreferenceState(gpu);
+                
+                // Load custom game environment variables and parse presets
+                const envVars = settingsSnapshot.gameEnvironmentVariables ?? '';
+                const envVarsStr = typeof envVars === 'string' ? envVars : '';
+                setGameEnvVars(envVarsStr);
+                
+                // Parse preset toggles from env vars string
+                setEnvForceX11(envVarsStr.includes('SDL_VIDEODRIVER=x11'));
+                setEnvDisableVkLayers(envVarsStr.includes('VK_LOADER_LAYERS_DISABLE=all'));
+                setEnvForceAmdVulkan(envVarsStr.includes('VK_ICD_FILENAMES=') && envVarsStr.includes('radeon'));
                 
                 try {
                     const adapters = await ipc.system.gpuAdapters();
@@ -786,6 +814,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
     };
 
+    // Environment variable preset definitions
+    const ENV_PRESETS = {
+        forceX11: 'SDL_VIDEODRIVER=x11',
+        disableVkLayers: 'VK_LOADER_LAYERS_DISABLE=all',
+        forceAmdVulkan: 'VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json',
+    };
+
+    // Helper to add/remove preset from env vars string
+    const toggleEnvPreset = (currentVars: string, preset: string, enabled: boolean): string => {
+        const vars = currentVars.split(/\s+/).filter(v => v.trim());
+        const withoutPreset = vars.filter(v => !v.startsWith(preset.split('=')[0] + '='));
+        
+        if (enabled) {
+            withoutPreset.push(preset);
+        }
+        
+        return withoutPreset.join(' ');
+    };
+
+    const handleEnvPresetToggle = async (presetKey: keyof typeof ENV_PRESETS, enabled: boolean) => {
+        const preset = ENV_PRESETS[presetKey];
+        const newEnvVars = toggleEnvPreset(gameEnvVars, preset, enabled);
+        setGameEnvVars(newEnvVars);
+        
+        // Update state
+        if (presetKey === 'forceX11') setEnvForceX11(enabled);
+        if (presetKey === 'disableVkLayers') setEnvDisableVkLayers(enabled);
+        if (presetKey === 'forceAmdVulkan') setEnvForceAmdVulkan(enabled);
+        
+        // Auto-save
+        try {
+            await ipc.settings.update({ gameEnvironmentVariables: newEnvVars });
+        } catch (err) {
+            console.error('Failed to save environment variables:', err);
+        }
+    };
+
+    const validateEnvVars = (value: string): { valid: boolean; error: string } => {
+        if (!value.trim()) return { valid: true, error: '' };
+        
+        // Now space-separated format: KEY=VALUE KEY2=VALUE2
+        const parts = value.split(/\s+/).filter(v => v.trim());
+        const envVarPattern = /^[A-Za-z_][A-Za-z0-9_]*=.*/;
+        
+        for (const part of parts) {
+            if (!envVarPattern.test(part.trim())) {
+                return { valid: false, error: t('settings.variablesSettings.envVarsInvalidFormat') };
+            }
+        }
+        return { valid: true, error: '' };
+    };
+
+    const handleSaveGameEnvVars = async () => {
+        const { valid, error } = validateEnvVars(gameEnvVars);
+        if (!valid) {
+            setGameEnvVarsError(error);
+            return;
+        }
+        setGameEnvVarsError('');
+        
+        // Update preset states based on new value
+        setEnvForceX11(gameEnvVars.includes('SDL_VIDEODRIVER=x11'));
+        setEnvDisableVkLayers(gameEnvVars.includes('VK_LOADER_LAYERS_DISABLE=all'));
+        setEnvForceAmdVulkan(gameEnvVars.includes('VK_ICD_FILENAMES=') && gameEnvVars.includes('radeon'));
+        
+        try {
+            await ipc.settings.update({ gameEnvironmentVariables: gameEnvVars });
+        } catch (err) {
+            console.error('Failed to save game environment variables:', err);
+        }
+    };
+
     const handleAccentColorChange = async (color: string) => {
         // Update the global context (which also saves to backend)
         await setAccentColorContext(color);
@@ -813,6 +913,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         { id: 'visual' as const, icon: Image, label: t('settings.visual') },
         { id: 'network' as const, icon: Wifi, label: t('settings.network') },
         { id: 'graphics' as const, icon: Monitor, label: t('settings.graphics') },
+        ...(isLinux ? [{ id: 'variables' as const, icon: Terminal, label: t('settings.variables') }] : []),
         { id: 'logs' as const, icon: FileText, label: t('logs.title') },
         { id: 'data' as const, icon: Database, label: t('settings.data') },
         { id: 'about' as const, icon: Globe, label: t('settings.about') },
@@ -1607,6 +1708,126 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </div>
                                     </div>
 
+                                </div>
+                            )}
+
+                            {/* Variables Tab */}
+                            {activeTab === 'variables' && (
+                                <div className="space-y-6">
+                                    {/* Common Presets */}
+                                    <div>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.variablesSettings.commonPresets')}</label>
+                                        <p className="text-xs text-white/40 mb-4">{t('settings.variablesSettings.commonPresetsHint')}</p>
+                                        <div className="space-y-2">
+                                            {/* Force X11 */}
+                                            <div 
+                                                className={`p-3 rounded-xl border cursor-pointer transition-colors`}
+                                                style={{
+                                                    backgroundColor: envForceX11 ? `${accentColor}15` : '#151515',
+                                                    borderColor: envForceX11 ? `${accentColor}50` : 'rgba(255,255,255,0.08)'
+                                                }}
+                                                onClick={() => handleEnvPresetToggle('forceX11', !envForceX11)}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">{t('settings.variablesSettings.forceX11')}</div>
+                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.variablesSettings.forceX11Hint')}</div>
+                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">SDL_VIDEODRIVER=x11</code>
+                                                    </div>
+                                                    <div 
+                                                        className={`w-10 h-5 rounded-full flex items-center transition-colors flex-shrink-0`}
+                                                        style={{ backgroundColor: envForceX11 ? accentColor : 'rgba(255,255,255,0.15)' }}
+                                                    >
+                                                        <div 
+                                                            className={`w-4 h-4 rounded-full shadow-md transform transition-transform mx-0.5 ${envForceX11 ? 'translate-x-5' : 'translate-x-0'}`}
+                                                            style={{ backgroundColor: 'white' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Disable Vulkan Layers */}
+                                            <div 
+                                                className={`p-3 rounded-xl border cursor-pointer transition-colors`}
+                                                style={{
+                                                    backgroundColor: envDisableVkLayers ? `${accentColor}15` : '#151515',
+                                                    borderColor: envDisableVkLayers ? `${accentColor}50` : 'rgba(255,255,255,0.08)'
+                                                }}
+                                                onClick={() => handleEnvPresetToggle('disableVkLayers', !envDisableVkLayers)}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">{t('settings.variablesSettings.disableVkLayers')}</div>
+                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.variablesSettings.disableVkLayersHint')}</div>
+                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">VK_LOADER_LAYERS_DISABLE=all</code>
+                                                    </div>
+                                                    <div 
+                                                        className={`w-10 h-5 rounded-full flex items-center transition-colors flex-shrink-0`}
+                                                        style={{ backgroundColor: envDisableVkLayers ? accentColor : 'rgba(255,255,255,0.15)' }}
+                                                    >
+                                                        <div 
+                                                            className={`w-4 h-4 rounded-full shadow-md transform transition-transform mx-0.5 ${envDisableVkLayers ? 'translate-x-5' : 'translate-x-0'}`}
+                                                            style={{ backgroundColor: 'white' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Force AMD RADV Vulkan */}
+                                            <div 
+                                                className={`p-3 rounded-xl border cursor-pointer transition-colors`}
+                                                style={{
+                                                    backgroundColor: envForceAmdVulkan ? `${accentColor}15` : '#151515',
+                                                    borderColor: envForceAmdVulkan ? `${accentColor}50` : 'rgba(255,255,255,0.08)'
+                                                }}
+                                                onClick={() => handleEnvPresetToggle('forceAmdVulkan', !envForceAmdVulkan)}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">{t('settings.variablesSettings.forceAmdVulkan')}</div>
+                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.variablesSettings.forceAmdVulkanHint')}</div>
+                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">VK_ICD_FILENAMES=...radeon_icd...</code>
+                                                    </div>
+                                                    <div 
+                                                        className={`w-10 h-5 rounded-full flex items-center transition-colors flex-shrink-0`}
+                                                        style={{ backgroundColor: envForceAmdVulkan ? accentColor : 'rgba(255,255,255,0.15)' }}
+                                                    >
+                                                        <div 
+                                                            className={`w-4 h-4 rounded-full shadow-md transform transition-transform mx-0.5 ${envForceAmdVulkan ? 'translate-x-5' : 'translate-x-0'}`}
+                                                            style={{ backgroundColor: 'white' }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Custom Environment Variables */}
+                                    <div>
+                                        <label className="block text-sm text-white/60 mb-2">{t('settings.variablesSettings.customEnvVars')}</label>
+                                        <p className="text-xs text-white/40 mb-3">{t('settings.variablesSettings.customEnvVarsHint')}</p>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={gameEnvVars}
+                                                onChange={(e) => {
+                                                    setGameEnvVars(e.target.value);
+                                                    if (gameEnvVarsError) setGameEnvVarsError('');
+                                                }}
+                                                placeholder={t('settings.variablesSettings.customEnvVarsPlaceholder')}
+                                                className={`flex-1 h-12 px-4 rounded-xl ${gc} text-white text-sm placeholder-white/35 focus:outline-none font-mono`}
+                                            />
+                                            <button
+                                                onClick={handleSaveGameEnvVars}
+                                                className={`h-12 px-4 rounded-xl ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
+                                            >
+                                                <Check size={18} />
+                                            </button>
+                                        </div>
+                                        {gameEnvVarsError && (
+                                            <p className="mt-2 text-xs text-yellow-300">{gameEnvVarsError}</p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 

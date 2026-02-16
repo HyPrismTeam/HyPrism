@@ -258,6 +258,19 @@ public interface ISettingsService
     bool SetGpuPreference(string preference);
     
     /// <summary>
+    /// Gets the custom environment variables for game launch.
+    /// </summary>
+    /// <returns>Space-separated KEY=VALUE pairs.</returns>
+    string GetGameEnvironmentVariables();
+    
+    /// <summary>
+    /// Sets custom environment variables for game launch.
+    /// </summary>
+    /// <param name="envVars">Space-separated KEY=VALUE pairs.</param>
+    /// <returns><c>true</c> if the setting was successfully saved.</returns>
+    bool SetGameEnvironmentVariables(string envVars);
+    
+    /// <summary>
     /// Gets the current instance directory path.
     /// </summary>
     /// <returns>The absolute path to the instances directory.</returns>

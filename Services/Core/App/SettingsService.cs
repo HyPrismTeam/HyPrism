@@ -346,5 +346,17 @@ public class SettingsService : ISettingsService
         return true;
     }
 
+    /// <inheritdoc/>
+    public string GetGameEnvironmentVariables() => _configService.Configuration.GameEnvironmentVariables;
+    
+    /// <inheritdoc/>
+    public bool SetGameEnvironmentVariables(string envVars)
+    {
+        _configService.Configuration.GameEnvironmentVariables = envVars ?? "";
+        _configService.SaveConfig();
+        Logger.Info("Config", $"Game environment variables set to: {envVars}");
+        return true;
+    }
+
     public string GetInstanceDirectory() => _configService.Configuration.InstanceDirectory;
 }

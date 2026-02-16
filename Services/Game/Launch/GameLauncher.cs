@@ -8,6 +8,7 @@ using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Core.App;
 using HyPrism.Services.Core.Integration;
+using HyPrism.Services.Core.Platform;
 using HyPrism.Services.Game.Asset;
 using HyPrism.Services.Game.Auth;
 using HyPrism.Services.Game.Instance;
@@ -38,6 +39,7 @@ public class GameLauncher : IGameLauncher
     private readonly AvatarService _avatarService;
     private readonly HttpClient _httpClient;
     private readonly HytaleAuthService _hytaleAuthService;
+    private readonly GpuDetectionService _gpuDetectionService;
     
     private Config _config => _configService.Configuration;
 
@@ -60,6 +62,7 @@ public class GameLauncher : IGameLauncher
     /// <param name="avatarService">Service for avatar backup.</param>
     /// <param name="httpClient">HTTP client for authentication requests.</param>
     /// <param name="hytaleAuthService">Service for official Hytale OAuth authentication.</param>
+    /// <param name="gpuDetectionService">Service for GPU detection.</param>
     public GameLauncher(
         IConfigService configService,
         ILaunchService launchService,
@@ -71,7 +74,8 @@ public class GameLauncher : IGameLauncher
         IUserIdentityService userIdentityService,
         AvatarService avatarService,
         HttpClient httpClient,
-        HytaleAuthService hytaleAuthService)
+        HytaleAuthService hytaleAuthService,
+        GpuDetectionService gpuDetectionService)
     {
         _configService = configService;
         _launchService = launchService;
@@ -84,8 +88,10 @@ public class GameLauncher : IGameLauncher
         _avatarService = avatarService;
         _httpClient = httpClient;
         _hytaleAuthService = hytaleAuthService;
+        _gpuDetectionService = gpuDetectionService;
         _gameProcessService.ProcessExited += OnGameProcessExited;
     }
+
 
     private void OnGameProcessExited(object? sender, EventArgs e)
     {
@@ -850,6 +856,7 @@ fi
 [[ -n ""$DUALAUTH_TRUST_ALL"" ]] && ENV_ARGS+=(""HYTALE_TRUST_ALL_ISSUERS=$DUALAUTH_TRUST_ALL"")
 [[ -n ""$DUALAUTH_TRUST_OFFICIAL"" ]] && ENV_ARGS+=(""HYTALE_TRUST_OFFICIAL=$DUALAUTH_TRUST_OFFICIAL"")
 
+{BuildCustomEnvLines()}
 exec env ""${{ENV_ARGS[@]}}"" ""{executable}"" {argsString}
 ";
         File.WriteAllText(launchScript, scriptContent);
@@ -881,26 +888,66 @@ exec env ""${{ENV_ARGS[@]}}"" ""{executable}"" {argsString}
     /// <summary>
     /// Builds GPU environment variable lines for the Unix launch script.
     /// Returns a string with export lines to be placed before 'exec env'.
+    /// Detects the GPU vendor and applies appropriate environment variables.
     /// </summary>
     private string BuildGpuEnvLines()
     {
         var gpuPref = _config.GpuPreference?.ToLowerInvariant() ?? "dedicated";
-        if (gpuPref == "auto") return "";
+        if (gpuPref == "auto") return "# GPU preference: auto (system decides)\n\n";
 
         if (gpuPref == "dedicated")
         {
-            Logger.Info("Game", "GPU preference: dedicated (NVIDIA/AMD env vars in launch script)");
             var sb = new StringBuilder();
             sb.AppendLine("# GPU preference: dedicated (discrete GPU)");
-            sb.AppendLine("export __NV_PRIME_RENDER_OFFLOAD=1");
-            sb.AppendLine("export __GLX_VENDOR_LIBRARY_NAME=nvidia");
+            
+            // Detect the vendor of the dedicated GPU
+            var adapters = _gpuDetectionService.GetAdapters();
+            var dedicatedGpu = adapters.FirstOrDefault(a => a.Type == "dedicated");
+            var vendor = dedicatedGpu?.Vendor?.ToUpperInvariant() ?? "";
+            
+            // DRI_PRIME is universal for Mesa-based drivers
             sb.AppendLine("export DRI_PRIME=1");
-
-            var nvidiaEglVendorJson = TryGetLinuxNvidiaEglVendorJsonPath();
-            if (!string.IsNullOrWhiteSpace(nvidiaEglVendorJson))
+            
+            if (vendor == "NVIDIA")
             {
-                sb.AppendLine($"export __EGL_VENDOR_LIBRARY_FILENAMES=\"{nvidiaEglVendorJson}\"");
-                Logger.Info("Game", $"Applied NVIDIA EGL vendor override: {nvidiaEglVendorJson}");
+                Logger.Info("Game", "GPU preference: dedicated (NVIDIA env vars in launch script)");
+                sb.AppendLine("export __NV_PRIME_RENDER_OFFLOAD=1");
+                sb.AppendLine("export __GLX_VENDOR_LIBRARY_NAME=nvidia");
+                
+                var nvidiaEglVendorJson = TryGetLinuxNvidiaEglVendorJsonPath();
+                if (!string.IsNullOrWhiteSpace(nvidiaEglVendorJson))
+                {
+                    sb.AppendLine($"export __EGL_VENDOR_LIBRARY_FILENAMES=\"{nvidiaEglVendorJson}\"");
+                    Logger.Info("Game", $"Applied NVIDIA EGL vendor override: {nvidiaEglVendorJson}");
+                }
+            }
+            else if (vendor == "AMD")
+            {
+                Logger.Info("Game", "GPU preference: dedicated (AMD env vars in launch script)");
+                
+                // For AMD Vulkan — find the ICD file to ensure correct GPU selection
+                var amdIcdPath = TryGetLinuxAmdVulkanIcdPath();
+                if (!string.IsNullOrWhiteSpace(amdIcdPath))
+                {
+                    sb.AppendLine($"export VK_ICD_FILENAMES=\"{amdIcdPath}\"");
+                    Logger.Info("Game", $"Applied AMD Vulkan ICD override: {amdIcdPath}");
+                }
+                
+                // Disable Vulkan validation layers for better performance
+                sb.AppendLine("export VK_LOADER_LAYERS_DISABLE=all");
+            }
+            else
+            {
+                // Unknown vendor — apply both NVIDIA and AMD variables as fallback
+                Logger.Info("Game", "GPU preference: dedicated (generic env vars, unknown vendor)");
+                sb.AppendLine("export __NV_PRIME_RENDER_OFFLOAD=1");
+                sb.AppendLine("export __GLX_VENDOR_LIBRARY_NAME=nvidia");
+                
+                var nvidiaEglVendorJson = TryGetLinuxNvidiaEglVendorJsonPath();
+                if (!string.IsNullOrWhiteSpace(nvidiaEglVendorJson))
+                {
+                    sb.AppendLine($"export __EGL_VENDOR_LIBRARY_FILENAMES=\"{nvidiaEglVendorJson}\"");
+                }
             }
 
             sb.AppendLine();
@@ -955,6 +1002,100 @@ export __NV_PRIME_RENDER_OFFLOAD=0
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Attempts to locate the AMD Vulkan ICD JSON file on Linux.
+    /// Returns the path to the ICD file, or null if not found.
+    /// </summary>
+    private static string? TryGetLinuxAmdVulkanIcdPath()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return null;
+
+        // Standard paths for AMD Vulkan ICD files (RADV / AMDVLK)
+        var candidates = new[]
+        {
+            "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json",
+            "/usr/share/vulkan/icd.d/radeon_icd.json",
+            "/usr/share/vulkan/icd.d/amd_icd64.json",
+            "/etc/vulkan/icd.d/radeon_icd.x86_64.json",
+            "/etc/vulkan/icd.d/radeon_icd.json",
+        };
+
+        foreach (var path in candidates)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        // Fallback: search for any radeon/amd ICD file
+        foreach (var dir in new[] { "/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d" })
+        {
+            if (!Directory.Exists(dir)) continue;
+            
+            try
+            {
+                foreach (var file in Directory.GetFiles(dir, "*radeon*.json"))
+                    return file;
+                foreach (var file in Directory.GetFiles(dir, "*amd*.json"))
+                    return file;
+            }
+            catch
+            {
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Builds custom environment variable lines for the Unix launch script.
+    /// Parses KEY=VALUE pairs from config and adds them to ENV_ARGS.
+    /// </summary>
+    private string BuildCustomEnvLines()
+    {
+        var customEnv = _config.GameEnvironmentVariables?.Trim();
+        if (string.IsNullOrWhiteSpace(customEnv))
+            return "# No custom environment variables\n\n";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Custom environment variables from Settings");
+        
+        var lines = customEnv.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var validCount = 0;
+        
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            // Skip comments and empty lines
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
+                continue;
+            
+            // Validate KEY=VALUE format
+            var eqIndex = trimmed.IndexOf('=');
+            if (eqIndex <= 0) continue;
+            
+            var key = trimmed[..eqIndex].Trim();
+            var value = trimmed[(eqIndex + 1)..].Trim();
+            
+            // Validate key is a valid env var name (alphanumeric + underscore, starts with letter/underscore)
+            if (!Regex.IsMatch(key, @"^[A-Za-z_][A-Za-z0-9_]*$"))
+                continue;
+            
+            // Escape value for bash
+            var escapedValue = EscapeForBashDoubleQuoted(value);
+            sb.AppendLine($"ENV_ARGS+=({key}=\"{escapedValue}\")");
+            validCount++;
+        }
+        
+        if (validCount > 0)
+        {
+            Logger.Info("Game", $"Applied {validCount} custom environment variable(s) from settings");
+        }
+        
+        sb.AppendLine();
+        return sb.ToString();
     }
 
     /// <summary>

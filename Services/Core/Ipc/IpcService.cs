@@ -1398,6 +1398,7 @@ public class IpcService
                 dataDirectory = appPath.AppDir,
                 instanceDirectory = settings.GetInstanceDirectory(),
                 gpuPreference = settings.GetGpuPreference(),
+                gameEnvironmentVariables = settings.GetGameEnvironmentVariables(),
                 launcherVersion = UpdateService.GetCurrentVersion()
             });
         });
@@ -1442,6 +1443,7 @@ public class IpcService
             case "useCustomJava": s.SetUseCustomJava(val.GetBoolean()); break;
             case "customJavaPath": s.SetCustomJavaPath(val.GetString() ?? ""); break;
             case "gpuPreference": s.SetGpuPreference(val.GetString() ?? "dedicated"); break;
+            case "gameEnvironmentVariables": s.SetGameEnvironmentVariables(val.GetString() ?? ""); break;
             case "hasCompletedOnboarding": s.SetHasCompletedOnboarding(val.GetBoolean()); break;
             default: Logger.Warning("IPC", $"Unknown setting key: {key}"); break;
         }
@@ -2082,6 +2084,7 @@ public class IpcService
 
     // #region System Info
     // @ipc invoke hyprism:system:gpuAdapters -> GpuAdapterInfo[]
+    // @ipc invoke hyprism:system:platform -> { os: string; isLinux: boolean; isWindows: boolean; isMacOS: boolean }
 
     private void RegisterSystemHandlers()
     {
@@ -2099,6 +2102,16 @@ public class IpcService
                 Logger.Error("IPC", $"Failed to get GPU adapters: {ex.Message}");
                 Reply("hyprism:system:gpuAdapters:reply", new List<object>());
             }
+        });
+
+        Electron.IpcMain.On("hyprism:system:platform", (_) =>
+        {
+            var isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+            var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var isMacOS = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+            var os = isLinux ? "linux" : isWindows ? "windows" : isMacOS ? "macos" : "unknown";
+            
+            Reply("hyprism:system:platform:reply", new { os, isLinux, isWindows, isMacOS });
         });
     }
 

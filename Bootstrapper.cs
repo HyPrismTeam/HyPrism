@@ -165,7 +165,8 @@ public static class Bootstrapper
                     sp.GetRequiredService<IUserIdentityService>(),
                     sp.GetRequiredService<AvatarService>(),
                     sp.GetRequiredService<HttpClient>(),
-                    sp.GetRequiredService<HytaleAuthService>()));
+                    sp.GetRequiredService<HytaleAuthService>(),
+                    sp.GetRequiredService<GpuDetectionService>()));
             services.AddSingleton<IGameLauncher>(sp => sp.GetRequiredService<GameLauncher>());
 
             services.AddSingleton(sp =>
