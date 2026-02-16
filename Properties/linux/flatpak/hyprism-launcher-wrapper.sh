@@ -49,6 +49,16 @@ log() {
   printf "%s %s\n" "$ts" "$*" >&2
 }
 
+# prefer Wayland when available
+export ELECTRON_ENABLE_WAYLAND=1
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+  log "ELECTRON_ENABLE_WAYLAND=1 (host reports WAYLAND_DISPLAY=$WAYLAND_DISPLAY) — Wayland available"
+elif [ -n "${DISPLAY:-}" ]; then
+  log "ELECTRON_ENABLE_WAYLAND=1 but no WAYLAND_DISPLAY found; DISPLAY is $DISPLAY — X11/fallback will be used"
+else
+  log "ELECTRON_ENABLE_WAYLAND=1 but no WAYLAND_DISPLAY or DISPLAY detected — display backend unknown"
+fi
+
 log "Wrapper start — DATA_DIR=$DATA_DIR"
 
 # Parse wrapper-only flags (these alter wrapper behaviour and are NOT forwarded)
