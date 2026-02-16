@@ -3,6 +3,7 @@ export enum Language {
     RUSSIAN = 'ru-RU',
     TURKISH = 'tr-TR',
     FRENCH = 'fr-FR',
+    ITALIAN = 'it-IT',
     SPANISH = 'es-ES',
     PORTUGUESE = 'pt-BR',
     GERMAN = 'de-DE',

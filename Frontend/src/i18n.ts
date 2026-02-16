@@ -9,6 +9,7 @@ import ruRU from './assets/locales/ru-RU.json';
 import deDE from './assets/locales/de-DE.json';
 import esES from './assets/locales/es-ES.json';
 import frFR from './assets/locales/fr-FR.json';
+import itIT from './assets/locales/it-IT.json';
 import jaJP from './assets/locales/ja-JP.json';
 import koKR from './assets/locales/ko-KR.json';
 import ptBR from './assets/locales/pt-BR.json';
@@ -27,6 +28,7 @@ const locales: Record<string, Record<string, unknown>> = {
     'ja-JP': jaJP,
     'ko-KR': koKR,
     'pt-BR': ptBR,
+    'it-IT': itIT,
     'tr-TR': trTR,
     'uk-UA': ukUA,
     'zh-CN': zhCN,

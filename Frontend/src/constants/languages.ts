@@ -32,6 +32,12 @@ export const LANGUAGE_CONFIG: Record<Language, LanguageMetadata> = {
         code: Language.FRENCH,
         searchQuery: 'French Translation',
     },
+    [Language.ITALIAN]: {
+        name: 'Italian',
+        nativeName: 'Italiano',
+        code: Language.ITALIAN,
+        searchQuery: 'Italian Translation',
+    },
     [Language.SPANISH]: {
         name: 'Spanish',
         nativeName: 'Español',
