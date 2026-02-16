@@ -25,6 +25,14 @@ Downloads are available in [Releases](https://github.com/yyyumeniku/HyPrism/rele
 - .NET 10.0 SDK
 - (for local Flatpak builds) `fakeroot` — required so `chrome-sandbox` is packaged with correct owner/permissions (SUID)
 
+Developer testing: to run a locally-built Flatpak that contains a non‑SUID `chrome-sandbox` (stub) use the developer override:
+
+```bash
+flatpak run --env=HYPRISM_DEV_ALLOW_STUB_SANDBOX=1 io.github.HyPrismTeam.HyPrism
+```
+
+This is unsafe and should be used for local testing only; production Flatpaks must include a SUID `chrome-sandbox`.
+
 **Build:**
 ```bash
 # Clone the repository
