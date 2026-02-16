@@ -12,7 +12,13 @@ DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/HyPrism"
 LOG="$DATA_DIR/wrapper.log"
 mkdir -p "$DATA_DIR"
 
-log() { printf "%s %s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >> "$LOG"; }
+log() {
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf "%s %s\n" "$ts" "$*" >> "$LOG"
+  printf "%s %s\n" "$ts" "$*" >&2
+}
+
+log "Wrapper start — DATA_DIR=$DATA_DIR"
 
 # Defer checking/running a user-installed launcher until we know the remote latest version.
 # This enables automatic updates: if a newer release exists on GitHub the wrapper will
@@ -90,6 +96,12 @@ if [ -n "$json" ]; then
   REMOTE_VERSION=$(normalize_version "$REMOTE_TAG")
 fi
 
+if [ -n "$REMOTE_VERSION" ]; then
+  log "Latest upstream release: $REMOTE_VERSION"
+else
+  log "Could not determine latest upstream release"
+fi
+
 # fallback: search releases for first prerelease with matching asset
 if [ -z "$asset_url" ]; then
   if command -v curl >/dev/null 2>&1; then
@@ -115,7 +127,9 @@ fi
 # If a user-installed launcher exists, check its version and auto-update if a newer
 # release is available on GitHub. If we cannot determine versions, fall back to running
 # the installed binary.
+log "Checking for user-installed HyPrism at $DATA_DIR/HyPrism"
 if [ -x "$DATA_DIR/HyPrism" ]; then
+  log "Found user-installed launcher: $DATA_DIR/HyPrism"
   INSTALLED_VER=""
   if [ -f "$DATA_DIR/version.txt" ]; then
     INSTALLED_VER=$(sed -n '1p' "$DATA_DIR/version.txt" 2>/dev/null || true)
@@ -139,18 +153,22 @@ if [ -x "$DATA_DIR/HyPrism" ]; then
       log "Installed launcher version $INSTALLED_VER is older than latest $REMOTE_VERSION — will update"
       # continue to download/extract branch below
     else
-      log "Installed launcher is up-to-date ($INSTALLED_VER) — exec"
+      log "Installed launcher is up-to-date ($INSTALLED_VER) — launching $DATA_DIR/HyPrism"
       exec "$DATA_DIR/HyPrism" "$@"
     fi
   else
-    log "Found user release at $DATA_DIR/HyPrism (version unknown) — exec"
+    log "Found user release at $DATA_DIR/HyPrism (version unknown) — launching $DATA_DIR/HyPrism"
     exec "$DATA_DIR/HyPrism" "$@"
   fi
 fi
 
 if [ -z "$asset_url" ]; then
   log "No suitable GitHub release asset found; falling back to bundled launcher"
-  if [ -x "/app/lib/hyprism/HyPrism" ]; then
+  if [ -x "/app/HyPrism/HyPrism" ]; then
+    log "Launching bundled launcher: /app/HyPrism/HyPrism"
+    exec /app/HyPrism/HyPrism "$@"
+  elif [ -x "/app/lib/hyprism/HyPrism" ]; then
+    log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
     exec /app/lib/hyprism/HyPrism "$@"
   fi
   log "Bundled launcher missing — exiting"
@@ -163,7 +181,11 @@ TMP_TAR="$DATA_DIR/hyprism-release.tar.xz"
 rm -f "$TMP_TAR"
 if ! download_file "$asset_url" "$TMP_TAR"; then
   log "Download failed: $asset_url — falling back to bundled launcher"
-  if [ -x "/app/lib/hyprism/HyPrism" ]; then
+  if [ -x "/app/HyPrism/HyPrism" ]; then
+    log "Launching bundled launcher: /app/HyPrism/HyPrism"
+    exec /app/HyPrism/HyPrism "$@"
+  elif [ -x "/app/lib/hyprism/HyPrism" ]; then
+    log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
     exec /app/lib/hyprism/HyPrism "$@"
   fi
   exit 1
@@ -192,7 +214,11 @@ if tar -xJf "$TMP_TAR" -C "$TMP_DIR" 2>>"$LOG"; then
   else
     log "No HyPrism binary found inside archive — falling back"
     rm -rf "$TMP_DIR" "$TMP_TAR"
-    if [ -x "/app/lib/hyprism/HyPrism" ]; then
+    if [ -x "/app/HyPrism/HyPrism" ]; then
+      log "Launching bundled launcher: /app/HyPrism/HyPrism"
+      exec /app/HyPrism/HyPrism "$@"
+    elif [ -x "/app/lib/hyprism/HyPrism" ]; then
+      log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
       exec /app/lib/hyprism/HyPrism "$@"
     fi
     exit 1
@@ -200,7 +226,11 @@ if tar -xJf "$TMP_TAR" -C "$TMP_DIR" 2>>"$LOG"; then
 else
   log "Extraction failed" 
   rm -rf "$TMP_DIR" "$TMP_TAR"
-  if [ -x "/app/lib/hyprism/HyPrism" ]; then
+  if [ -x "/app/HyPrism/HyPrism" ]; then
+    log "Launching bundled launcher: /app/HyPrism/HyPrism"
+    exec /app/HyPrism/HyPrism "$@"
+  elif [ -x "/app/lib/hyprism/HyPrism" ]; then
+    log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
     exec /app/lib/hyprism/HyPrism "$@"
   fi
   exit 1
@@ -210,15 +240,24 @@ fi
 # otherwise execs the system wrapper (this file is kept to make bundle builds
 # include the wrapper script). The real logic is in Properties/linux/flatpak/hyprism-launcher-wrapper.sh
 
-if [ -x "/app/lib/hyprism/hyprism-launcher-wrapper.sh" ]; then
+if [ -x "/app/HyPrism/hyprism-launcher-wrapper.sh" ]; then
+  log "Delegating to /app/HyPrism/hyprism-launcher-wrapper.sh"
+  exec /app/HyPrism/hyprism-launcher-wrapper.sh "$@"
+elif [ -x "/app/lib/hyprism/hyprism-launcher-wrapper.sh" ]; then
+  log "Delegating to /app/lib/hyprism/hyprism-launcher-wrapper.sh"
   exec /app/lib/hyprism/hyprism-launcher-wrapper.sh "$@"
 fi
 
 # Fallback to bundled binary
-if [ -x "/app/lib/hyprism/HyPrism" ]; then
+if [ -x "/app/HyPrism/HyPrism" ]; then
+  log "Launching bundled launcher: /app/HyPrism/HyPrism"
+  exec /app/HyPrism/HyPrism "$@"
+elif [ -x "/app/lib/hyprism/HyPrism" ]; then
+  log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
   exec /app/lib/hyprism/HyPrism "$@"
 fi
 
 # Last-resort: fail with message
+log "HyPrism launcher not available inside bundle — exiting"
 echo "HyPrism launcher not available inside bundle" >&2
 exit 1

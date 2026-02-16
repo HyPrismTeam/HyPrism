@@ -15,9 +15,7 @@ add-extensions:
     version: '25.08-extra'
     autodelete: false
     add-ld-path: lib
-    cleanup-commands:
-      - mkdir -p /app/lib/i386-linux-gnu/codecs-extra
-
+      
 build-options:
   append-path: /usr/lib/sdk/node18/bin
 
@@ -118,6 +116,7 @@ modules:
   - name: HyPrism
     buildsystem: simple
     build-commands:
+      - mkdir -p /app/lib/i386-linux-gnu/codecs-extra
       - install -d /app/bin/HyPrism
       - install -Dm755 linux-unpacked/HyPrism /app/bin/HyPrism/HyPrism
       - cp -R linux-unpacked/* /app/bin/HyPrism
