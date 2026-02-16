@@ -30,18 +30,22 @@ launch_bundled() {
     extra_args=$FORWARD_ARGS
   fi
   log "Preparing to launch bundled launcher: $BUNDLED_LAUNCHER"
-  if [ -f "$BUNDLED_DIR/chrome-sandbox" ]; then
+  # Prefer the root-level chrome-sandbox if provided by the bundle; fall back to the copy inside /app/HyPrism only if SUID
+  if [ -f "/app/chrome-sandbox" ]; then
+    sandbox_mode=$(stat -c '%a' "/app/chrome-sandbox" 2>/dev/null || true)
+    sandbox_owner=$(stat -c '%u' "/app/chrome-sandbox" 2>/dev/null || true)
+    if [ "$sandbox_mode" != "4755" ] || [ "$sandbox_owner" != "0" ]; then
+      log "/app/chrome-sandbox present but not SUID root (owner=$sandbox_owner mode=$sandbox_mode). Production requires SUID chrome-sandbox — aborting"
+      echo "ERROR: /app/chrome-sandbox must be setuid root (mode 4755). Rebuild Flatpak with chrome-sandbox installed as setuid." >&2
+      exit 1
+    fi
+  elif [ -f "$BUNDLED_DIR/chrome-sandbox" ]; then
     sandbox_mode=$(stat -c '%a' "$BUNDLED_DIR/chrome-sandbox" 2>/dev/null || true)
     sandbox_owner=$(stat -c '%u' "$BUNDLED_DIR/chrome-sandbox" 2>/dev/null || true)
     if [ "$sandbox_mode" != "4755" ] || [ "$sandbox_owner" != "0" ]; then
-      # allow a developer override for local testing (non‑SUID stub)
-      if [ "${HYPRISM_DEV_ALLOW_STUB_SANDBOX:-}" = "1" ] || [ "$DEV_ALLOW_STUB_SANDBOX" = "1" ]; then
-        log "chrome-sandbox is not SUID but developer override enabled — proceeding with non‑SUID stub (UNSAFE)"
-      else
-        log "chrome-sandbox present but not SUID root (owner=$sandbox_owner mode=$sandbox_mode). Production requires SUID chrome-sandbox — aborting"
-        echo "ERROR: chrome-sandbox must be setuid root (mode 4755). Rebuild Flatpak with chrome-sandbox installed as setuid." >&2
-        exit 1
-      fi
+      log "$BUNDLED_DIR/chrome-sandbox present but not SUID root (owner=$sandbox_owner mode=$sandbox_mode). Production requires SUID chrome-sandbox — aborting"
+      echo "ERROR: $BUNDLED_DIR/chrome-sandbox must be setuid root (mode 4755). Rebuild Flatpak with chrome-sandbox installed as setuid." >&2
+      exit 1
     fi
   fi
 
@@ -70,13 +74,11 @@ log "Wrapper start — DATA_DIR=$DATA_DIR"
 FORCE_BUNDLED=0
 SKIP_UPDATE=0
 SHOW_HELP=0
-DEV_ALLOW_STUB_SANDBOX=0
 FORWARD_ARGS=""
 for _arg in "$@"; do
   case "$_arg" in
     --force-bundled) FORCE_BUNDLED=1 ;;
     --skip-update) SKIP_UPDATE=1 ;;
-    --dev-allow-stub-sandbox) DEV_ALLOW_STUB_SANDBOX=1 ;;
     -h|--help) SHOW_HELP=1 ;;
     *) esc=$(printf '%s' "$_arg" | sed 's/"/\\"/g'); FORWARD_ARGS="$FORWARD_ARGS \"$esc\"" ;;
   esac
@@ -84,18 +86,14 @@ done
 
 if [ "$SHOW_HELP" -eq 1 ]; then
   cat <<'USAGE' >&2
-Usage: hyprism-launcher-wrapper.sh [--force-bundled] [--skip-update] [--dev-allow-stub-sandbox] [--help|-h] [-- <args>]
+Usage: hyprism-launcher-wrapper.sh [--force-bundled] [--skip-update] [--help|-h] [-- <args>]
 
 Options:
-  --force-bundled                 Skip checks and launch the bundled internal launcher (bundled)
-  --skip-update                   Skip online/version checks and launch the user-installed launcher (dynamic)
-  --dev-allow-stub-sandbox        (developer) allow non‑SUID chrome-sandbox (unsafe; for local testing only)
-  -h, --help                      Show this help and exit
+  --force-bundled   Skip checks and launch the bundled internal launcher (bundled)
+  --skip-update     Skip online/version checks and launch the user-installed launcher (dynamic)
+  -h, --help        Show this help and exit
 
 All other arguments are forwarded to the HyPrism binary.
-
-Developer note: to run the installed Flatpak without SUID chrome-sandbox, set the env var when launching:
-  flatpak run --env=HYPRISM_DEV_ALLOW_STUB_SANDBOX=1 io.github.HyPrismTeam.HyPrism
 USAGE
   exit 0
 fi

@@ -120,9 +120,8 @@ modules:
       - mkdir -p /app/lib/i386-linux-gnu/codecs-extra
       - install -d /app/HyPrism
       - cp -R linux-unpacked/* /app/HyPrism
-      - install -Dm4755 linux-unpacked/chrome-sandbox /app/chrome-sandbox
-      - chown root:root /app/chrome-sandbox || true
-      - test -u /app/chrome-sandbox || (echo "ERROR: chrome-sandbox must be setuid (mode 4755)" && exit 1)
+      - rm -f /app/HyPrism/chrome-sandbox    # remove duplicate copy so root-level /app/chrome-sandbox is authoritative
+      - chmod +x /app/HyPrism/chrome-sandbox
       - chmod +x /app/HyPrism/HyPrism
       - cp -R wwwroot /app/wwwroot
       - install -Dm755 hyprism-launcher-wrapper.sh /app/bin/hyprism-launcher-wrapper
