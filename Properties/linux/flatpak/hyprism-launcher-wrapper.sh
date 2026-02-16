@@ -1,6 +1,8 @@
 #!/bin/sh
-# Bundled copy of hyprism-launcher-wrapper.sh for flatpak bundle packaging
-#!/bin/sh
+#
+# Sorry I don't know Electron, and chrome-sandbox is driving me crazy, so since we are already in a Flatpak I decided to run it with --no-sandbox and call it a day.
+# If you have time and willing to figure out how to make it work please open a PR.
+#
 # HyPrism Flatpak launcher wrapper —
 # - if a user‑installed copy exists in $XDG_DATA_HOME/HyPrism, run it
 # - otherwise download the Linux release (latest → prerelease), extract to app data dir and run
@@ -30,26 +32,9 @@ launch_bundled() {
     extra_args=$FORWARD_ARGS
   fi
   log "Preparing to launch bundled launcher: $BUNDLED_LAUNCHER"
-  # Prefer the root-level chrome-sandbox if provided by the bundle; fall back to the copy inside /app/HyPrism only if SUID
-  if [ -f "/app/chrome-sandbox" ]; then
-    sandbox_mode=$(stat -c '%a' "/app/chrome-sandbox" 2>/dev/null || true)
-    sandbox_owner=$(stat -c '%u' "/app/chrome-sandbox" 2>/dev/null || true)
-    if [ "$sandbox_mode" != "4755" ] || [ "$sandbox_owner" != "0" ]; then
-      log "/app/chrome-sandbox present but not SUID root (owner=$sandbox_owner mode=$sandbox_mode). Production requires SUID chrome-sandbox — aborting"
-      echo "ERROR: /app/chrome-sandbox must be setuid root (mode 4755). Rebuild Flatpak with chrome-sandbox installed as setuid." >&2
-      exit 1
-    fi
-  elif [ -f "$BUNDLED_DIR/chrome-sandbox" ]; then
-    sandbox_mode=$(stat -c '%a' "$BUNDLED_DIR/chrome-sandbox" 2>/dev/null || true)
-    sandbox_owner=$(stat -c '%u' "$BUNDLED_DIR/chrome-sandbox" 2>/dev/null || true)
-    if [ "$sandbox_mode" != "4755" ] || [ "$sandbox_owner" != "0" ]; then
-      log "$BUNDLED_DIR/chrome-sandbox present but not SUID root (owner=$sandbox_owner mode=$sandbox_mode). Production requires SUID chrome-sandbox — aborting"
-      echo "ERROR: $BUNDLED_DIR/chrome-sandbox must be setuid root (mode 4755). Rebuild Flatpak with chrome-sandbox installed as setuid." >&2
-      exit 1
-    fi
-  fi
 
-  eval \"$BUNDLED_LAUNCHER\" $extra_args
+  # Run bundled HyPrism by default with --no-sandbox (Flatpak debug default).
+  eval \"$BUNDLED_LAUNCHER\" --no-sandbox $extra_args
 }
 
 log() {
@@ -113,7 +98,7 @@ if [ "$SKIP_UPDATE" -eq 1 ]; then
   log "--skip-update: skipping online/version checks and launching user-installed launcher if present"
   if [ -x "$DYNAMIC_LAUNCHER" ]; then
     log "Launching user-installed launcher: $DYNAMIC_LAUNCHER"
-    eval exec "$DYNAMIC_LAUNCHER" $FORWARD_ARGS
+    eval exec "$DYNAMIC_LAUNCHER" --no-sandbox $FORWARD_ARGS
   else
     log "No user-installed launcher found for --skip-update — falling back to bundled launcher"
     if [ -x "$BUNDLED_LAUNCHER" ]; then
@@ -279,11 +264,11 @@ if [ -x "$DYNAMIC_LAUNCHER" ]; then
       # continue to download/extract branch below
     else
       log "Installed launcher is up-to-date ($INSTALLED_VER) — launching $DYNAMIC_LAUNCHER"
-      exec "$DYNAMIC_LAUNCHER" "$@"
+      exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
     fi
   else
     log "Found user release at $DYNAMIC_LAUNCHER (version unknown) — launching $DYNAMIC_LAUNCHER"
-    exec "$DYNAMIC_LAUNCHER" "$@"
+    exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
   fi
 fi
 
@@ -305,7 +290,7 @@ if ! download_file "$asset_url" "$TMP_TAR"; then
   log "Download failed: $asset_url — falling back to bundled launcher"
   if [ -x "$BUNDLED_LAUNCHER" ]; then
     log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-    exec "$BUNDLED_LAUNCHER" "$@"
+    exec "$BUNDLED_LAUNCHER" --no-sandbox "$@"
   fi
   exit 1
 fi
@@ -329,13 +314,13 @@ if tar -xJf "$TMP_TAR" -C "$TMP_DIR" 2>>"$LOG"; then
     fi
     rm -rf "$TMP_DIR" "$TMP_TAR"
     log "Extraction complete — exec $DYNAMIC_LAUNCHER"
-    exec "$DYNAMIC_LAUNCHER" "$@"
+    exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
   else
     log "No HyPrism binary found inside archive — falling back"
     rm -rf "$TMP_DIR" "$TMP_TAR"
     if [ -x "$BUNDLED_LAUNCHER" ]; then
       log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-      exec "$BUNDLED_LAUNCHER" "$@"
+      exec "$BUNDLED_LAUNCHER" --no-sandbox "$@"
     fi
     exit 1
   fi
@@ -344,7 +329,7 @@ else
   rm -rf "$TMP_DIR" "$TMP_TAR"
   if [ -x "$BUNDLED_LAUNCHER" ]; then
     log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-    exec "$BUNDLED_LAUNCHER" "$@"
+    exec "$BUNDLED_LAUNCHER" --no-sandbox "$@"
   fi
   exit 1
 fi

@@ -17,7 +17,7 @@ add-extensions:
     add-ld-path: lib
       
 build-options:
-  append-path: /usr/lib/sdk/node18/bin
+  append-path: /usr/lib/sdk/node22/bin
 
 finish-args:
   - --share=ipc
@@ -120,9 +120,7 @@ modules:
       - mkdir -p /app/lib/i386-linux-gnu/codecs-extra
       - install -d /app/HyPrism
       - cp -R linux-unpacked/* /app/HyPrism
-      - rm -f /app/HyPrism/chrome-sandbox    # remove duplicate copy so root-level /app/chrome-sandbox is authoritative
-      - chmod +x /app/HyPrism/chrome-sandbox
-      - chmod +x /app/HyPrism/HyPrism
+      - chmod +x /app/HyPrism/chrome-sandbox /app/HyPrism/HyPrism
       - cp -R wwwroot /app/wwwroot
       - install -Dm755 hyprism-launcher-wrapper.sh /app/bin/hyprism-launcher-wrapper
       - install -Dm644 io.github.HyPrismTeam.HyPrism.png /app/share/icons/hicolor/256x256/apps/io.github.HyPrismTeam.HyPrism.png
