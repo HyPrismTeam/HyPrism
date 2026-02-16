@@ -86,7 +86,10 @@ public static class Bootstrapper
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<IConfigService>(),
                     sp.GetRequiredService<HytaleVersionSource>(),
-                    sp.GetRequiredService<MirrorVersionSource>()));
+                    new IVersionSource[] {
+                        sp.GetRequiredService<EstroGenVersionSource>(),
+                        sp.GetRequiredService<CobyLobbyVersionSource>()
+                    }));
             services.AddSingleton<IVersionService>(sp => sp.GetRequiredService<VersionService>());
 
             #endregion
@@ -224,9 +227,12 @@ public static class Bootstrapper
                     sp.GetRequiredService<IConfigService>()));
 
             services.AddSingleton(sp =>
-                new MirrorVersionSource(
-                    sp.GetRequiredService<HttpClient>(),
-                    "default"));
+                new EstroGenVersionSource(
+                    sp.GetRequiredService<HttpClient>()));
+
+            services.AddSingleton(sp =>
+                new CobyLobbyVersionSource(
+                    sp.GetRequiredService<HttpClient>()));
 
             #endregion
 

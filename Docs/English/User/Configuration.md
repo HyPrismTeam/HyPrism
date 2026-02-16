@@ -63,6 +63,18 @@ Access settings through the **Settings** page (gear icon in sidebar).
 | Pre-release | Receive pre-release updates | false |
 | Launcher branch | Release or pre-release channel | release |
 | Data directory | Custom data storage path | Platform default |
+| Download source | Where to download game files from | auto |
+
+#### Download Source Options
+
+| Value | Description |
+|-------|-------------|
+| auto | Use official server if available, fallback to mirror |
+| official | Only use official Hytale servers (requires account) |
+| estrogen | Use EstroGen community mirror (licdn.estrogen.cat) |
+
+The EstroGen mirror provides full game versions at:
+`https://licdn.estrogen.cat/hytale/patches/{os}/{arch}/{branch}/0/{version}.pwr`
 
 ## Instance Management
 

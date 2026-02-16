@@ -45,7 +45,8 @@ namespace HyPrism.Services.Core.Ipc;
 /// @type Profile { id: string; name: string; uuid?: string; isOfficial?: boolean; avatar?: string; folderName?: string; }
 /// @type HytaleAuthStatus { loggedIn: boolean; username?: string; uuid?: string; error?: string; errorType?: string; }
 /// @type ProfileSnapshot { nick: string; uuid: string; avatarPath?: string; }
-/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; javaArguments?: string; useCustomJava?: boolean; customJavaPath?: string; systemMemoryMb?: number; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
+/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; javaArguments?: string; useCustomJava?: boolean; customJavaPath?: string; systemMemoryMb?: number; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; preferredMirror?: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
+/// @type MirrorSpeedTestResult { mirrorId: string; mirrorUrl: string; mirrorName: string; pingMs: number; speedMBps: number; isAvailable: boolean; testedAt: string; }
 /// @type ModScreenshot { id: number; title: string; thumbnailUrl: string; url: string; }
 /// @type ModInfo { id: string; name: string; slug: string; summary: string; author: string; downloadCount: number; iconUrl: string; thumbnailUrl: string; categories: string[]; dateUpdated: string; latestFileId: string; screenshots: ModScreenshot[]; }
 /// @type ModSearchResult { mods: ModInfo[]; totalCount: number; }
@@ -1399,6 +1400,7 @@ public class IpcService
                 instanceDirectory = settings.GetInstanceDirectory(),
                 gpuPreference = settings.GetGpuPreference(),
                 gameEnvironmentVariables = settings.GetGameEnvironmentVariables(),
+                preferredMirror = settings.GetPreferredMirror(),
                 launcherVersion = UpdateService.GetCurrentVersion()
             });
         });
@@ -1419,6 +1421,65 @@ public class IpcService
             {
                 Logger.Error("IPC", $"Settings update failed: {ex.Message}");
                 Reply("hyprism:settings:update:reply", new { success = false, error = ex.Message });
+            }
+        });
+        
+        // @ipc invoke hyprism:settings:testMirrorSpeed -> MirrorSpeedTestResult
+        Electron.IpcMain.On("hyprism:settings:testMirrorSpeed", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                var mirrorId = request?.GetValueOrDefault("mirrorId").GetString() ?? "estrogen";
+                var forceRefresh = request?.GetValueOrDefault("forceRefresh").ValueKind == JsonValueKind.True;
+                
+                var versionService = _services.GetRequiredService<IVersionService>();
+                var result = await versionService.TestMirrorSpeedAsync(mirrorId, forceRefresh);
+                
+                Reply("hyprism:settings:testMirrorSpeed:reply", result);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Mirror speed test failed: {ex.Message}");
+                Reply("hyprism:settings:testMirrorSpeed:reply", new { 
+                    mirrorId = "estrogen",
+                    mirrorName = "EstroGen",
+                    mirrorUrl = "",
+                    pingMs = -1L,
+                    speedMBps = 0.0,
+                    isAvailable = false,
+                    testedAt = DateTime.UtcNow
+                });
+            }
+        });
+        
+        // @ipc invoke hyprism:settings:testOfficialSpeed -> MirrorSpeedTestResult
+        Electron.IpcMain.On("hyprism:settings:testOfficialSpeed", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                var forceRefresh = request?.GetValueOrDefault("forceRefresh").ValueKind == JsonValueKind.True;
+                
+                var versionService = _services.GetRequiredService<IVersionService>();
+                var result = await versionService.TestOfficialSpeedAsync(forceRefresh);
+                
+                Reply("hyprism:settings:testOfficialSpeed:reply", result);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Official speed test failed: {ex.Message}");
+                Reply("hyprism:settings:testOfficialSpeed:reply", new { 
+                    mirrorId = "official",
+                    mirrorName = "Hytale Official",
+                    mirrorUrl = "https://cdn.hytale.com",
+                    pingMs = -1L,
+                    speedMBps = 0.0,
+                    isAvailable = false,
+                    testedAt = DateTime.UtcNow
+                });
             }
         });
     }
@@ -1444,6 +1505,7 @@ public class IpcService
             case "customJavaPath": s.SetCustomJavaPath(val.GetString() ?? ""); break;
             case "gpuPreference": s.SetGpuPreference(val.GetString() ?? "dedicated"); break;
             case "gameEnvironmentVariables": s.SetGameEnvironmentVariables(val.GetString() ?? ""); break;
+            case "preferredMirror": s.SetPreferredMirror(val.GetString() ?? "estrogen"); break;
             case "hasCompletedOnboarding": s.SetHasCompletedOnboarding(val.GetBoolean()); break;
             default: Logger.Warning("IPC", $"Unknown setting key: {key}"); break;
         }

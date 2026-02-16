@@ -359,4 +359,25 @@ public class SettingsService : ISettingsService
     }
 
     public string GetInstanceDirectory() => _configService.Configuration.InstanceDirectory;
+
+    // ========== Mirror Settings ==========
+    
+    /// <inheritdoc/>
+    public string GetPreferredMirror() => _configService.Configuration.PreferredMirror;
+    
+    /// <inheritdoc/>
+    public bool SetPreferredMirror(string mirrorId)
+    {
+        var normalized = mirrorId?.ToLowerInvariant() ?? "estrogen";
+        // Currently only "estrogen" mirror is available
+        if (normalized != "estrogen")
+        {
+            normalized = "estrogen";
+        }
+        
+        _configService.Configuration.PreferredMirror = normalized;
+        _configService.SaveConfig();
+        Logger.Info("Config", $"Preferred mirror set to: {normalized}");
+        return true;
+    }
 }

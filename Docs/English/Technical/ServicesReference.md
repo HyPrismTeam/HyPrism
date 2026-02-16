@@ -73,6 +73,22 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **CRITICAL:** Binary manipulation for game integrity
 - **Rule:** NEVER modify without explicit instruction
 
+### VersionService
+- **Purpose:** Manages game version discovery and download URL resolution
+- **Sources:** Queries official Hytale API and community mirror (EstroGen) for version lists
+- **Caching:** Version lists are cached locally with configurable TTL
+- **Mirror fallback:** If official servers are unavailable, mirror versions are used automatically
+
+### EstroGenVersionSource
+- **File:** `Services/Game/Sources/EstroGenVersionSource.cs`
+- **Purpose:** Community mirror version source for game downloads (licdn.estrogen.cat)
+- **URL format:** `https://licdn.estrogen.cat/hytale/patches/{os}/{arch}/{branch}/0/{version}.pwr`
+- **Diff patches:** `https://licdn.estrogen.cat/hytale/patches/{os}/{arch}/{branch}/{from}/{to}.pwr`
+- **HTML parsing:** Uses regex to parse nginx autoindex HTML for version discovery
+- **File size validation:** Versions with files < 1 MB are filtered out (incomplete uploads)
+- **Speed test:** Supports mirror speed testing with ping and download speed measurement
+- **Cache TTL:** Version cache: 30 minutes, Speed test cache: 1 hour
+
 ### ModService
 - **Purpose:** Mod listing, searching, and management (CurseForge integration)
 - **Instance mods source:** Reads from `UserData/Mods` and falls back to file-system discovery (`.jar`, `.zip`, `.disabled`) when manifest entries are missing

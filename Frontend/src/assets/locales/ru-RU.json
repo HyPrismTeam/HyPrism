@@ -162,8 +162,25 @@
       "updateChannelHint": "Только проверенные версии.",
       "closeLauncher": "Закрывать после запуска",
       "closeLauncherHint": "Закрывать лаунчер при запуске игры",
+      "mirrorSettings": "Настройки зеркала",
+      "mirrorTestSpeed": "Тест скорости",
+      "mirrorTesting": "Проверка...",
+      "mirrorUnavailable": "Недоступно",
+      "mirrorDescription": "Комьюнити зеркало используется как альтернативный источник файлов игры, когда официальные серверы недоступны.",
       "showAlphaMods": "Показывать альфа-моды",
       "showAlphaModsHint": "Показывать моды с типом альфа-релиза в менеджере модов"
+    },
+    "downloads": {
+      "title": "Загрузки",
+      "howDownloadsWork": "Как работают загрузки",
+      "howDownloadsWorkDescription": "HyPrism автоматически выбирает самый быстрый доступный источник для загрузки файлов игры. Нажмите \"Тест скорости\" для проверки соединения.",
+      "officialSource": "Официальный источник",
+      "officialSourceHint": "Загрузка с официальных серверов Hytale",
+      "mirrors": "Комьюнити зеркала",
+      "mirrorsHint": "Альтернативные источники от сообщества",
+      "unavailable": "Недоступно",
+      "testing": "Проверка...",
+      "testSpeed": "Тест скорости"
     },
     "javaSettings": {
       "javaRuntime": "Java runtime",

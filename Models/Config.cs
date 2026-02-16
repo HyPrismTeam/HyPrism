@@ -150,4 +150,13 @@ public class Config
     /// Automatically fetched on first launch if not set.
     /// </summary>
     public string CurseForgeKey { get; set; } = "";
+    
+    /// <summary>
+    /// Preferred mirror for downloading game files when using a mirror.
+    /// Mirrors are always used for version discovery, but this setting controls
+    /// which mirror to use for actual file downloads when official server is unavailable.
+    /// - "estrogen": EstroGen community mirror (licdn.estrogen.cat)
+    /// Default is "estrogen" (currently the only available mirror).
+    /// </summary>
+    public string PreferredMirror { get; set; } = "estrogen";
 }

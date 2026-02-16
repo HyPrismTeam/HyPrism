@@ -162,8 +162,25 @@
       "updateChannelHint": "You will receive stable releases only.",
       "closeLauncher": "Close after launch",
       "closeLauncherHint": "Close launcher when game starts",
+      "mirrorSettings": "Mirror Settings",
+      "mirrorTestSpeed": "Test Speed",
+      "mirrorTesting": "Testing...",
+      "mirrorUnavailable": "Unavailable",
+      "mirrorDescription": "Community mirror is used as alternative source for game files when official servers are unavailable.",
       "showAlphaMods": "Show Alpha Mods",
       "showAlphaModsHint": "Show mods with alpha release type in the mod manager"
+    },
+    "downloads": {
+      "title": "Downloads",
+      "howDownloadsWork": "How downloads work",
+      "howDownloadsWorkDescription": "HyPrism automatically selects the fastest available source to download game files. Press \"Test Speed\" to check your connection.",
+      "officialSource": "Official Source",
+      "officialSourceHint": "Download from official Hytale servers",
+      "mirrors": "Community Mirrors",
+      "mirrorsHint": "Alternative sources from the community",
+      "unavailable": "Unavailable",
+      "testing": "Testing...",
+      "testSpeed": "Test Speed"
     },
     "javaSettings": {
       "javaRuntime": "Java runtime",

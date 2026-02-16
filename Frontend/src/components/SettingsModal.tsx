@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Coffee, Server, Edit3, FileText, Terminal } from 'lucide-react';
+import { X, Github, Bug, Check, AlertTriangle, ChevronDown, ExternalLink, Power, FolderOpen, Trash2, Settings, Database, Globe, Code, Image, Loader2, FlaskConical, RotateCcw, Monitor, Download, HardDrive, Package, Box, Wifi, Coffee, Server, Edit3, FileText, Terminal, Info } from 'lucide-react';
 import { ipc, on } from '@/lib/ipc';
 import { changeLanguage } from '../i18n';
 
@@ -113,7 +113,7 @@ interface SettingsModalProps {
     onMovingDataChange?: (isMoving: boolean) => void;
 }
 
-type SettingsTab = 'general' | 'java' | 'visual' | 'network' | 'graphics' | 'variables' | 'logs' | 'language' | 'data' | 'instances' | 'about' | 'developer';
+type SettingsTab = 'general' | 'downloads' | 'java' | 'visual' | 'network' | 'graphics' | 'variables' | 'logs' | 'language' | 'data' | 'instances' | 'about' | 'developer';
 
 // Auth server base URL for avatar/skin head
 const DEFAULT_AUTH_DOMAIN = 'sessions.sanasol.ws';
@@ -138,6 +138,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [isBranchOpen, setIsBranchOpen] = useState(false);
 
     const [selectedLauncherBranch, setSelectedLauncherBranch] = useState(launcherBranch);
+    const [mirrorSpeedTest, setMirrorSpeedTest] = useState<{
+        mirrorId: string;
+        mirrorUrl: string;
+        mirrorName: string;
+        pingMs: number;
+        speedMBps: number;
+        isAvailable: boolean;
+        testedAt: string;
+    } | null>(null);
+    const [cobyLobbySpeedTest, setCobyLobbySpeedTest] = useState<{
+        mirrorId: string;
+        mirrorUrl: string;
+        mirrorName: string;
+        pingMs: number;
+        speedMBps: number;
+        isAvailable: boolean;
+        testedAt: string;
+    } | null>(null);
+    const [officialSpeedTest, setOfficialSpeedTest] = useState<{
+        pingMs: number;
+        speedMBps: number;
+        isAvailable: boolean;
+        testedAt: string;
+    } | null>(null);
+    const [isMirrorTesting, setIsMirrorTesting] = useState(false);
+    const [isCobyLobbyTesting, setIsCobyLobbyTesting] = useState(false);
+    const [isOfficialTesting, setIsOfficialTesting] = useState(false);
+    const [hasOfficialAccount, setHasOfficialAccount] = useState(false);
     const [closeAfterLaunch, setCloseAfterLaunch] = useState(false);
     const [javaArguments, setJavaArguments] = useState('');
     const [javaRamMb, setJavaRamMb] = useState(4096);
@@ -410,6 +438,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     if (avatar) setLocalAvatar(avatar);
                 } catch { /* ignore */ }
                 
+                // Check if user has any official account
+                try {
+                    const profiles = await ipc.profile.list();
+                    const hasOfficial = profiles.some(p => p.isOfficial === true);
+                    setHasOfficialAccount(hasOfficial);
+                } catch { /* ignore */ }
+                
                 // Accent color is now handled by AccentColorContext
                 
                 const savedDevMode = localStorage.getItem('hyprism_dev_mode');
@@ -590,6 +625,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setSelectedLauncherBranch(branch);
         setIsBranchOpen(false);
         onLauncherBranchChange(branch);
+    };
+    
+    const handleTestMirrorSpeed = async (forceRefresh = false) => {
+        setIsMirrorTesting(true);
+        try {
+            const result = await ipc.settings.testMirrorSpeed({ mirrorId: 'estrogen', forceRefresh });
+            setMirrorSpeedTest(result);
+        } catch (err) {
+            console.error('Mirror speed test failed:', err);
+            setMirrorSpeedTest({
+                mirrorId: 'estrogen',
+                mirrorUrl: '',
+                mirrorName: 'estrogen',
+                pingMs: -1,
+                speedMBps: 0,
+                isAvailable: false,
+                testedAt: new Date().toISOString()
+            });
+        } finally {
+            setIsMirrorTesting(false);
+        }
+    };
+
+    const handleTestCobyLobbySpeed = async (forceRefresh = false) => {
+        setIsCobyLobbyTesting(true);
+        try {
+            const result = await ipc.settings.testMirrorSpeed({ mirrorId: 'cobylobby', forceRefresh });
+            setCobyLobbySpeedTest(result);
+        } catch (err) {
+            console.error('CobyLobby speed test failed:', err);
+            setCobyLobbySpeedTest({
+                mirrorId: 'cobylobby',
+                mirrorUrl: '',
+                mirrorName: 'CobyLobby',
+                pingMs: -1,
+                speedMBps: 0,
+                isAvailable: false,
+                testedAt: new Date().toISOString()
+            });
+        } finally {
+            setIsCobyLobbyTesting(false);
+        }
+    };
+
+    const handleTestOfficialSpeed = async (forceRefresh = false) => {
+        setIsOfficialTesting(true);
+        try {
+            const result = await ipc.settings.testOfficialSpeed({ forceRefresh });
+            setOfficialSpeedTest(result);
+        } catch (err) {
+            console.error('Official speed test failed:', err);
+            setOfficialSpeedTest({
+                mirrorId: 'official',
+                mirrorUrl: '',
+                mirrorName: 'Hytale Official',
+                pingMs: -1,
+                speedMBps: 0,
+                isAvailable: false,
+                testedAt: new Date().toISOString()
+            });
+        } finally {
+            setIsOfficialTesting(false);
+        }
     };
 
     const handleCloseAfterLaunchChange = async () => {
@@ -909,6 +1007,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const tabs = [
         { id: 'general' as const, icon: Settings, label: t('settings.general') },
+        { id: 'downloads' as const, icon: Download, label: t('settings.downloads.title') },
         { id: 'java' as const, icon: Coffee, label: t('settings.java') },
         { id: 'visual' as const, icon: Image, label: t('settings.visual') },
         { id: 'network' as const, icon: Wifi, label: t('settings.network') },
@@ -1173,6 +1272,214 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </div>
 
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Downloads Tab */}
+                            {activeTab === 'downloads' && (
+                                <div className="space-y-6">
+                                        {/* Info Note */}
+                                        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
+                                            <Info size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm text-blue-400 font-medium">{t('settings.downloads.howDownloadsWork')}</p>
+                                                <p className="text-xs text-blue-400/70 mt-1">{t('settings.downloads.howDownloadsWorkDescription')}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Official Source Card - Only show if user has official account */}
+                                        {hasOfficialAccount && (
+                                            <div 
+                                                className="p-3 rounded-xl border cursor-default transition-colors"
+                                                style={{
+                                                    backgroundColor: '#151515',
+                                                    borderColor: 'rgba(255,255,255,0.08)'
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                                            <Server size={20} className="text-blue-400" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-white text-sm font-medium">Hytale Official</div>
+                                                            <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.officialSourceHint')}</div>
+                                                            <code className="text-[10px] text-white/30 mt-1 block font-mono">cdn.hytale.com</code>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 relative">
+                                                        <AnimatePresence mode="wait">
+                                                            {officialSpeedTest && !isOfficialTesting && (
+                                                                <motion.div 
+                                                                    key="official-speed-badge"
+                                                                    initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                                    exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                                    className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${
+                                                                        officialSpeedTest.isAvailable 
+                                                                            ? 'bg-green-500/20 text-green-400' 
+                                                                            : 'bg-red-500/20 text-red-400'
+                                                                    }`}
+                                                                >
+                                                                    {officialSpeedTest.isAvailable ? (
+                                                                        <>
+                                                                            <span>{officialSpeedTest.pingMs}ms</span>
+                                                                            <span>•</span>
+                                                                            <span>{officialSpeedTest.speedMBps.toFixed(1)} MB/s</span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <span>{t('settings.downloads.unavailable')}</span>
+                                                                    )}
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                        <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                            <button
+                                                                onClick={() => handleTestOfficialSpeed(true)}
+                                                                disabled={isOfficialTesting}
+                                                                className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
+                                                            >
+                                                                {isOfficialTesting ? (
+                                                                    <Loader2 size={16} className="animate-spin" />
+                                                                ) : (
+                                                                    <Wifi size={16} />
+                                                                )}
+                                                                <span className="ml-2 text-sm">{isOfficialTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* EstroGen Mirror Card */}
+                                        <div 
+                                            className="p-3 rounded-xl border cursor-default transition-colors"
+                                            style={{
+                                                backgroundColor: '#151515',
+                                                borderColor: 'rgba(255,255,255,0.08)'
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">🪞</span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">EstroGen Mirror</div>
+                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.mirrorsHint')}</div>
+                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">licdn.estrogen.cat</code>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 relative">
+                                                    <AnimatePresence mode="wait">
+                                                        {mirrorSpeedTest && !isMirrorTesting && (
+                                                            <motion.div 
+                                                                key="mirror-speed-badge"
+                                                                initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                                exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                                className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${
+                                                                    mirrorSpeedTest.isAvailable 
+                                                                        ? 'bg-green-500/20 text-green-400' 
+                                                                        : 'bg-red-500/20 text-red-400'
+                                                                }`}
+                                                            >
+                                                                {mirrorSpeedTest.isAvailable ? (
+                                                                    <>
+                                                                        <span>{mirrorSpeedTest.pingMs}ms</span>
+                                                                        <span>•</span>
+                                                                        <span>{mirrorSpeedTest.speedMBps.toFixed(1)} MB/s</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span>{t('settings.downloads.unavailable')}</span>
+                                                                )}
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                    <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                        <button
+                                                            onClick={() => handleTestMirrorSpeed(true)}
+                                                            disabled={isMirrorTesting}
+                                                            className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
+                                                        >
+                                                            {isMirrorTesting ? (
+                                                                <Loader2 size={16} className="animate-spin" />
+                                                            ) : (
+                                                                <Wifi size={16} />
+                                                            )}
+                                                            <span className="ml-2 text-sm">{isMirrorTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* CobyLobby Mirror Card */}
+                                        <div 
+                                            className="p-3 rounded-xl border cursor-default transition-colors"
+                                            style={{
+                                                backgroundColor: '#151515',
+                                                borderColor: 'rgba(255,255,255,0.08)'
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-lg">🌐</span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">CobyLobby Mirror</div>
+                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.mirrorsHint')}</div>
+                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">cobylobbyht.store</code>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 relative">
+                                                    <AnimatePresence mode="wait">
+                                                        {cobyLobbySpeedTest && !isCobyLobbyTesting && (
+                                                            <motion.div 
+                                                                key="cobylobby-speed-badge"
+                                                                initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                                exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                                className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${
+                                                                    cobyLobbySpeedTest.isAvailable 
+                                                                        ? 'bg-green-500/20 text-green-400' 
+                                                                        : 'bg-red-500/20 text-red-400'
+                                                                }`}
+                                                            >
+                                                                {cobyLobbySpeedTest.isAvailable ? (
+                                                                    <>
+                                                                        <span>{cobyLobbySpeedTest.pingMs}ms</span>
+                                                                        <span>•</span>
+                                                                        <span>{cobyLobbySpeedTest.speedMBps.toFixed(1)} MB/s</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span>{t('settings.downloads.unavailable')}</span>
+                                                                )}
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                    <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                        <button
+                                                            onClick={() => handleTestCobyLobbySpeed(true)}
+                                                            disabled={isCobyLobbyTesting}
+                                                            className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
+                                                        >
+                                                            {isCobyLobbyTesting ? (
+                                                                <Loader2 size={16} className="animate-spin" />
+                                                            ) : (
+                                                                <Wifi size={16} />
+                                                            )}
+                                                            <span className="ml-2 text-sm">{isCobyLobbyTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                 </div>
                             )}
 
@@ -1735,11 +2042,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         <code className="text-[10px] text-white/30 mt-1 block font-mono">SDL_VIDEODRIVER=x11</code>
                                                     </div>
                                                     <div 
-                                                        className={`w-10 h-5 rounded-full flex items-center transition-colors flex-shrink-0`}
+                                                        className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
                                                         style={{ backgroundColor: envForceX11 ? accentColor : 'rgba(255,255,255,0.15)' }}
                                                     >
                                                         <div 
-                                                            className={`w-4 h-4 rounded-full shadow-md transform transition-transform mx-0.5 ${envForceX11 ? 'translate-x-5' : 'translate-x-0'}`}
+                                                            className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${envForceX11 ? 'translate-x-6' : 'translate-x-1'}`}
                                                             style={{ backgroundColor: 'white' }}
                                                         />
                                                     </div>
@@ -1762,11 +2069,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         <code className="text-[10px] text-white/30 mt-1 block font-mono">VK_LOADER_LAYERS_DISABLE=all</code>
                                                     </div>
                                                     <div 
-                                                        className={`w-10 h-5 rounded-full flex items-center transition-colors flex-shrink-0`}
+                                                        className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
                                                         style={{ backgroundColor: envDisableVkLayers ? accentColor : 'rgba(255,255,255,0.15)' }}
                                                     >
                                                         <div 
-                                                            className={`w-4 h-4 rounded-full shadow-md transform transition-transform mx-0.5 ${envDisableVkLayers ? 'translate-x-5' : 'translate-x-0'}`}
+                                                            className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${envDisableVkLayers ? 'translate-x-6' : 'translate-x-1'}`}
                                                             style={{ backgroundColor: 'white' }}
                                                         />
                                                     </div>
@@ -1789,11 +2096,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         <code className="text-[10px] text-white/30 mt-1 block font-mono">VK_ICD_FILENAMES=...radeon_icd...</code>
                                                     </div>
                                                     <div 
-                                                        className={`w-10 h-5 rounded-full flex items-center transition-colors flex-shrink-0`}
+                                                        className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
                                                         style={{ backgroundColor: envForceAmdVulkan ? accentColor : 'rgba(255,255,255,0.15)' }}
                                                     >
                                                         <div 
-                                                            className={`w-4 h-4 rounded-full shadow-md transform transition-transform mx-0.5 ${envForceAmdVulkan ? 'translate-x-5' : 'translate-x-0'}`}
+                                                            className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${envForceAmdVulkan ? 'translate-x-6' : 'translate-x-1'}`}
                                                             style={{ backgroundColor: 'white' }}
                                                         />
                                                     </div>

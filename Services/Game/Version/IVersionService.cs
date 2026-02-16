@@ -1,4 +1,5 @@
 using HyPrism.Models;
+using HyPrism.Services.Game.Sources;
 
 namespace HyPrism.Services.Game.Version;
 
@@ -168,4 +169,36 @@ public interface IVersionService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Diff patch URL from mirror, or null if not available.</returns>
     Task<string?> GetMirrorDiffUrlAsync(string os, string arch, string branch, int fromVersion, int toVersion, CancellationToken ct = default);
+    
+    /// <summary>
+    /// Tests the speed and availability of a mirror.
+    /// </summary>
+    /// <param name="mirrorId">The mirror identifier (e.g., "estrogen").</param>
+    /// <param name="forceRefresh">Whether to force a new speed test ignoring cache.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Speed test result including ping, download speed, and availability.</returns>
+    Task<MirrorSpeedTestResult> TestMirrorSpeedAsync(string mirrorId, bool forceRefresh = false, CancellationToken ct = default);
+    
+    /// <summary>
+    /// Tests the speed and availability of the official Hytale CDN.
+    /// </summary>
+    /// <param name="forceRefresh">Whether to force a new speed test ignoring cache.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Speed test result including ping, download speed, and availability.</returns>
+    Task<MirrorSpeedTestResult> TestOfficialSpeedAsync(bool forceRefresh = false, CancellationToken ct = default);
+    
+    /// <summary>
+    /// Gets a list of all available mirrors.
+    /// </summary>
+    /// <returns>List of tuples with mirror ID and display name.</returns>
+    List<(string Id, string Name)> GetAvailableMirrors();
+    
+    /// <summary>
+    /// Selects the best mirror based on speed tests.
+    /// Only called when official source is not available.
+    /// Tests all mirrors concurrently and selects the fastest available one.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The selected version source, or null if no mirrors available.</returns>
+    Task<IVersionSource?> SelectBestMirrorAsync(CancellationToken ct = default);
 }

@@ -275,4 +275,17 @@ public interface ISettingsService
     /// </summary>
     /// <returns>The absolute path to the instances directory.</returns>
     string GetInstanceDirectory();
+    
+    /// <summary>
+    /// Gets the preferred mirror for game downloads when using mirrors.
+    /// </summary>
+    /// <returns>The current preferred mirror ID (e.g., "estrogen").</returns>
+    string GetPreferredMirror();
+    
+    /// <summary>
+    /// Sets the preferred mirror for game downloads.
+    /// </summary>
+    /// <param name="mirrorId">The mirror ID (e.g., "estrogen").</param>
+    /// <returns><c>true</c> if the setting was successfully saved.</returns>
+    bool SetPreferredMirror(string mirrorId);
 }

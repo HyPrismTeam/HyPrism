@@ -24,7 +24,10 @@ public class VersionService : IVersionService
 
     // Keep direct references for source-specific operations
     private readonly HytaleVersionSource? _hytaleSource;
-    private readonly MirrorVersionSource? _mirrorSource;
+    private readonly List<IVersionSource> _mirrorSources = new();
+    
+    // Selected mirror for downloads (set after speed test)
+    private IVersionSource? _selectedMirror;
 
     /// <summary>
     /// In-memory cache of the full snapshot.
@@ -38,7 +41,7 @@ public class VersionService : IVersionService
         string appDir,
         IConfigService configService,
         HytaleVersionSource? hytaleSource = null,
-        MirrorVersionSource? mirrorSource = null)
+        IEnumerable<IVersionSource>? mirrorSources = null)
     {
         _appDir = appDir;
         _configService = configService;
@@ -52,10 +55,13 @@ public class VersionService : IVersionService
             _sources.Add(hytaleSource);
         }
         
-        if (mirrorSource != null)
+        if (mirrorSources != null)
         {
-            _mirrorSource = mirrorSource;
-            _sources.Add(mirrorSource);
+            foreach (var mirror in mirrorSources.Where(m => m.Type == VersionSourceType.Mirror))
+            {
+                _mirrorSources.Add(mirror);
+                _sources.Add(mirror);
+            }
         }
         
         // Sort by priority
@@ -475,7 +481,8 @@ public class VersionService : IVersionService
     public bool IsDiffBasedBranch(string branch)
     {
         var normalizedBranch = NormalizeBranch(branch);
-        return _mirrorSource?.IsDiffBasedBranch(normalizedBranch) ?? false;
+        return _selectedMirror?.IsDiffBasedBranch(normalizedBranch) ?? 
+               _mirrorSources.FirstOrDefault()?.IsDiffBasedBranch(normalizedBranch) ?? false;
     }
 
     /// <summary>
@@ -486,7 +493,17 @@ public class VersionService : IVersionService
         string os, string arch, string branch, int version, CancellationToken ct = default)
     {
         var normalizedBranch = NormalizeBranch(branch);
-        return await _mirrorSource?.GetDownloadUrlAsync(os, arch, normalizedBranch, version, ct)!;
+        
+        // Use selected mirror if available, otherwise select one
+        var mirror = _selectedMirror ?? await GetSelectedMirrorAsync(ct);
+        if (mirror == null && _mirrorSources.Count > 0)
+        {
+            mirror = _mirrorSources[0];
+        }
+        
+        return mirror != null 
+            ? await mirror.GetDownloadUrlAsync(os, arch, normalizedBranch, version, ct)
+            : null;
     }
 
     /// <summary>
@@ -496,7 +513,17 @@ public class VersionService : IVersionService
         string os, string arch, string branch, int fromVersion, int toVersion, CancellationToken ct = default)
     {
         var normalizedBranch = NormalizeBranch(branch);
-        return await _mirrorSource?.GetDiffUrlAsync(os, arch, normalizedBranch, fromVersion, toVersion, ct)!;
+        
+        // Use selected mirror if available, otherwise select one
+        var mirror = _selectedMirror ?? await GetSelectedMirrorAsync(ct);
+        if (mirror == null && _mirrorSources.Count > 0)
+        {
+            mirror = _mirrorSources[0];
+        }
+        
+        return mirror != null
+            ? await mirror.GetDiffUrlAsync(os, arch, normalizedBranch, fromVersion, toVersion, ct)
+            : null;
     }
 
     /// <summary>
@@ -741,5 +768,156 @@ public class VersionService : IVersionService
             Logger.Warning("Version", $"Failed to save versions cache: {ex.Message}");
         }
     }
+    
+    /// <summary>
+    /// Tests the speed and availability of a mirror by ID.
+    /// </summary>
+    public async Task<MirrorSpeedTestResult> TestMirrorSpeedAsync(string mirrorId, bool forceRefresh = false, CancellationToken ct = default)
+    {
+        var mirror = _mirrorSources.FirstOrDefault(m => m.SourceId.Equals(mirrorId, StringComparison.OrdinalIgnoreCase));
+        
+        if (mirror == null)
+        {
+            return new MirrorSpeedTestResult
+            {
+                MirrorId = mirrorId,
+                MirrorName = mirrorId,
+                PingMs = -1,
+                SpeedMBps = 0,
+                IsAvailable = false,
+                TestedAt = DateTime.UtcNow
+            };
+        }
+        
+        if (!forceRefresh)
+        {
+            var cached = mirror.GetCachedSpeedTest();
+            if (cached != null)
+            {
+                return cached;
+            }
+        }
+        
+        return await mirror.TestSpeedAsync(ct);
+    }
+    
+    /// <summary>
+    /// Tests the speed and availability of the official Hytale CDN.
+    /// </summary>
+    public async Task<MirrorSpeedTestResult> TestOfficialSpeedAsync(bool forceRefresh = false, CancellationToken ct = default)
+    {
+        if (_hytaleSource == null || !_hytaleSource.IsAvailable)
+        {
+            return new MirrorSpeedTestResult
+            {
+                MirrorId = "official",
+                MirrorName = "Hytale Official",
+                MirrorUrl = "https://cdn.hytale.com",
+                PingMs = -1,
+                SpeedMBps = 0,
+                IsAvailable = false,
+                TestedAt = DateTime.UtcNow
+            };
+        }
+        
+        if (!forceRefresh)
+        {
+            var cached = _hytaleSource.GetCachedSpeedTest();
+            if (cached != null)
+            {
+                return cached;
+            }
+        }
+        
+        return await _hytaleSource.TestSpeedAsync(ct);
+    }
+    
+    /// <summary>
+    /// Gets all available mirrors.
+    /// </summary>
+    public List<(string Id, string Name)> GetAvailableMirrors()
+    {
+        return _mirrorSources.Select(m => (m.SourceId, m.GetCachedSpeedTest()?.MirrorName ?? m.SourceId)).ToList();
+    }
+    
+    /// <summary>
+    /// Selects the best mirror based on speed tests.
+    /// Only called when official source is not available.
+    /// </summary>
+    public async Task<IVersionSource?> SelectBestMirrorAsync(CancellationToken ct = default)
+    {
+        if (_mirrorSources.Count == 0)
+        {
+            Logger.Warning("Version", "No mirrors available for selection");
+            return null;
+        }
+        
+        // If only one mirror, use it
+        if (_mirrorSources.Count == 1)
+        {
+            _selectedMirror = _mirrorSources[0];
+            Logger.Info("Version", $"Only one mirror available: {_selectedMirror.SourceId}");
+            return _selectedMirror;
+        }
+        
+        Logger.Info("Version", $"Testing {_mirrorSources.Count} mirrors to select the best one...");
+        
+        var results = new List<(IVersionSource Source, MirrorSpeedTestResult Result)>();
+        
+        // Test all mirrors concurrently
+        var tasks = _mirrorSources.Select(async mirror =>
+        {
+            try
+            {
+                var result = await mirror.TestSpeedAsync(ct);
+                return (Source: mirror, Result: result);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("Version", $"Mirror {mirror.SourceId} speed test failed: {ex.Message}");
+                return (Source: mirror, Result: new MirrorSpeedTestResult
+                {
+                    MirrorId = mirror.SourceId,
+                    MirrorName = mirror.SourceId,
+                    IsAvailable = false,
+                    PingMs = -1,
+                    SpeedMBps = 0
+                });
+            }
+        });
+        
+        var testResults = await Task.WhenAll(tasks);
+        results.AddRange(testResults);
+        
+        // Filter available mirrors and sort by speed (descending)
+        var availableMirrors = results
+            .Where(r => r.Result.IsAvailable && r.Result.SpeedMBps > 0)
+            .OrderByDescending(r => r.Result.SpeedMBps)
+            .ThenBy(r => r.Result.PingMs)
+            .ToList();
+        
+        if (availableMirrors.Count == 0)
+        {
+            Logger.Warning("Version", "No mirrors passed speed test, using first available");
+            _selectedMirror = _mirrorSources[0];
+            return _selectedMirror;
+        }
+        
+        var best = availableMirrors[0];
+        _selectedMirror = best.Source;
+        Logger.Success("Version", $"Selected mirror: {best.Source.SourceId} ({best.Result.SpeedMBps:F2} MB/s, {best.Result.PingMs}ms ping)");
+        
+        return _selectedMirror;
+    }
+    
+    /// <summary>
+    /// Gets the currently selected mirror, or selects one if not yet selected.
+    /// </summary>
+    public async Task<IVersionSource?> GetSelectedMirrorAsync(CancellationToken ct = default)
+    {
+        if (_selectedMirror != null)
+            return _selectedMirror;
+        
+        return await SelectBestMirrorAsync(ct);
+    }
 }
-

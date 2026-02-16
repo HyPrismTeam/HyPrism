@@ -95,4 +95,17 @@ public interface IVersionSource
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
     Task PreloadAsync(CancellationToken ct = default);
+    
+    /// <summary>
+    /// Tests the speed and availability of this source.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Speed test result including ping, download speed, and availability.</returns>
+    Task<MirrorSpeedTestResult> TestSpeedAsync(CancellationToken ct = default);
+    
+    /// <summary>
+    /// Gets the cached speed test result if still valid.
+    /// </summary>
+    /// <returns>Cached speed test result, or null if expired/missing.</returns>
+    MirrorSpeedTestResult? GetCachedSpeedTest();
 }

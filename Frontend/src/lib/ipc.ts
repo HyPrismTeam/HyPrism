@@ -135,6 +135,7 @@ export interface SettingsSnapshot {
   dataDirectory: string;
   instanceDirectory: string;
   gpuPreference?: string;
+  preferredMirror?: string;
   launchOnStartup?: boolean;
   minimizeToTray?: boolean;
   animations?: boolean;
@@ -147,6 +148,16 @@ export interface SettingsSnapshot {
   verboseLogging?: boolean;
   preRelease?: boolean;
   [key: string]: unknown;
+}
+
+export interface MirrorSpeedTestResult {
+  mirrorId: string;
+  mirrorUrl: string;
+  mirrorName: string;
+  pingMs: number;
+  speedMBps: number;
+  isAvailable: boolean;
+  testedAt: string;
 }
 
 export interface ModScreenshot {
@@ -351,6 +362,8 @@ const _auth = {
 const _settings = {
   get: () => invoke<SettingsSnapshot>('hyprism:settings:get'),
   update: (data?: unknown) => invoke<{ success: boolean }>('hyprism:settings:update', data),
+  testMirrorSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testMirrorSpeed', data),
+  testOfficialSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testOfficialSpeed', data),
   launcherPath: (data?: unknown) => invoke<string>('hyprism:settings:launcherPath', data),
   defaultInstanceDir: (data?: unknown) => invoke<string>('hyprism:settings:defaultInstanceDir', data),
   setInstanceDir: (data?: unknown) => invoke<{ success: boolean, path: string, noop?: boolean, reason?: string, error?: string }>('hyprism:settings:setInstanceDir', data, 300000),
