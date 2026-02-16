@@ -125,6 +125,7 @@
     "visual": "Aspetto",
     "java": "Java",
     "graphics": "Grafica",
+    "variables": "Variabili",
     "language": "Lingua",
     "data": "Dati",
     "instances": "Istanze",
@@ -236,6 +237,22 @@
       "installOptModsAction": "Installa 8 mod di prestazioni su tutti i profili",
       "optModsInstalled": "Mod di ottimizzazione installate!",
       "optModsFailed": "Impossibile installare le mod di ottimizzazione"
+    },
+    "variablesSettings": {
+      "title": "Variabili d'ambiente",
+      "linuxOnlyNotice": "Le variabili d'ambiente vengono applicate solo su Linux",
+      "commonPresets": "Preimpostazioni comuni",
+      "commonPresetsHint": "Interruttori rapidi per le variabili d'ambiente comuni. Queste vengono aggiunte automaticamente alle tue variabili personalizzate",
+      "forceX11": "Forza X11 (SDL_VIDEODRIVER)",
+      "forceX11Hint": "Forza il gioco a utilizzare X11 invece di Wayland. Aiuta con alcuni problemi di compatibilità GPU/driver",
+      "disableVkLayers": "Disabilita i Vulkan layers",
+      "disableVkLayersHint": "Disabilita i layer di convalida Vulkan che potrebbero causare crash con driver sperimentali",
+      "forceAmdVulkan": "Forza driver AMD RADV",
+      "forceAmdVulkanHint": "Forza l'uso del driver Vulkan open-source RADV per GPU AMD",
+      "customEnvVars": "Variabili d'ambiente personalizzate",
+      "customEnvVarsHint": "Coppie KEY=VALUE separate da spazi. Esempio: MY_VAR=value ANOTHER=123",
+      "customEnvVarsPlaceholder": "MY_VAR=value ANOTHER_VAR=123",
+      "envVarsInvalidFormat": "Formato non valido. Usa coppie KEY=VALUE separate da spazi"
     },
     "languageSettings": {
       "title": "Impostazioni della lingua",
