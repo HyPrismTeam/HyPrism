@@ -4,7 +4,7 @@
 # HyPrism Flatpak launcher wrapper —
 # - if a user‑installed copy exists in $XDG_DATA_HOME/HyPrism, run it
 # - otherwise download the Linux release (latest → prerelease), extract to app data dir and run
-# - fall back to bundled /app/lib/hyprism/HyPrism if anything fails
+# - fall back to bundled /app/HyPrism/HyPrism if anything fails
 
 set -eu
 
@@ -13,12 +13,52 @@ LOG="$DATA_DIR/wrapper.log"
 mkdir -p "$DATA_DIR"
 
 log() {
-  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  ts="$(date '+%Y-%m-%d %H:%M:%S %Z')"
   printf "%s %s\n" "$ts" "$*" >> "$LOG"
   printf "%s %s\n" "$ts" "$*" >&2
 }
 
 log "Wrapper start — DATA_DIR=$DATA_DIR"
+
+# Parse wrapper-only flags (these alter wrapper behaviour and are NOT forwarded)
+FORCE_INTERNAL=0
+SKIP_UPDATE=0
+FORWARD_ARGS=""
+for _arg in "$@"; do
+  case "$_arg" in
+    --force-internal) FORCE_INTERNAL=1 ;;
+    --skip-update) SKIP_UPDATE=1 ;;
+    *) esc=$(printf '%s' "$_arg" | sed 's/"/\\"/g'); FORWARD_ARGS="$FORWARD_ARGS \"$esc\"" ;;
+  esac
+done
+
+if [ "$FORCE_INTERNAL" -eq 1 ]; then
+  log "--force-internal: skipping checks and launching bundled internal launcher"
+  if [ -x "/app/HyPrism/HyPrism" ]; then
+    eval exec /app/HyPrism/HyPrism $FORWARD_ARGS
+  else
+    log "--force-internal requested but internal launcher not found — exiting"
+    echo "Internal launcher not found" >&2
+    exit 1
+  fi
+fi
+
+if [ "$SKIP_UPDATE" -eq 1 ]; then
+  log "--skip-update: skipping online/version checks and launching user-installed launcher if present"
+  if [ -x "$DATA_DIR/HyPrism" ]; then
+    log "Launching user-installed launcher: $DATA_DIR/HyPrism"
+    eval exec "$DATA_DIR/HyPrism" $FORWARD_ARGS
+  else
+    log "No user-installed launcher found for --skip-update — falling back to bundled launcher"
+    if [ -x "/app/HyPrism/HyPrism" ]; then
+      eval exec /app/HyPrism/HyPrism $FORWARD_ARGS
+    else
+      log "No launcher available for --skip-update — exiting"
+      echo "No launcher available" >&2
+      exit 1
+    fi
+  fi
+fi
 
 # Defer checking/running a user-installed launcher until we know the remote latest version.
 # This enables automatic updates: if a newer release exists on GitHub the wrapper will
@@ -79,21 +119,28 @@ version_lt() {
 }
 
 # Try GitHub API: latest → prereleases
-REPO="yyyumeniku/HyPrism"
+REPO="HyPrismTeam/HyPrism"
 log "Looking for release asset matching: $ASSET_RE"
 asset_url=""
 
 # try latest
+LATEST_API_URL="https://api.github.com/repos/$REPO/releases/latest"
+log "Querying GitHub API: $LATEST_API_URL"
 if command -v curl >/dev/null 2>&1; then
-  json=$(curl -sSf "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null || true)
+  json=$(curl -sS --fail "$LATEST_API_URL" 2>/dev/null || true)
+elif command -v wget >/dev/null 2>&1; then
+  json=$(wget -qO- "$LATEST_API_URL" 2>/dev/null || true)
 else
   json=""
 fi
 if [ -n "$json" ]; then
   asset_url=$(get_asset_url "$json")
+  log "Asset URL in latest release: ${asset_url:-<none>}"
   # extract tag_name (e.g. "v2.3.4") and normalize to "2.3.4"
-  REMOTE_TAG=$(printf "%s" "$json" | grep -E '"tag_name"' | sed -E 's/.*"tag_name" *: *"([^"]+)".*/\1/' | head -n1 || true)
+  REMOTE_TAG=$(printf "%s" "$json" | grep -E '"tag_name"' | sed -E 's/.*"tag_name" *: *"([^\"]+)".*/\1/' | head -n1 || true)
   REMOTE_VERSION=$(normalize_version "$REMOTE_TAG")
+else
+  log "No JSON response from $LATEST_API_URL"
 fi
 
 if [ -n "$REMOTE_VERSION" ]; then
@@ -104,9 +151,16 @@ fi
 
 # fallback: search releases for first prerelease with matching asset
 if [ -z "$asset_url" ]; then
+  ALL_API_URL="https://api.github.com/repos/$REPO/releases"
+  log "Querying GitHub API: $ALL_API_URL"
   if command -v curl >/dev/null 2>&1; then
-    json_all=$(curl -sSf "https://api.github.com/repos/$REPO/releases" 2>/dev/null || true)
-    if [ -n "$json_all" ]; then
+    json_all=$(curl -sS --fail "$ALL_API_URL" 2>/dev/null || true)
+  elif command -v wget >/dev/null 2>&1; then
+    json_all=$(wget -qO- "$ALL_API_URL" 2>/dev/null || true)
+  else
+    json_all=""
+  fi
+  if [ -n "$json_all" ]; then
       # prefer non-draft releases; pick first release with matching asset
       asset_url=$(get_asset_url "$json_all")
       if [ -n "$asset_url" ]; then
@@ -120,7 +174,8 @@ JSON
           REMOTE_VERSION=$(normalize_version "$REMOTE_TAG")
         fi
       fi
-    fi
+  else
+    log "No JSON response from $ALL_API_URL"
   fi
 fi
 
@@ -167,9 +222,6 @@ if [ -z "$asset_url" ]; then
   if [ -x "/app/HyPrism/HyPrism" ]; then
     log "Launching bundled launcher: /app/HyPrism/HyPrism"
     exec /app/HyPrism/HyPrism "$@"
-  elif [ -x "/app/lib/hyprism/HyPrism" ]; then
-    log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
-    exec /app/lib/hyprism/HyPrism "$@"
   fi
   log "Bundled launcher missing — exiting"
   echo "No launcher available" >&2
@@ -184,9 +236,6 @@ if ! download_file "$asset_url" "$TMP_TAR"; then
   if [ -x "/app/HyPrism/HyPrism" ]; then
     log "Launching bundled launcher: /app/HyPrism/HyPrism"
     exec /app/HyPrism/HyPrism "$@"
-  elif [ -x "/app/lib/hyprism/HyPrism" ]; then
-    log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
-    exec /app/lib/hyprism/HyPrism "$@"
   fi
   exit 1
 fi
@@ -217,9 +266,6 @@ if tar -xJf "$TMP_TAR" -C "$TMP_DIR" 2>>"$LOG"; then
     if [ -x "/app/HyPrism/HyPrism" ]; then
       log "Launching bundled launcher: /app/HyPrism/HyPrism"
       exec /app/HyPrism/HyPrism "$@"
-    elif [ -x "/app/lib/hyprism/HyPrism" ]; then
-      log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
-      exec /app/lib/hyprism/HyPrism "$@"
     fi
     exit 1
   fi
@@ -229,32 +275,23 @@ else
   if [ -x "/app/HyPrism/HyPrism" ]; then
     log "Launching bundled launcher: /app/HyPrism/HyPrism"
     exec /app/HyPrism/HyPrism "$@"
-  elif [ -x "/app/lib/hyprism/HyPrism" ]; then
-    log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
-    exec /app/lib/hyprism/HyPrism "$@"
   fi
   exit 1
 fi
 
-# Minimal shim that execs the wrapper shipped in /app/lib/hyprism if present,
+# Minimal shim that execs the wrapper shipped in /app/HyPrism if present,
 # otherwise execs the system wrapper (this file is kept to make bundle builds
 # include the wrapper script). The real logic is in Properties/linux/flatpak/hyprism-launcher-wrapper.sh
 
 if [ -x "/app/HyPrism/hyprism-launcher-wrapper.sh" ]; then
   log "Delegating to /app/HyPrism/hyprism-launcher-wrapper.sh"
   exec /app/HyPrism/hyprism-launcher-wrapper.sh "$@"
-elif [ -x "/app/lib/hyprism/hyprism-launcher-wrapper.sh" ]; then
-  log "Delegating to /app/lib/hyprism/hyprism-launcher-wrapper.sh"
-  exec /app/lib/hyprism/hyprism-launcher-wrapper.sh "$@"
 fi
 
 # Fallback to bundled binary
 if [ -x "/app/HyPrism/HyPrism" ]; then
   log "Launching bundled launcher: /app/HyPrism/HyPrism"
   exec /app/HyPrism/HyPrism "$@"
-elif [ -x "/app/lib/hyprism/HyPrism" ]; then
-  log "Launching bundled launcher: /app/lib/hyprism/HyPrism"
-  exec /app/lib/hyprism/HyPrism "$@"
 fi
 
 # Last-resort: fail with message
