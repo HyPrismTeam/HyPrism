@@ -1,7 +1,11 @@
 #!/bin/sh
 #
-# Sorry I don't know Electron, and chrome-sandbox is driving me crazy, so since we are already in a Flatpak I decided to run it with --no-sandbox and call it a day.
-# If you have time and willing to figure out how to make it work please open a PR.
+# Launcher wrapper for Flatpak — prefers zypak when available to support chrome-sandbox.
+# When zypak is present the wrapper runs the Electron binary via `zypak-wrapper` and
+# sets `ZYPAK_SANDBOX_FILENAME=chrome-sandbox` if the bundled sandbox binary exists.
+# If zypak is not available the wrapper falls back to running the binary with
+# `--no-sandbox` for maximum compatibility. Use `ZYPAK_DEBUG=1` or `ZYPAK_STRACE=all`
+# for troubleshooting.
 #
 # HyPrism Flatpak launcher wrapper —
 # - if a user‑installed copy exists in $XDG_DATA_HOME/HyPrism, run it
@@ -33,8 +37,20 @@ launch_bundled() {
   fi
   log "Preparing to launch bundled launcher: $BUNDLED_LAUNCHER"
 
-  # Run bundled HyPrism by default with --no-sandbox (Flatpak debug default).
-  eval \"$BUNDLED_LAUNCHER\" --no-sandbox $extra_args
+  # Prefer zypak (redirects Chromium sandbox into Flatpak sandbox) when available.
+  if command -v zypak-wrapper >/dev/null 2>&1; then
+    if [ -x /app/HyPrism/chrome-sandbox ]; then
+      export ZYPAK_SANDBOX_FILENAME=chrome-sandbox
+      log "zypak-wrapper available — using ZYPAK_SANDBOX_FILENAME=chrome-sandbox"
+    else
+      log "zypak-wrapper available — no chrome-sandbox found in /app/HyPrism"
+    fi
+    # run via zypak-wrapper (passes through arguments)
+    eval exec zypak-wrapper \"$BUNDLED_LAUNCHER\" $extra_args
+  else
+    # Fallback: run bundled HyPrism with --no-sandbox (older/no-zypak hosts)
+    eval \"$BUNDLED_LAUNCHER\" --no-sandbox $extra_args
+  fi
 }
 
 log() {
@@ -98,7 +114,12 @@ if [ "$SKIP_UPDATE" -eq 1 ]; then
   log "--skip-update: skipping online/version checks and launching user-installed launcher if present"
   if [ -x "$DYNAMIC_LAUNCHER" ]; then
     log "Launching user-installed launcher: $DYNAMIC_LAUNCHER"
-    eval exec "$DYNAMIC_LAUNCHER" --no-sandbox $FORWARD_ARGS
+    if command -v zypak-wrapper >/dev/null 2>&1; then
+      if [ -x /app/HyPrism/chrome-sandbox ]; then export ZYPAK_SANDBOX_FILENAME=chrome-sandbox; fi
+      eval exec zypak-wrapper \"$DYNAMIC_LAUNCHER\" $FORWARD_ARGS
+    else
+      eval exec \"$DYNAMIC_LAUNCHER\" --no-sandbox $FORWARD_ARGS
+    fi
   else
     log "No user-installed launcher found for --skip-update — falling back to bundled launcher"
     if [ -x "$BUNDLED_LAUNCHER" ]; then
@@ -264,11 +285,21 @@ if [ -x "$DYNAMIC_LAUNCHER" ]; then
       # continue to download/extract branch below
     else
       log "Installed launcher is up-to-date ($INSTALLED_VER) — launching $DYNAMIC_LAUNCHER"
-      exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
+      if command -v zypak-wrapper >/dev/null 2>&1; then
+        if [ -x /app/HyPrism/chrome-sandbox ]; then export ZYPAK_SANDBOX_FILENAME=chrome-sandbox; fi
+        exec zypak-wrapper "$DYNAMIC_LAUNCHER" "$@"
+      else
+        exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
+      fi
     fi
   else
     log "Found user release at $DYNAMIC_LAUNCHER (version unknown) — launching $DYNAMIC_LAUNCHER"
-    exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
+    if command -v zypak-wrapper >/dev/null 2>&1; then
+      if [ -x /app/HyPrism/chrome-sandbox ]; then export ZYPAK_SANDBOX_FILENAME=chrome-sandbox; fi
+      exec zypak-wrapper "$DYNAMIC_LAUNCHER" "$@"
+    else
+      exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
+    fi
   fi
 fi
 
@@ -290,7 +321,7 @@ if ! download_file "$asset_url" "$TMP_TAR"; then
   log "Download failed: $asset_url — falling back to bundled launcher"
   if [ -x "$BUNDLED_LAUNCHER" ]; then
     log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-    exec "$BUNDLED_LAUNCHER" --no-sandbox "$@"
+    launch_bundled "$@"
   fi
   exit 1
 fi
@@ -314,13 +345,18 @@ if tar -xJf "$TMP_TAR" -C "$TMP_DIR" 2>>"$LOG"; then
     fi
     rm -rf "$TMP_DIR" "$TMP_TAR"
     log "Extraction complete — exec $DYNAMIC_LAUNCHER"
-    exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
+    if command -v zypak-wrapper >/dev/null 2>&1; then
+      if [ -x /app/HyPrism/chrome-sandbox ]; then export ZYPAK_SANDBOX_FILENAME=chrome-sandbox; fi
+      exec zypak-wrapper "$DYNAMIC_LAUNCHER" "$@"
+    else
+      exec "$DYNAMIC_LAUNCHER" --no-sandbox "$@"
+    fi
   else
     log "No HyPrism binary found inside archive — falling back"
     rm -rf "$TMP_DIR" "$TMP_TAR"
     if [ -x "$BUNDLED_LAUNCHER" ]; then
       log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-      exec "$BUNDLED_LAUNCHER" --no-sandbox "$@"
+      launch_bundled "$@"
     fi
     exit 1
   fi
@@ -329,7 +365,7 @@ else
   rm -rf "$TMP_DIR" "$TMP_TAR"
   if [ -x "$BUNDLED_LAUNCHER" ]; then
     log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-    exec "$BUNDLED_LAUNCHER" --no-sandbox "$@"
+    launch_bundled "$@"
   fi
   exit 1
 fi
