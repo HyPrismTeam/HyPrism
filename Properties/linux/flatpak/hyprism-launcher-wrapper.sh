@@ -18,6 +18,28 @@ mkdir -p "$DATA_DIR"
 DYNAMIC_LAUNCHER="$DATA_DIR/HyPrism"
 BUNDLED_LAUNCHER="/app/HyPrism/HyPrism"
 BUNDLED_WRAPPER="/app/HyPrism/hyprism-launcher-wrapper.sh"
+BUNDLED_DIR="/app/HyPrism"
+
+# helper to launch bundled launcher and gracefully handle chrome-sandbox issues
+launch_bundled() {
+  # accept explicit args or fall back to FORWARD_ARGS
+  local extra_args
+  if [ "$#" -gt 0 ]; then
+    extra_args="$*"
+  else
+    extra_args=$FORWARD_ARGS
+  fi
+  log "Preparing to launch bundled launcher: $BUNDLED_LAUNCHER"
+  if [ -f "$BUNDLED_DIR/chrome-sandbox" ]; then
+    sandbox_mode=$(stat -c '%a' "$BUNDLED_DIR/chrome-sandbox" 2>/dev/null || true)
+    sandbox_owner=$(stat -c '%u' "$BUNDLED_DIR/chrome-sandbox" 2>/dev/null || true)
+    if [ "$sandbox_mode" != "4755" ] || [ "$sandbox_owner" != "0" ]; then
+      log "chrome-sandbox present but not SUID root (owner=$sandbox_owner mode=$sandbox_mode). Trying --no-sandbox fallback"
+      eval exec \"$BUNDLED_LAUNCHER\" $extra_args --no-sandbox
+    fi
+  fi
+  eval exec \"$BUNDLED_LAUNCHER\" $extra_args
+}
 
 log() {
   ts="$(date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -58,7 +80,7 @@ fi
 if [ "$FORCE_BUNDLED" -eq 1 ]; then
   log "--force-bundled: skipping checks and launching bundled internal launcher"
   if [ -x "$BUNDLED_LAUNCHER" ]; then
-    eval exec "$BUNDLED_LAUNCHER" $FORWARD_ARGS
+    launch_bundled
   else
     log "--force-bundled requested but internal launcher not found — exiting"
     echo "Internal launcher not found" >&2
@@ -74,7 +96,7 @@ if [ "$SKIP_UPDATE" -eq 1 ]; then
   else
     log "No user-installed launcher found for --skip-update — falling back to bundled launcher"
     if [ -x "$BUNDLED_LAUNCHER" ]; then
-      eval exec "$BUNDLED_LAUNCHER" $FORWARD_ARGS
+      launch_bundled
     else
       log "No launcher available for --skip-update — exiting"
       echo "No launcher available" >&2
@@ -90,9 +112,9 @@ fi
 
 # Determine asset name by architecture
 case "$(uname -m)" in
-  x86_64|amd64) ASSET_RE='HyPrism-linux-x86_64.*\\.tar\\.xz' ;;
-  aarch64|arm64) ASSET_RE='HyPrism-linux-arm64.*\\.tar\\.xz' ;;
-  *) ASSET_RE='HyPrism-linux-x86_64.*\\.tar\\.xz' ;;
+  x86_64|amd64) ASSET_RE='HyPrism.*linux.*\\.tar.*' ;;
+  aarch64|arm64) ASSET_RE='HyPrism.*linux.*\\.tar.*' ;;
+  *) ASSET_RE='HyPrism.*linux.*\\.tar.*' ;;
 esac
 
 # Helper: get browser_download_url for matching asset from GitHub API JSON
@@ -212,6 +234,9 @@ if [ -x "$DYNAMIC_LAUNCHER" ]; then
   if [ -f "$DATA_DIR/version.txt" ]; then
     INSTALLED_VER=$(sed -n '1p' "$DATA_DIR/version.txt" 2>/dev/null || true)
     INSTALLED_VER=$(normalize_version "$INSTALLED_VER")
+    if [ -n "$INSTALLED_VER" ]; then
+      log "found version $INSTALLED_VER"
+    fi
   else
     # Try common CLI version flags; these are best-effort and optional.
     if "$DYNAMIC_LAUNCHER" --version >/dev/null 2>&1; then
@@ -245,7 +270,7 @@ if [ -z "$asset_url" ]; then
   log "No suitable GitHub release asset found; falling back to bundled launcher"
   if [ -x "$BUNDLED_LAUNCHER" ]; then
     log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-    exec "$BUNDLED_LAUNCHER" "$@"
+    launch_bundled "$@"
   fi
   log "Bundled launcher missing — exiting"
   echo "No launcher available" >&2
@@ -315,7 +340,7 @@ fi
 # Fallback to bundled binary
 if [ -x "$BUNDLED_LAUNCHER" ]; then
   log "Launching bundled launcher: $BUNDLED_LAUNCHER"
-  exec "$BUNDLED_LAUNCHER" "$@"
+  launch_bundled "$@"
 fi
 
 # Last-resort: fail with message
