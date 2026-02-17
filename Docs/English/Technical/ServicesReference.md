@@ -60,7 +60,10 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **States:** preparing → download → install → patching → launching → running → stopped
 - **Auth launch behavior:** In authenticated mode, launch identity/name is derived from token claims when available to avoid server-side username mismatch shutdowns.
 - **Custom auth mode:** Non-official profiles can launch in online authenticated mode with client binary patching + DualAuth runtime agent for custom session domains.
+- **DualAuth JWKS domain:** The auth domain for JWKS discovery is derived from the sessions domain by replacing `sessions.` prefix with `auth.` (e.g., `sessions.sanasol.ws` → `auth.sanasol.ws`). This is handled by `DeriveAuthDomain()` in GameLauncher.
 - **Server JAR policy:** The launcher no longer rewrites `Server/HytaleServer.jar` during custom-auth launches.
+- **Mod compatibility quarantine:** Before launch, `QuarantineIncompatibleServerMods()` reads `ServerVersion` from each mod JAR's `manifest.json` and compares it with the server's version from `HytaleServer.jar`. Incompatible mods (non-wildcard version mismatch) are moved to `Mods_Disabled/`; previously quarantined mods are automatically restored when they become compatible again.
+- **AOT cache invalidation:** Before launch, `InvalidateAotCacheIfNeeded()` detects JVM flag changes via SHA-256 hash comparison and deletes `.aot` and `.jsa` cache files in the Server directory to prevent UseCompactObjectHeaders mismatches.
 - **Stop control:** Game stop is available through IPC (`hyprism:game:stop`) and can be triggered from Dashboard and Instances actions.
 - **Official 403 recovery:** If official CDN download returns HTTP 403 (expired signed `verify` token), the service force-refreshes version cache and retries official download once before mirror fallback.
 - **Pre-release mirror fallback:** If target full mirror file is invalid/missing (for example 0-byte placeholder), service tries previous full build and applies patch chain to target version.
@@ -108,6 +111,7 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **Purpose:** Mod listing, searching, and management (CurseForge integration)
 - **Instance mods source:** Reads from `UserData/Mods` and falls back to file-system discovery (`.jar`, `.zip`, `.disabled`) when manifest entries are missing
 - **Download URL fallback:** if CurseForge returns no `downloadUrl` and `/download-url` is forbidden/empty, the service derives a deterministic CDN URL from `fileId + fileName`.
+- **Version compatibility:** Mods with a specific `ServerVersion` in their JAR `manifest.json` (format: `YYYY.MM.DD-<hash>`) are automatically quarantined if the installed server's version doesn't match. Mods with `ServerVersion: "*"` (wildcard) are always compatible.
 
 ## User Services (`Services/User/`)
 

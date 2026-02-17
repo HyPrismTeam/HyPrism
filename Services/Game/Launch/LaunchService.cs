@@ -447,6 +447,8 @@ public class LaunchService : ILaunchService
         return false;
     }
 
+    private const string WrapperVersion = "v3"; // Bump when wrapper content changes
+
     private void EnsureJavaWrapper(string javaBin)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -471,7 +473,7 @@ public class LaunchService : ILaunchService
                 {
                     if (File.Exists(javaBin))
                     {
-                        // If javaBin is already a wrapper script, avoid moving it over realJava
+                        // If javaBin is already a wrapper script, check if it's ours
                         byte[] headBytes = new byte[2];
                         using (var fs = new FileStream(javaBin, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
@@ -481,7 +483,7 @@ public class LaunchService : ILaunchService
                         bool looksLikeScript = headBytes[0] == (byte)'#' && headBytes[1] == (byte)'!';
                         if (looksLikeScript)
                         {
-                            Logger.Warning("JRE", "Wrapper detected but java.real missing; skipping move to avoid clobbering wrapper");
+                            Logger.Warning("JRE", "Wrapper detected but java.real missing; cannot install wrapper without original java binary");
                             return;
                         }
 
@@ -493,6 +495,18 @@ public class LaunchService : ILaunchService
                     Logger.Warning("JRE", $"Failed to move java binary for wrapping: {ex.Message}");
                     return;
                 }
+            }
+
+            // Check if wrapper is already up-to-date via version marker
+            var versionMarker = Path.Combine(javaDir, ".wrapper-version");
+            if (File.Exists(javaBin) && File.Exists(versionMarker))
+            {
+                try
+                {
+                    if (File.ReadAllText(versionMarker).Trim() == WrapperVersion)
+                        return; // Wrapper is current
+                }
+                catch { /* Re-write if we can't read */ }
             }
 
             var wrapper = "#!/bin/bash\n" +
@@ -514,12 +528,14 @@ public class LaunchService : ILaunchService
                          "exec \"$REAL_JAVA\" \"${ARGS[@]}\"\n";
 
             File.WriteAllText(javaBin, wrapper);
+            File.WriteAllText(versionMarker, WrapperVersion);
             var chmod = new ProcessStartInfo("chmod", $"+x \"{javaBin}\"")
             {
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
             Process.Start(chmod)?.WaitForExit();
+            Logger.Info("JRE", $"Java wrapper script installed/updated ({WrapperVersion})");
         }
         catch (Exception ex)
         {

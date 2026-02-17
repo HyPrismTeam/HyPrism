@@ -4,6 +4,7 @@ using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Game;
 using HyPrism.Services.Game.Instance;
+using HyPrism.Services.Game.Mod;
 
 namespace HyPrism.Services.User;
 
@@ -873,6 +874,14 @@ public class ProfileManagementService : IProfileManagementService
             var gameModsPath = Path.Combine(userDataPath, "Mods");
 
             Directory.CreateDirectory(userDataPath);
+
+            // Handle the case where Hytale created a file named "Mods" instead of a directory
+            if (File.Exists(gameModsPath))
+            {
+                Logger.Warning("Mods",
+                    $"Found a file where the Mods directory should be ({gameModsPath}), removing it");
+                File.Delete(gameModsPath);
+            }
 
             if (!Directory.Exists(gameModsPath))
             {

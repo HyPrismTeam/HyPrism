@@ -1,6 +1,7 @@
 using HyPrism.Services.Core.App;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Game.Instance;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HyPrism.Models;
@@ -29,7 +30,27 @@ public class ModService : IModService
 
     // Lock for mod manifest operations to prevent concurrent writes
     private static readonly SemaphoreSlim _modManifestLock = new(1, 1);
-    
+
+    /// <summary>
+    /// Ensures the <paramref name="modsPath"/> exists as a directory.
+    /// The Hytale game sometimes creates a regular <b>file</b> named <c>Mods</c>
+    /// inside <c>UserData/</c>.  <see cref="Directory.CreateDirectory"/> throws
+    /// <see cref="IOException"/> when a file with the same name already exists,
+    /// so we delete the conflicting file first.
+    /// </summary>
+    internal static void EnsureModsDirectory(string modsPath)
+    {
+        if (File.Exists(modsPath))
+        {
+            // A plain file blocks Directory.CreateDirectory – remove it.
+            Logger.Warning("ModService",
+                $"Found a file where the Mods directory should be ({modsPath}), removing it");
+            File.Delete(modsPath);
+        }
+
+        Directory.CreateDirectory(modsPath);
+    }
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -92,17 +113,20 @@ public class ModService : IModService
             using var fileRequest = CreateCurseForgeRequest(HttpMethod.Get, fileEndpoint);
             using var fileResponse = await _httpClient.SendAsync(fileRequest);
 
-            if (!fileResponse.IsSuccessStatusCode)
+            if (fileResponse.IsSuccessStatusCode)
             {
-                Logger.Warning("ModService", $"Get file info returned {fileResponse.StatusCode} for mod {modId} file {fileId}");
-                return null;
+                var fileJson = await fileResponse.Content.ReadAsStringAsync();
+                var cfFileResp = JsonSerializer.Deserialize<CurseForgeFileResponse>(fileJson, _jsonOptions);
+                if (cfFileResp?.Data != null)
+                    return cfFileResp.Data;
             }
 
-            var fileJson = await fileResponse.Content.ReadAsStringAsync();
-            var cfFileResp = JsonSerializer.Deserialize<CurseForgeFileResponse>(fileJson, _jsonOptions);
-            return cfFileResp?.Data;
+            // Specific fileId not found (deleted / expired) — fall back to the latest available file.
+            Logger.Warning("ModService",
+                $"Get file info returned {fileResponse.StatusCode} for mod {modId} file {fileId}, falling back to latest file");
         }
 
+        // Fetch the most recent file for this mod.
         var filesEndpoint = $"/v1/mods/{modId}/files?pageSize=1";
         using var filesRequest = CreateCurseForgeRequest(HttpMethod.Get, filesEndpoint);
         using var filesResponse = await _httpClient.SendAsync(filesRequest);
@@ -115,7 +139,13 @@ public class ModService : IModService
 
         var filesJson = await filesResponse.Content.ReadAsStringAsync();
         var filesResp = JsonSerializer.Deserialize<CurseForgeFilesResponse>(filesJson, _jsonOptions);
-        return filesResp?.Data?.FirstOrDefault();
+        var latest = filesResp?.Data?.FirstOrDefault();
+        if (latest != null && !string.IsNullOrWhiteSpace(fileId))
+        {
+            Logger.Info("ModService",
+                $"Resolved mod {modId} to latest file {latest.Id} ('{latest.FileName}') instead of requested file {fileId}");
+        }
+        return latest;
     }
 
     private static string? BuildEdgeCdnFallbackUrl(string fileId, string? fileName)
@@ -339,7 +369,7 @@ public class ModService : IModService
             
             // Download the file to UserData/Mods folder (correct Hytale mod location)
             var modsPath = Path.Combine(instancePath, "UserData", "Mods");
-            Directory.CreateDirectory(modsPath);
+            EnsureModsDirectory(modsPath);
             
             var fallbackName = !string.IsNullOrWhiteSpace(resolvedFileId)
                 ? $"mod_{resolvedFileId}.jar"
@@ -368,6 +398,19 @@ public class ModService : IModService
 
             if (!downloaded)
             {
+                return false;
+            }
+
+            // ── Post-download server version compatibility check ──
+            // Read the mod's manifest.json → ServerVersion and compare with the
+            // server's Implementation-Version from HytaleServer.jar.
+            if (!CheckModServerCompatibility(filePath, instancePath, out string? incompatibilityReason))
+            {
+                // Remove the incompatible file we just downloaded.
+                try { File.Delete(filePath); } catch { /* best-effort */ }
+                Logger.Warning("ModService",
+                    $"Mod '{cfFile.FileName}' is incompatible with the server: {incompatibilityReason}");
+                onProgress?.Invoke("incompatible", incompatibilityReason ?? "unknown version mismatch");
                 return false;
             }
             
@@ -442,7 +485,7 @@ public class ModService : IModService
         var manifestPath = Path.Combine(modsPath, "manifest.json");
         var legacyManifestPath = Path.Combine(instancePath, "Client", "mods", "manifest.json");
 
-        Directory.CreateDirectory(modsPath);
+        EnsureModsDirectory(modsPath);
 
         List<InstalledMod> mods;
         
@@ -665,7 +708,7 @@ public class ModService : IModService
         try
         {
             var modsPath = Path.Combine(instancePath, "UserData", "Mods");
-            Directory.CreateDirectory(modsPath);
+            EnsureModsDirectory(modsPath);
             var manifestPath = Path.Combine(modsPath, "manifest.json");
             
             var json = JsonSerializer.Serialize(mods, new JsonSerializerOptions { WriteIndented = true });
@@ -891,12 +934,21 @@ public class ModService : IModService
             }
             
             var modsPath = Path.Combine(instancePath, "UserData", "Mods");
-            Directory.CreateDirectory(modsPath);
+            EnsureModsDirectory(modsPath);
             
             var fileName = Path.GetFileName(sourcePath);
             var destPath = Path.Combine(modsPath, fileName);
             
             File.Copy(sourcePath, destPath, true);
+
+            // Server version compatibility check
+            if (fileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) &&
+                !CheckModServerCompatibility(destPath, instancePath, out string? incompatReason))
+            {
+                try { File.Delete(destPath); } catch { /* best-effort */ }
+                Logger.Warning("ModService", $"Local mod '{fileName}' is incompatible: {incompatReason}");
+                return false;
+            }
             
             // Add to manifest
             var mods = GetInstanceInstalledMods(instancePath);
@@ -931,11 +983,20 @@ public class ModService : IModService
         try
         {
             var modsPath = Path.Combine(instancePath, "UserData", "Mods");
-            Directory.CreateDirectory(modsPath);
+            EnsureModsDirectory(modsPath);
             
             var destPath = Path.Combine(modsPath, fileName);
             var bytes = Convert.FromBase64String(base64Content);
             await File.WriteAllBytesAsync(destPath, bytes);
+
+            // Server version compatibility check
+            if (fileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) &&
+                !CheckModServerCompatibility(destPath, instancePath, out string? incompatReason))
+            {
+                try { File.Delete(destPath); } catch { /* best-effort */ }
+                Logger.Warning("ModService", $"Base64 mod '{fileName}' is incompatible: {incompatReason}");
+                return false;
+            }
             
             // Add to manifest
             var mods = GetInstanceInstalledMods(instancePath);
@@ -965,6 +1026,107 @@ public class ModService : IModService
     /// <summary>
     /// <summary>
     /// Extracts a clean version string from CurseForge DisplayName or FileName.
+    // ========== Server Version Compatibility Helpers ==========
+
+    /// <summary>
+    /// Reads the <c>ServerVersion</c> field from a mod JAR's top-level <c>manifest.json</c>.
+    /// Returns <c>null</c> when the JAR has no manifest or no ServerVersion field.
+    /// </summary>
+    private static string? ReadModServerVersion(string jarPath)
+    {
+        try
+        {
+            using var archive = ZipFile.OpenRead(jarPath);
+            var entry = archive.Entries.FirstOrDefault(e =>
+                e.FullName.Equals("manifest.json", StringComparison.OrdinalIgnoreCase));
+            if (entry == null) return null;
+
+            using var stream = entry.Open();
+            using var doc = JsonDocument.Parse(stream);
+
+            if (doc.RootElement.TryGetProperty("ServerVersion", out var sv) &&
+                sv.ValueKind == JsonValueKind.String)
+            {
+                return sv.GetString();
+            }
+        }
+        catch
+        {
+            // Malformed JAR / JSON — treat as unknown
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Reads the server's own build version from the <c>META-INF/MANIFEST.MF</c>
+    /// inside <c>Server/HytaleServer.jar</c> (field <c>Implementation-Version</c>).
+    /// </summary>
+    private static string? ReadHytaleServerVersion(string instancePath)
+    {
+        var serverJar = Path.Combine(instancePath, "Server", "HytaleServer.jar");
+        if (!File.Exists(serverJar)) return null;
+
+        try
+        {
+            using var archive = ZipFile.OpenRead(serverJar);
+            var manifestEntry = archive.Entries.FirstOrDefault(e =>
+                e.FullName.Equals("META-INF/MANIFEST.MF", StringComparison.OrdinalIgnoreCase));
+            if (manifestEntry == null) return null;
+
+            using var reader = new StreamReader(manifestEntry.Open());
+            while (reader.ReadLine() is { } line)
+            {
+                if (line.StartsWith("Implementation-Version:", StringComparison.OrdinalIgnoreCase))
+                {
+                    return line["Implementation-Version:".Length..].Trim();
+                }
+            }
+        }
+        catch
+        {
+            // Malformed archive — treat as unknown
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks whether a downloaded mod JAR is compatible with the instance's
+    /// Hytale server.  Returns <c>true</c> when compatible (or when compatibility
+    /// cannot be determined).  When incompatible, <paramref name="reason"/> contains
+    /// a human-readable description.
+    /// </summary>
+    private static bool CheckModServerCompatibility(
+        string modJarPath,
+        string instancePath,
+        out string? reason)
+    {
+        reason = null;
+
+        var modSV = ReadModServerVersion(modJarPath);
+
+        // No ServerVersion → compatible with any server
+        if (string.IsNullOrWhiteSpace(modSV) || modSV.Trim() == "*")
+            return true;
+
+        var serverSV = ReadHytaleServerVersion(instancePath);
+        if (string.IsNullOrWhiteSpace(serverSV))
+        {
+            // Can't determine server version — don't block the install
+            return true;
+        }
+
+        if (string.Equals(modSV.Trim(), serverSV.Trim(), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        reason = $"Mod requires server version '{modSV.Trim()}' " +
+                 $"but instance has server version '{serverSV.Trim()}'";
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to extract a semver-like version string from a display name or filename.
     /// Looks for semver-like patterns (e.g., "1.2.7", "0.3.1-beta") and returns the first match.
     /// Falls back to DisplayName or FileName if no version pattern is found.
     /// </summary>

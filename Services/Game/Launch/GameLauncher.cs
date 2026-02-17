@@ -168,7 +168,9 @@ public class GameLauncher : IGameLauncher
         string userDataDir = _instanceService.GetInstanceUserDataPath(versionPath);
         Directory.CreateDirectory(userDataDir);
 
-        QuarantineIncompatibleServerMods(userDataDir);
+        InvalidateAotCacheIfNeeded(versionPath);
+
+        QuarantineIncompatibleServerMods(versionPath, userDataDir);
 
         RestoreProfileSkinData(sessionUuid, userDataDir);
 
@@ -558,9 +560,238 @@ public class GameLauncher : IGameLauncher
         }
     }
 
-    private void QuarantineIncompatibleServerMods(string userDataDir)
+    /// <summary>
+    /// Deletes the AOT (Ahead-Of-Time) cache in the Server directory when JVM flags have changed.
+    /// The AOT cache can become invalid if the JRE version or JVM flags change
+    /// (e.g., UseCompactObjectHeaders enabled vs disabled), causing the server to fail at startup.
+    /// We store a hash of the current JVM flags and invalidate when it changes.
+    /// </summary>
+    private void InvalidateAotCacheIfNeeded(string versionPath)
     {
-        return;
+        string serverDir = Path.Combine(versionPath, "Server");
+        if (!Directory.Exists(serverDir))
+            return;
+
+        string markerPath = Path.Combine(serverDir, ".jvm-flags-hash");
+        string currentFlags = _config.JavaArguments?.Trim() ?? "";
+        string currentHash = ComputeSimpleHash(currentFlags);
+
+        if (File.Exists(markerPath))
+        {
+            try
+            {
+                string storedHash = File.ReadAllText(markerPath).Trim();
+                if (storedHash == currentHash)
+                    return; // No change in JVM flags
+            }
+            catch { /* If we can't read, re-invalidate */ }
+        }
+
+        // Delete AOT cache files
+        try
+        {
+            int deletedCount = 0;
+            foreach (var aotFile in Directory.EnumerateFiles(serverDir, "*.aot", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.Delete(aotFile);
+                    deletedCount++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("Game", $"Failed to delete AOT cache file '{Path.GetFileName(aotFile)}': {ex.Message}");
+                }
+            }
+
+            // Also look for AOT-related directories (e.g., ".jsa" shared archives)
+            foreach (var jsaFile in Directory.EnumerateFiles(serverDir, "*.jsa", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.Delete(jsaFile);
+                    deletedCount++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("Game", $"Failed to delete shared archive '{Path.GetFileName(jsaFile)}': {ex.Message}");
+                }
+            }
+
+            if (deletedCount > 0)
+                Logger.Info("Game", $"Invalidated {deletedCount} AOT/shared archive cache file(s) due to JVM flags change");
+
+            // Store current hash
+            File.WriteAllText(markerPath, currentHash);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Game", $"AOT cache invalidation failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Computes a simple deterministic hash string for JVM flags comparison.
+    /// </summary>
+    private static string ComputeSimpleHash(string input)
+    {
+        var bytes = Encoding.UTF8.GetBytes(input);
+        var hash = System.Security.Cryptography.SHA256.HashData(bytes);
+        return Convert.ToHexString(hash)[..16]; // 16 hex chars is sufficient for comparison
+    }
+
+    /// <summary>
+    /// Disables mods whose ServerVersion in manifest.json is incompatible with the installed server.
+    /// Mods with ServerVersion "*" (wildcard) or without a manifest are left alone.
+    /// Incompatible mods are moved to a "Mods_Disabled" subfolder so the server doesn't load them.
+    /// </summary>
+    private void QuarantineIncompatibleServerMods(string versionPath, string userDataDir)
+    {
+        string serverJarPath = Path.Combine(versionPath, "Server", "HytaleServer.jar");
+        if (!File.Exists(serverJarPath))
+        {
+            Logger.Info("Game", "No server JAR found — skipping mod compatibility check");
+            return;
+        }
+
+        if (!TryReadServerVersionFromManifest(serverJarPath, out string? currentServerVersion) ||
+            string.IsNullOrWhiteSpace(currentServerVersion))
+        {
+            Logger.Warning("Game", "Could not read server version from HytaleServer.jar manifest — skipping mod compatibility check");
+            return;
+        }
+
+        Logger.Info("Game", $"Server version: {currentServerVersion}");
+
+        string modsDir = Path.Combine(userDataDir, "Mods");
+        // The game may create a plain file named "Mods" — replace it with a directory
+        if (File.Exists(modsDir))
+        {
+            Logger.Warning("Game",
+                $"Found a file where the Mods directory should be ({modsDir}), removing it");
+            File.Delete(modsDir);
+        }
+        if (!Directory.Exists(modsDir))
+        {
+            Logger.Info("Game", "No Mods directory found — nothing to quarantine");
+            return;
+        }
+
+        string disabledDir = Path.Combine(userDataDir, "Mods_Disabled");
+        var jarFiles = Directory.GetFiles(modsDir, "*.jar", SearchOption.TopDirectoryOnly);
+        int quarantinedCount = 0;
+
+        foreach (var jarPath in jarFiles)
+        {
+            try
+            {
+                if (!TryReadServerVersionFromManifest(jarPath, out string? modServerVersion))
+                    continue; // No manifest or no ServerVersion — assume compatible
+
+                if (string.IsNullOrWhiteSpace(modServerVersion) || modServerVersion.Trim() == "*")
+                    continue; // Wildcard — compatible with any server version
+
+                if (string.Equals(modServerVersion.Trim(), currentServerVersion.Trim(), StringComparison.OrdinalIgnoreCase))
+                    continue; // Exact match — compatible
+
+                // Incompatible: move to Mods_Disabled
+                Directory.CreateDirectory(disabledDir);
+                string fileName = Path.GetFileName(jarPath);
+                string destPath = Path.Combine(disabledDir, fileName);
+
+                // If a file with the same name exists in disabled dir, overwrite
+                if (File.Exists(destPath))
+                    File.Delete(destPath);
+
+                File.Move(jarPath, destPath);
+                quarantinedCount++;
+
+                Logger.Warning("Game",
+                    $"Quarantined incompatible mod '{fileName}': " +
+                    $"mod requires ServerVersion '{modServerVersion}', " +
+                    $"but server is '{currentServerVersion}'");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("Game", $"Failed to check/quarantine mod '{Path.GetFileName(jarPath)}': {ex.Message}");
+            }
+        }
+
+        // Also restore previously quarantined mods that are now compatible
+        if (Directory.Exists(disabledDir))
+        {
+            var disabledJars = Directory.GetFiles(disabledDir, "*.jar", SearchOption.TopDirectoryOnly);
+            int restoredCount = 0;
+
+            foreach (var jarPath in disabledJars)
+            {
+                try
+                {
+                    if (!TryReadServerVersionFromManifest(jarPath, out string? modServerVersion))
+                    {
+                        // No version requirement — restore it
+                        RestoreModFromQuarantine(jarPath, modsDir);
+                        restoredCount++;
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(modServerVersion) || modServerVersion.Trim() == "*")
+                    {
+                        RestoreModFromQuarantine(jarPath, modsDir);
+                        restoredCount++;
+                        continue;
+                    }
+
+                    if (string.Equals(modServerVersion.Trim(), currentServerVersion.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        RestoreModFromQuarantine(jarPath, modsDir);
+                        restoredCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("Game", $"Failed to check/restore quarantined mod '{Path.GetFileName(jarPath)}': {ex.Message}");
+                }
+            }
+
+            if (restoredCount > 0)
+                Logger.Info("Game", $"Restored {restoredCount} previously quarantined mod(s) that are now compatible");
+
+            // Clean up empty disabled dir
+            try
+            {
+                if (Directory.Exists(disabledDir) && !Directory.EnumerateFileSystemEntries(disabledDir).Any())
+                    Directory.Delete(disabledDir);
+            }
+            catch { /* ignore */ }
+        }
+
+        if (quarantinedCount > 0)
+        {
+            Logger.Warning("Game",
+                $"Quarantined {quarantinedCount} incompatible mod(s). " +
+                $"They have been moved to Mods_Disabled and will be restored automatically when a compatible server version is installed.");
+
+            _progressService.ReportError("mod_incompatible",
+                $"{quarantinedCount} mod(s) disabled due to server version mismatch (server: {currentServerVersion}). " +
+                $"They will be restored automatically when the server is updated to a compatible version.",
+                $"Quarantined mods moved to {disabledDir}");
+        }
+    }
+
+    /// <summary>
+    /// Moves a mod JAR from the Mods_Disabled directory back to the active Mods directory.
+    /// </summary>
+    private static void RestoreModFromQuarantine(string quarantinedJarPath, string modsDir)
+    {
+        string fileName = Path.GetFileName(quarantinedJarPath);
+        string destPath = Path.Combine(modsDir, fileName);
+
+        if (File.Exists(destPath))
+            File.Delete(destPath);
+
+        File.Move(quarantinedJarPath, destPath);
+        Logger.Info("Game", $"Restored compatible mod from quarantine: {fileName}");
     }
 
     private static bool TryReadServerVersionFromManifest(string jarPath, out string? serverVersion)
@@ -703,12 +934,26 @@ public class GameLauncher : IGameLauncher
         if (string.IsNullOrEmpty(_dualAuthAgentPath) || IsOfficialServerMode())
             return;
 
-        string baseDomain = GetEffectiveCustomAuthDomain(logFallback: false) ?? "";
+        string authDomain = DeriveAuthDomain(GetEffectiveCustomAuthDomain(logFallback: false));
+
+        DualAuthService.ApplyToProcess(startInfo, _dualAuthAgentPath, authDomain, trustOfficialIssuers: true);
+        Logger.Info("Game", $"DualAuth environment applied to process (auth domain: {authDomain})");
+    }
+
+    /// <summary>
+    /// Derives the DualAuth domain (used for JWKS discovery) from the sessions domain.
+    /// For example, "sessions.sanasol.ws" → "auth.sanasol.ws".
+    /// </summary>
+    private static string DeriveAuthDomain(string? sessionsDomain)
+    {
+        if (string.IsNullOrWhiteSpace(sessionsDomain))
+            return "";
+
+        string baseDomain = sessionsDomain;
         if (baseDomain.StartsWith("sessions."))
             baseDomain = baseDomain["sessions.".Length..];
 
-        DualAuthService.ApplyToProcess(startInfo, _dualAuthAgentPath, baseDomain, trustOfficialIssuers: true);
-        Logger.Info("Game", $"DualAuth environment applied to process");
+        return $"auth.{baseDomain}";
     }
 
     /// <summary>
@@ -1098,11 +1343,9 @@ export __NV_PRIME_RENDER_OFFLOAD=0
         if (string.IsNullOrEmpty(_dualAuthAgentPath) || IsOfficialServerMode())
             return "# No DualAuth (official server mode or agent unavailable)\nDUALAUTH_JAVA_TOOL_OPTIONS=\"\"\nDUALAUTH_AUTH_DOMAIN=\"\"\nDUALAUTH_TRUST_ALL=\"\"\nDUALAUTH_TRUST_OFFICIAL=\"\"\n\n";
 
-        string baseDomain = GetEffectiveCustomAuthDomain(logFallback: false) ?? "";
-        if (baseDomain.StartsWith("sessions."))
-            baseDomain = baseDomain["sessions.".Length..];
+        string authDomain = DeriveAuthDomain(GetEffectiveCustomAuthDomain(logFallback: false));
 
-        Logger.Info("Game", $"DualAuth env lines for Unix script: {baseDomain}");
+        Logger.Info("Game", $"DualAuth env lines for Unix script: {authDomain}");
         
         // Store DualAuth values in separate shell variables, then compose the
         // JAVA_TOOL_OPTIONS=KEY=VALUE pair when building ENV_ARGS.
@@ -1113,7 +1356,7 @@ export __NV_PRIME_RENDER_OFFLOAD=0
         // the path contains spaces.
         return $@"# DualAuth Agent Configuration
 DUALAUTH_JAVA_TOOL_OPTIONS=""\""-javaagent:{_dualAuthAgentPath}\""""
-DUALAUTH_AUTH_DOMAIN=""{baseDomain}""
+DUALAUTH_AUTH_DOMAIN=""{authDomain}""
 DUALAUTH_TRUST_ALL=""true""
 DUALAUTH_TRUST_OFFICIAL=""true""
 

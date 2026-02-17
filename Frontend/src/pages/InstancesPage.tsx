@@ -1359,13 +1359,15 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
     for (const mod of modsToUpdate) {
       try {
         const fileId = String(mod.latestFileId);
-        await ipc.mods.install({
+        const result = await ipc.mods.install({
           modId: getCurseForgeModId(mod),
           fileId,
           instanceId: selectedInstance.id,
           branch: selectedInstance.branch,
           version: selectedInstance.version,
         });
+        const ok = typeof result === 'object' && result !== null ? (result as { success: boolean }).success : result;
+        if (!ok) failed++;
       } catch {
         failed++;
       }

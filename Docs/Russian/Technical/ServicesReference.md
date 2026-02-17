@@ -58,7 +58,10 @@
 - **Назначение:** Управление жизненным циклом игры — загрузка, установка, патчинг, запуск
 - **Состояния:** preparing → download → install → patching → launching → running → stopped
 - **Режим кастомной авторизации:** Для неофициальных профилей используется патч клиентского бинарника + runtime-агент DualAuth.
+- **Домен JWKS для DualAuth:** Домен для JWKS discovery вычисляется из sessions-домена заменой префикса `sessions.` на `auth.` (например, `sessions.sanasol.ws` → `auth.sanasol.ws`). Обрабатывается методом `DeriveAuthDomain()` в GameLauncher.
 - **Политика server JAR:** Лаунчер больше не переписывает `Server/HytaleServer.jar` при запуске с кастомным auth-доменом.
+- **Карантин несовместимых модов:** Перед запуском `QuarantineIncompatibleServerMods()` считывает `ServerVersion` из `manifest.json` каждого мод-JAR и сравнивает с версией сервера из `HytaleServer.jar`. Несовместимые моды (без wildcard `*`) перемещаются в `Mods_Disabled/`; ранее помещённые в карантин моды автоматически восстанавливаются при совместимости.
+- **Инвалидация AOT-кэша:** Перед запуском `InvalidateAotCacheIfNeeded()` обнаруживает изменение JVM-флагов через SHA-256 хеш и удаляет `.aot` и `.jsa` кэш-файлы в директории Server, чтобы предотвратить несоответствие UseCompactObjectHeaders.
 - **Восстановление при 403 official CDN:** если официальный URL возвращает HTTP 403 (просроченный подписанный `verify`-токен), сервис принудительно обновляет кэш версий и один раз повторяет загрузку с official перед fallback на mirror.
 - **Fallback для pre-release mirror:** если целевой full-файл зеркала невалиден/отсутствует (например, 0-byte placeholder), сервис пытается установить предыдущую full-сборку и применяет цепочку патчей до целевой версии.
 - **Синхронизация запуска с выбранным инстансом:** при выборе инстанса обновляются и `SelectedInstanceId`, и legacy-поля запуска (`VersionType`/`SelectedVersion`), а запуск с Dashboard отправляет явные `branch/version`, чтобы исключить старт «старого» инстанса.
@@ -104,6 +107,7 @@
 ### ModService
 - **Назначение:** Просмотр, поиск и управление модами (интеграция с CurseForge)
 - **Fallback для URL загрузки:** если CurseForge возвращает пустой `downloadUrl`, а `/download-url` отвечает `403` или пустым payload, сервис вычисляет детерминированный CDN URL по `fileId + fileName`.
+- **Совместимость версий:** Моды с конкретным `ServerVersion` в `manifest.json` JAR (формат: `YYYY.MM.DD-<hash>`) автоматически помещаются в карантин, если версия установленного сервера не совпадает. Моды с `ServerVersion: "*"` (wildcard) всегда совместимы.
 
 ## Пользовательские сервисы (`Services/User/`)
 

@@ -750,10 +750,7 @@ public class IpcService
                 
                 var modsPath = Path.Combine(instancePath, "UserData", "Mods");
                 
-                if (!Directory.Exists(modsPath))
-                {
-                    Directory.CreateDirectory(modsPath);
-                }
+                ModService.EnsureModsDirectory(modsPath);
                 
                 fileService.OpenFolder(modsPath);
                 Logger.Info("IPC", $"Opened mods folder: {modsPath}");
@@ -1861,12 +1858,26 @@ public class IpcService
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Logger.Warning("IPC", "Mods install failed: no target instance selected");
-                    Reply("hyprism:mods:install:reply", false);
+                    Reply("hyprism:mods:install:reply", new { success = false, error = "No target instance selected" });
                     return;
                 }
                 
-                var success = await modService.InstallModFileToInstanceAsync(modId, fileId, instancePath);
-                Reply("hyprism:mods:install:reply", success);
+                string? incompatibleReason = null;
+                var success = await modService.InstallModFileToInstanceAsync(modId, fileId, instancePath,
+                    (status, detail) =>
+                    {
+                        if (status == "incompatible")
+                            incompatibleReason = detail;
+                    });
+
+                if (!string.IsNullOrEmpty(incompatibleReason))
+                {
+                    Reply("hyprism:mods:install:reply", new { success = false, error = incompatibleReason });
+                }
+                else
+                {
+                    Reply("hyprism:mods:install:reply", success);
+                }
             }
             catch (Exception ex)
             {
@@ -2036,7 +2047,7 @@ public class IpcService
                 }
                 
                 var modsPath = Path.Combine(instancePath, "UserData", "Mods");
-                Directory.CreateDirectory(modsPath);
+                ModService.EnsureModsDirectory(modsPath);
                 Electron.Shell.OpenPathAsync(modsPath);
             }
             catch (Exception ex)

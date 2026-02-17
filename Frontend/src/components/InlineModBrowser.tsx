@@ -305,8 +305,11 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         setDownloadJobs(prev => prev.map(j => j.id === item.id ? { ...j, status: 'running', attempts: attempt } : j));
         try {
-          const ok = await ipc.mods.install({ modId: item.id, fileId: item.fileId, branch: currentBranch, version: currentVersion, instanceId: currentInstanceId });
-          if (!ok) throw new Error(t('modManager.backendRefused'));
+          const result = await ipc.mods.install({ modId: item.id, fileId: item.fileId, branch: currentBranch, version: currentVersion, instanceId: currentInstanceId });
+          // Backend may return plain boolean or { success: false, error: "..." }
+          const ok = typeof result === 'object' && result !== null ? (result as { success: boolean }).success : result;
+          const errorMsg = typeof result === 'object' && result !== null ? (result as { error?: string }).error : undefined;
+          if (!ok) throw new Error(errorMsg || t('modManager.backendRefused'));
           setDownloadJobs(prev => prev.map(j => j.id === item.id ? { ...j, status: 'success' } : j));
           break;
         } catch (err: unknown) {
