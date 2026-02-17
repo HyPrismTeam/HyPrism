@@ -11,17 +11,17 @@ const BrowserOpenURL = (url: string) => ipc.browser.open(url);
 // InstalledVersionInfo type (was in api/backend)
 export interface InstalledVersionInfo {
     id?: string;
-  branch: string;
-  version: number;
-  path: string;
-  sizeBytes?: number;
-  isLatest?: boolean;
-  isLatestInstance?: boolean;
-  playTimeSeconds?: number;
-  playTimeFormatted?: string;
-  createdAt?: string;
-  lastPlayedAt?: string;
-  updatedAt?: string;
+    branch: string;
+    version: number;
+    path: string;
+    sizeBytes?: number;
+    isLatest?: boolean;
+    isLatestInstance?: boolean;
+    playTimeSeconds?: number;
+    playTimeFormatted?: string;
+    createdAt?: string;
+    lastPlayedAt?: string;
+    updatedAt?: string;
 }
 
 // Settings-backed helpers
@@ -39,8 +39,8 @@ async function GetDiscordLink(): Promise<string> { console.warn('[IPC] GetDiscor
 // Real IPC functions that now have channels
 async function GetLauncherFolderPath(): Promise<string> { return ipc.settings.launcherPath(); }
 async function GetDefaultInstanceDir(): Promise<string> { return ipc.settings.defaultInstanceDir(); }
-async function SetInstanceDirectory(path: string): Promise<{ success: boolean, path: string }> { 
-    const result = await ipc.settings.setInstanceDir(path); 
+async function SetInstanceDirectory(path: string): Promise<{ success: boolean, path: string }> {
+    const result = await ipc.settings.setInstanceDir(path);
     console.log('[IPC] SetInstanceDirectory result:', result);
     return result;
 }
@@ -81,15 +81,15 @@ const backgroundModulesJpg = import.meta.glob('../assets/backgrounds/bg_*.jpg', 
 const backgroundModulesPng = import.meta.glob('../assets/backgrounds/bg_*.png', { query: '?url', import: 'default', eager: true });
 const allBackgrounds = { ...backgroundModulesJpg, ...backgroundModulesPng };
 const backgroundImages = Object.entries(allBackgrounds)
-  .sort(([a], [b]) => {
-    const numA = parseInt(a.match(/bg_(\d+)/)?.[1] || '0');
-    const numB = parseInt(b.match(/bg_(\d+)/)?.[1] || '0');
-    return numA - numB;
-  })
-  .map(([path, url]) => ({ 
-    name: path.match(/bg_(\d+)/)?.[0] || 'bg_1', 
-    url: url as string 
-  }));
+    .sort(([a], [b]) => {
+        const numA = parseInt(a.match(/bg_(\d+)/)?.[1] || '0');
+        const numB = parseInt(b.match(/bg_(\d+)/)?.[1] || '0');
+        return numA - numB;
+    })
+    .map(([path, url]) => ({
+        name: path.match(/bg_(\d+)/)?.[0] || 'bg_1',
+        url: url as string
+    }));
 
 interface Contributor {
     login: string;
@@ -189,29 +189,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [hasSingleGpu, setHasSingleGpu] = useState(false);
     const [gameEnvVars, setGameEnvVars] = useState('');
     const [gameEnvVarsError, setGameEnvVarsError] = useState('');
-    
+    const [gameEnvVarsFocus, setGameEnvVarsFocus] = useState(false);
+
     // Environment variable presets state
     const [envForceX11, setEnvForceX11] = useState(false);
     const [envDisableVkLayers, setEnvDisableVkLayers] = useState(false);
-    const [envForceAmdVulkan, setEnvForceAmdVulkan] = useState(false);
-    
+
+
     // Platform detection (for showing/hiding Linux-only features)
     const [isLinux, setIsLinux] = useState(false);
 
     const detectedSystemRamMb = Math.max(4096, systemMemoryMb);
     const minJavaRamMb = 1024;
     const maxJavaRamMb = Math.max(minJavaRamMb, Math.floor((detectedSystemRamMb * 0.75) / 256) * 256);
-    
+
     // Data move progress state
     const [isMovingData, setIsMovingData] = useState(false);
     const [moveProgress, setMoveProgress] = useState(0);
     const [moveCurrentFile, setMoveCurrentFile] = useState('');
-    
+
     // Notify parent about moving state change (for hiding navigation)
     useEffect(() => {
         onMovingDataChange?.(isMovingData);
     }, [isMovingData, onMovingDataChange]);
-    
+
     const { accentColor, accentTextColor, setAccentColor: setAccentColorContext } = useAccentColor();
 
     // Glass-aware control background class for toggle rows, dropdowns, inputs
@@ -220,7 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [isLoadingContributors, setIsLoadingContributors] = useState(false);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
     const branchDropdownRef = useRef<HTMLDivElement>(null);
-    
+
     // Instances state
     const [installedInstances, setInstalledInstances] = useState<InstalledVersionInfo[]>([]);
     const [isLoadingInstances, setIsLoadingInstances] = useState(false);
@@ -332,13 +333,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 } catch (err) {
                     console.error('Failed to load platform info:', err);
                 }
-                
+
                 const closeAfter = await GetCloseAfterLaunch();
                 setCloseAfterLaunch(closeAfter);
-                
+
                 const folderPath = await GetLauncherFolderPath();
                 setLauncherFolderPath(folderPath);
-                
+
                 const customDir = await GetCustomInstanceDir();
                 const defaultInstanceDir = await GetDefaultInstanceDir();
                 setInstanceDir(customDir || defaultInstanceDir); // Show real path
@@ -372,26 +373,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 setJavaGcMode(detectJavaGcMode(normalizedJavaArgs));
                 setJavaRuntimeMode(settingsSnapshot.useCustomJava ? 'custom' : 'bundled');
                 setCustomJavaPath(typeof settingsSnapshot.customJavaPath === 'string' ? settingsSnapshot.customJavaPath : '');
-                
+
                 const bgMode = await GetBackgroundMode();
                 setBackgroundModeState(bgMode);
 
                 setLauncherDataDir(folderPath);
-                
+
                 // Load GPU preference and adapters
                 const gpu = settingsSnapshot.gpuPreference ?? 'dedicated';
                 setGpuPreferenceState(gpu);
-                
+
                 // Load custom game environment variables and parse presets
                 const envVars = settingsSnapshot.gameEnvironmentVariables ?? '';
                 const envVarsStr = typeof envVars === 'string' ? envVars : '';
                 setGameEnvVars(envVarsStr);
-                
+
                 // Parse preset toggles from env vars string
                 setEnvForceX11(envVarsStr.includes('SDL_VIDEODRIVER=x11'));
                 setEnvDisableVkLayers(envVarsStr.includes('VK_LOADER_LAYERS_DISABLE=all'));
-                setEnvForceAmdVulkan(envVarsStr.includes('VK_ICD_FILENAMES=') && envVarsStr.includes('radeon'));
-                
+
+
                 try {
                     const adapters = await ipc.system.gpuAdapters();
                     setGpuAdapters(adapters || []);
@@ -405,18 +406,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 } catch (err) {
                     console.error('Failed to load GPU adapters:', err);
                 }
-                
+
                 // Load profile data
                 const username = await GetNick();
                 // Use 'HyPrism' as fallback - matches backend default
                 const displayName = username || 'HyPrism';
                 setProfileUsername(displayName);
                 setEditUsernameValue(displayName);
-                
+
                 const uuid = await GetUUID();
                 setProfileUuid(uuid || '');
                 setEditUuidValue(uuid || '');
-                
+
                 // Load auth domain for profile pictures
                 const domain = await GetAuthDomain();
                 if (domain) {
@@ -431,22 +432,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         setCustomAuthDomain(domain);
                     }
                 }
-                
+
                 // Load local avatar preview
                 try {
                     const avatar = await GetAvatarPreview();
                     if (avatar) setLocalAvatar(avatar);
                 } catch { /* ignore */ }
-                
+
                 // Check if user has any official account
                 try {
                     const profiles = await ipc.profile.list();
                     const hasOfficial = profiles.some(p => p.isOfficial === true);
                     setHasOfficialAccount(hasOfficial);
                 } catch { /* ignore */ }
-                
+
                 // Accent color is now handled by AccentColorContext
-                
+
                 const savedDevMode = localStorage.getItem('hyprism_dev_mode');
                 setDevModeEnabled(savedDevMode === 'true');
             } catch (err) {
@@ -482,7 +483,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     useEffect(() => {
         if (activeTab === 'about' && contributors.length === 0 && !isLoadingContributors) {
             setIsLoadingContributors(true);
-            fetch('https://api.github.com/repos/yyyumeniku/HyPrism/contributors')
+            fetch('https://api.github.com/repos/HyPrismTeam/HyPrism/contributors')
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
@@ -493,7 +494,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 .finally(() => setIsLoadingContributors(false));
         }
     }, [activeTab, contributors.length, isLoadingContributors]);
-    
+
     // Load installed instances when Instances tab is active
     useEffect(() => {
         if (activeTab === 'instances' && installedInstances.length === 0 && !isLoadingInstances) {
@@ -512,7 +513,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
         setIsLoadingInstances(false);
     };
-    
+
     const handleExportInstance = async (instance: InstalledVersionInfo) => {
         const key = `${instance.branch}-${instance.version}`;
         setExportingInstance(key);
@@ -534,7 +535,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setExportingInstance(null);
         setShowInstanceExportModal(null);
     };
-    
+
     const handleBrowseInstanceExportFolder = async () => {
         try {
             const selectedPath = await BrowseFolder(instanceExportPath || '');
@@ -545,7 +546,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             console.error('Failed to browse folder:', err);
         }
     };
-    
+
     const handleDeleteInstance = async () => {
         if (!instanceToDelete) return;
         try {
@@ -560,10 +561,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
         setInstanceToDelete(null);
     };
-    
+
     const handleImportInstance = async () => {
         if (!showImportModal) return;
-        
+
         setIsImportingInstance(true);
         try {
             const success = await ImportInstanceFromZip(importTargetBranch, importTargetVersion, showImportModal.zipBase64);
@@ -626,7 +627,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setIsBranchOpen(false);
         onLauncherBranchChange(branch);
     };
-    
+
     const handleTestMirrorSpeed = async (forceRefresh = false) => {
         setIsMirrorTesting(true);
         try {
@@ -849,7 +850,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 setIsMovingData(true);
                 setMoveProgress(0);
                 setMoveCurrentFile('');
-                
+
                 const result = await SetInstanceDirectory(selectedPath);
                 if (result.success) {
                     setInstanceDir(result.path || selectedPath);
@@ -916,18 +917,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const ENV_PRESETS = {
         forceX11: 'SDL_VIDEODRIVER=x11',
         disableVkLayers: 'VK_LOADER_LAYERS_DISABLE=all',
-        forceAmdVulkan: 'VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.x86_64.json',
     };
 
     // Helper to add/remove preset from env vars string
     const toggleEnvPreset = (currentVars: string, preset: string, enabled: boolean): string => {
         const vars = currentVars.split(/\s+/).filter(v => v.trim());
         const withoutPreset = vars.filter(v => !v.startsWith(preset.split('=')[0] + '='));
-        
+
         if (enabled) {
             withoutPreset.push(preset);
         }
-        
+
         return withoutPreset.join(' ');
     };
 
@@ -935,12 +935,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         const preset = ENV_PRESETS[presetKey];
         const newEnvVars = toggleEnvPreset(gameEnvVars, preset, enabled);
         setGameEnvVars(newEnvVars);
-        
+
         // Update state
         if (presetKey === 'forceX11') setEnvForceX11(enabled);
         if (presetKey === 'disableVkLayers') setEnvDisableVkLayers(enabled);
-        if (presetKey === 'forceAmdVulkan') setEnvForceAmdVulkan(enabled);
-        
+
+
         // Auto-save
         try {
             await ipc.settings.update({ gameEnvironmentVariables: newEnvVars });
@@ -951,11 +951,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const validateEnvVars = (value: string): { valid: boolean; error: string } => {
         if (!value.trim()) return { valid: true, error: '' };
-        
+
         // Now space-separated format: KEY=VALUE KEY2=VALUE2
         const parts = value.split(/\s+/).filter(v => v.trim());
         const envVarPattern = /^[A-Za-z_][A-Za-z0-9_]*=.*/;
-        
+
         for (const part of parts) {
             if (!envVarPattern.test(part.trim())) {
                 return { valid: false, error: t('settings.variablesSettings.envVarsInvalidFormat') };
@@ -971,12 +971,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             return;
         }
         setGameEnvVarsError('');
-        
+
         // Update preset states based on new value
         setEnvForceX11(gameEnvVars.includes('SDL_VIDEODRIVER=x11'));
         setEnvDisableVkLayers(gameEnvVars.includes('VK_LOADER_LAYERS_DISABLE=all'));
-        setEnvForceAmdVulkan(gameEnvVars.includes('VK_ICD_FILENAMES=') && gameEnvVars.includes('radeon'));
-        
+
         try {
             await ipc.settings.update({ gameEnvironmentVariables: gameEnvVars });
         } catch (err) {
@@ -996,8 +995,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         localStorage.setItem('hyprism_dev_mode', newValue ? 'true' : 'false');
     };
 
-    const openGitHub = () => BrowserOpenURL('https://github.com/yyyumeniku/HyPrism');
-    const openBugReport = () => BrowserOpenURL('https://github.com/yyyumeniku/HyPrism/issues/new');
+    const openGitHub = () => BrowserOpenURL('https://github.com/HyPrismTeam/HyPrism');
+    const openBugReport = () => BrowserOpenURL('https://github.com/HyPrismTeam/HyPrism/issues/new');
     const openDiscord = async () => {
         const link = await GetDiscordLink();
         BrowserOpenURL(link);
@@ -1055,11 +1054,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                                        activeTab === tab.id
-                                            ? 'bg-white/10 text-white'
-                                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                                    }`}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${activeTab === tab.id
+                                        ? 'bg-white/10 text-white'
+                                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                                        }`}
                                     style={activeTab === tab.id ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
                                 >
                                     <tab.icon size={18} />
@@ -1069,7 +1067,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </nav>
                         {/* Dev Mode Toggle at bottom */}
                         <div className="px-2 pt-4 border-t border-white/[0.06] mx-2">
-                            <div 
+                            <div
                                 className="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors"
                                 onClick={handleDevModeToggle}
                             >
@@ -1077,12 +1075,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <Code size={14} />
                                     <span className="text-xs">{t('settings.devMode')}</span>
                                 </div>
-                                <div 
+                                <div
                                     className={`w-8 h-4 rounded-full flex items-center transition-colors`}
                                     style={{ backgroundColor: devModeEnabled ? accentColor : 'rgba(255,255,255,0.2)' }}
                                 >
-                                    <div 
-                                        className={`w-3 h-3 rounded-full shadow-md transform transition-transform ${devModeEnabled ? 'translate-x-4' : 'translate-x-0.5'}`} 
+                                    <div
+                                        className={`w-3 h-3 rounded-full shadow-md transform transition-transform ${devModeEnabled ? 'translate-x-4' : 'translate-x-0.5'}`}
                                         style={{ backgroundColor: devModeEnabled ? accentTextColor : 'white' }}
                                     />
                                 </div>
@@ -1238,7 +1236,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             )}
                                         </div>
                                         <p className="mt-2 text-xs text-white/40">
-                                            {selectedLauncherBranch === 'beta' 
+                                            {selectedLauncherBranch === 'beta'
                                                 ? t('settings.generalSettings.updateChannelBetaWarning')
                                                 : t('settings.generalSettings.updateChannelHint')}
                                         </p>
@@ -1247,7 +1245,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     {/* Toggle Settings - macOS Tahoe style */}
                                     <div className="space-y-3">
                                         {/* Close After Launch */}
-                                        <div 
+                                        <div
                                             className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                             onClick={handleCloseAfterLaunchChange}
                                         >
@@ -1260,11 +1258,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     <p className="text-xs text-white/40">{t('settings.generalSettings.closeLauncherHint')}</p>
                                                 </div>
                                             </div>
-                                            <div 
+                                            <div
                                                 className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
                                                 style={{ backgroundColor: closeAfterLaunch ? accentColor : 'rgba(255,255,255,0.15)' }}
                                             >
-                                                <div 
+                                                <div
                                                     className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${closeAfterLaunch ? 'translate-x-6' : 'translate-x-1'}`}
                                                     style={{ backgroundColor: closeAfterLaunch ? accentTextColor : 'white' }}
                                                 />
@@ -1278,120 +1276,54 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             {/* Downloads Tab */}
                             {activeTab === 'downloads' && (
                                 <div className="space-y-6">
-                                        {/* Info Note */}
-                                        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
-                                            <Info size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
-                                            <div>
-                                                <p className="text-sm text-blue-400 font-medium">{t('settings.downloads.howDownloadsWork')}</p>
-                                                <p className="text-xs text-blue-400/70 mt-1">{t('settings.downloads.howDownloadsWorkDescription')}</p>
-                                            </div>
+                                    {/* Info Note */}
+                                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
+                                        <Info size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm text-blue-400 font-medium">{t('settings.downloads.howDownloadsWork')}</p>
+                                            <p className="text-xs text-blue-400/70 mt-1">{t('settings.downloads.howDownloadsWorkDescription')}</p>
                                         </div>
+                                    </div>
 
-                                        {/* Official Source Card - Only show if user has official account */}
-                                        {hasOfficialAccount && (
-                                            <div 
-                                                className="p-3 rounded-xl border cursor-default transition-colors"
-                                                style={{
-                                                    backgroundColor: '#151515',
-                                                    borderColor: 'rgba(255,255,255,0.08)'
-                                                }}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                                            <Server size={20} className="text-blue-400" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-white text-sm font-medium">Hytale Official</div>
-                                                            <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.officialSourceHint')}</div>
-                                                            <code className="text-[10px] text-white/30 mt-1 block font-mono">cdn.hytale.com</code>
-                                                        </div>
+                                    {/* Official Source Card - Only show if user has official account */}
+                                    {hasOfficialAccount && (
+                                        <div
+                                            className="p-3 rounded-xl border cursor-default transition-colors"
+                                            style={{
+                                                backgroundColor: '#151515',
+                                                borderColor: 'rgba(255,255,255,0.08)'
+                                            }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                                        <Server size={20} className="text-blue-400" />
                                                     </div>
-                                                    <div className="flex items-center gap-2 relative">
-                                                        <AnimatePresence mode="wait">
-                                                            {officialSpeedTest && !isOfficialTesting && (
-                                                                <motion.div 
-                                                                    key="official-speed-badge"
-                                                                    initial={{ opacity: 0, x: 20, scale: 0.9 }}
-                                                                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                                                                    exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                                                                    transition={{ duration: 0.2, ease: 'easeOut' }}
-                                                                    className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${
-                                                                        officialSpeedTest.isAvailable 
-                                                                            ? 'bg-green-500/20 text-green-400' 
-                                                                            : 'bg-red-500/20 text-red-400'
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">Hytale Official</div>
+                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.officialSourceHint')}</div>
+                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">cdn.hytale.com</code>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 relative">
+                                                    <AnimatePresence mode="wait">
+                                                        {officialSpeedTest && !isOfficialTesting && (
+                                                            <motion.div
+                                                                key="official-speed-badge"
+                                                                initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                                exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                                className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${officialSpeedTest.isAvailable
+                                                                    ? 'bg-green-500/20 text-green-400'
+                                                                    : 'bg-red-500/20 text-red-400'
                                                                     }`}
-                                                                >
-                                                                    {officialSpeedTest.isAvailable ? (
-                                                                        <>
-                                                                            <span>{officialSpeedTest.pingMs}ms</span>
-                                                                            <span>•</span>
-                                                                            <span>{officialSpeedTest.speedMBps.toFixed(1)} MB/s</span>
-                                                                        </>
-                                                                    ) : (
-                                                                        <span>{t('settings.downloads.unavailable')}</span>
-                                                                    )}
-                                                                </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
-                                                        <div className={`flex rounded-full overflow-hidden ${gc}`}>
-                                                            <button
-                                                                onClick={() => handleTestOfficialSpeed(true)}
-                                                                disabled={isOfficialTesting}
-                                                                className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
                                                             >
-                                                                {isOfficialTesting ? (
-                                                                    <Loader2 size={16} className="animate-spin" />
-                                                                ) : (
-                                                                    <Wifi size={16} />
-                                                                )}
-                                                                <span className="ml-2 text-sm">{isOfficialTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        
-                                        {/* EstroGen Mirror Card */}
-                                        <div 
-                                            className="p-3 rounded-xl border cursor-default transition-colors"
-                                            style={{
-                                                backgroundColor: '#151515',
-                                                borderColor: 'rgba(255,255,255,0.08)'
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-lg">🪞</span>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-white text-sm font-medium">EstroGen Mirror</div>
-                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.mirrorsHint')}</div>
-                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">licdn.estrogen.cat</code>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 relative">
-                                                    <AnimatePresence mode="wait">
-                                                        {mirrorSpeedTest && !isMirrorTesting && (
-                                                            <motion.div 
-                                                                key="mirror-speed-badge"
-                                                                initial={{ opacity: 0, x: 20, scale: 0.9 }}
-                                                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                                                exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                                                                transition={{ duration: 0.2, ease: 'easeOut' }}
-                                                                className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${
-                                                                    mirrorSpeedTest.isAvailable 
-                                                                        ? 'bg-green-500/20 text-green-400' 
-                                                                        : 'bg-red-500/20 text-red-400'
-                                                                }`}
-                                                            >
-                                                                {mirrorSpeedTest.isAvailable ? (
+                                                                {officialSpeedTest.isAvailable ? (
                                                                     <>
-                                                                        <span>{mirrorSpeedTest.pingMs}ms</span>
+                                                                        <span>{officialSpeedTest.pingMs}ms</span>
                                                                         <span>•</span>
-                                                                        <span>{mirrorSpeedTest.speedMBps.toFixed(1)} MB/s</span>
+                                                                        <span>{officialSpeedTest.speedMBps.toFixed(1)} MB/s</span>
                                                                     </>
                                                                 ) : (
                                                                     <span>{t('settings.downloads.unavailable')}</span>
@@ -1401,85 +1333,148 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     </AnimatePresence>
                                                     <div className={`flex rounded-full overflow-hidden ${gc}`}>
                                                         <button
-                                                            onClick={() => handleTestMirrorSpeed(true)}
-                                                            disabled={isMirrorTesting}
+                                                            onClick={() => handleTestOfficialSpeed(true)}
+                                                            disabled={isOfficialTesting}
                                                             className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
                                                         >
-                                                            {isMirrorTesting ? (
+                                                            {isOfficialTesting ? (
                                                                 <Loader2 size={16} className="animate-spin" />
                                                             ) : (
                                                                 <Wifi size={16} />
                                                             )}
-                                                            <span className="ml-2 text-sm">{isMirrorTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
+                                                            <span className="ml-2 text-sm">{isOfficialTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
                                                         </button>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    )}
 
-                                        {/* CobyLobby Mirror Card */}
-                                        <div 
-                                            className="p-3 rounded-xl border cursor-default transition-colors"
-                                            style={{
-                                                backgroundColor: '#151515',
-                                                borderColor: 'rgba(255,255,255,0.08)'
-                                            }}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-lg">🌐</span>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-white text-sm font-medium">CobyLobby Mirror</div>
-                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.mirrorsHint')}</div>
-                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">cobylobbyht.store</code>
-                                                    </div>
+                                    {/* EstroGen Mirror Card */}
+                                    <div
+                                        className="p-3 rounded-xl border cursor-default transition-colors"
+                                        style={{
+                                            backgroundColor: '#151515',
+                                            borderColor: 'rgba(255,255,255,0.08)'
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-lg">🪞</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 relative">
-                                                    <AnimatePresence mode="wait">
-                                                        {cobyLobbySpeedTest && !isCobyLobbyTesting && (
-                                                            <motion.div 
-                                                                key="cobylobby-speed-badge"
-                                                                initial={{ opacity: 0, x: 20, scale: 0.9 }}
-                                                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                                                exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                                                                transition={{ duration: 0.2, ease: 'easeOut' }}
-                                                                className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${
-                                                                    cobyLobbySpeedTest.isAvailable 
-                                                                        ? 'bg-green-500/20 text-green-400' 
-                                                                        : 'bg-red-500/20 text-red-400'
+                                                <div>
+                                                    <div className="text-white text-sm font-medium">EstroGen Mirror</div>
+                                                    <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.mirrorsHint')}</div>
+                                                    <code className="text-[10px] text-white/30 mt-1 block font-mono">licdn.estrogen.cat</code>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 relative">
+                                                <AnimatePresence mode="wait">
+                                                    {mirrorSpeedTest && !isMirrorTesting && (
+                                                        <motion.div
+                                                            key="mirror-speed-badge"
+                                                            initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                            exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                            className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${mirrorSpeedTest.isAvailable
+                                                                ? 'bg-green-500/20 text-green-400'
+                                                                : 'bg-red-500/20 text-red-400'
                                                                 }`}
-                                                            >
-                                                                {cobyLobbySpeedTest.isAvailable ? (
-                                                                    <>
-                                                                        <span>{cobyLobbySpeedTest.pingMs}ms</span>
-                                                                        <span>•</span>
-                                                                        <span>{cobyLobbySpeedTest.speedMBps.toFixed(1)} MB/s</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <span>{t('settings.downloads.unavailable')}</span>
-                                                                )}
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-                                                    <div className={`flex rounded-full overflow-hidden ${gc}`}>
-                                                        <button
-                                                            onClick={() => handleTestCobyLobbySpeed(true)}
-                                                            disabled={isCobyLobbyTesting}
-                                                            className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
                                                         >
-                                                            {isCobyLobbyTesting ? (
-                                                                <Loader2 size={16} className="animate-spin" />
+                                                            {mirrorSpeedTest.isAvailable ? (
+                                                                <>
+                                                                    <span>{mirrorSpeedTest.pingMs}ms</span>
+                                                                    <span>•</span>
+                                                                    <span>{mirrorSpeedTest.speedMBps.toFixed(1)} MB/s</span>
+                                                                </>
                                                             ) : (
-                                                                <Wifi size={16} />
+                                                                <span>{t('settings.downloads.unavailable')}</span>
                                                             )}
-                                                            <span className="ml-2 text-sm">{isCobyLobbyTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
-                                                        </button>
-                                                    </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                                <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                    <button
+                                                        onClick={() => handleTestMirrorSpeed(true)}
+                                                        disabled={isMirrorTesting}
+                                                        className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
+                                                    >
+                                                        {isMirrorTesting ? (
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                        ) : (
+                                                            <Wifi size={16} />
+                                                        )}
+                                                        <span className="ml-2 text-sm">{isMirrorTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* CobyLobby Mirror Card */}
+                                    <div
+                                        className="p-3 rounded-xl border cursor-default transition-colors"
+                                        style={{
+                                            backgroundColor: '#151515',
+                                            borderColor: 'rgba(255,255,255,0.08)'
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-lg">🌐</span>
+                                                </div>
+                                                <div>
+                                                    <div className="text-white text-sm font-medium">CobyLobby Mirror</div>
+                                                    <div className="text-[11px] text-white/40 mt-0.5">{t('settings.downloads.mirrorsHint')}</div>
+                                                    <code className="text-[10px] text-white/30 mt-1 block font-mono">cobylobbyht.store</code>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 relative">
+                                                <AnimatePresence mode="wait">
+                                                    {cobyLobbySpeedTest && !isCobyLobbyTesting && (
+                                                        <motion.div
+                                                            key="cobylobby-speed-badge"
+                                                            initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                                                            exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                                                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                                                            className={`flex items-center gap-2 px-3 h-10 rounded-full text-xs ${cobyLobbySpeedTest.isAvailable
+                                                                ? 'bg-green-500/20 text-green-400'
+                                                                : 'bg-red-500/20 text-red-400'
+                                                                }`}
+                                                        >
+                                                            {cobyLobbySpeedTest.isAvailable ? (
+                                                                <>
+                                                                    <span>{cobyLobbySpeedTest.pingMs}ms</span>
+                                                                    <span>•</span>
+                                                                    <span>{cobyLobbySpeedTest.speedMBps.toFixed(1)} MB/s</span>
+                                                                </>
+                                                            ) : (
+                                                                <span>{t('settings.downloads.unavailable')}</span>
+                                                            )}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                                <div className={`flex rounded-full overflow-hidden ${gc}`}>
+                                                    <button
+                                                        onClick={() => handleTestCobyLobbySpeed(true)}
+                                                        disabled={isCobyLobbyTesting}
+                                                        className="h-10 px-4 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/60"
+                                                    >
+                                                        {isCobyLobbyTesting ? (
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                        ) : (
+                                                            <Wifi size={16} />
+                                                        )}
+                                                        <span className="ml-2 text-sm">{isCobyLobbyTesting ? t('settings.downloads.testing') : t('settings.downloads.testSpeed')}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -1492,11 +1487,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                         <div className="space-y-2">
                                             <div
-                                                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                                                    javaRuntimeMode === 'bundled'
-                                                        ? 'border-white/20'
-                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
-                                                }`}
+                                                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${javaRuntimeMode === 'bundled'
+                                                    ? 'border-white/20'
+                                                    : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                    }`}
                                                 style={javaRuntimeMode === 'bundled' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                 onClick={() => handleJavaRuntimeModeChange('bundled')}
                                             >
@@ -1513,11 +1507,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
 
                                             <div
-                                                className={`rounded-xl border transition-all ${
-                                                    javaRuntimeMode === 'custom'
-                                                        ? 'border-white/20'
-                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
-                                                }`}
+                                                className={`rounded-xl border transition-all ${javaRuntimeMode === 'custom'
+                                                    ? 'border-white/20'
+                                                    : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                    }`}
                                                 style={javaRuntimeMode === 'custom' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                             >
                                                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => handleJavaRuntimeModeChange('custom')}>
@@ -1714,9 +1707,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     {/* Background Chooser */}
                                     <div>
                                         <label className="block text-sm text-white/60 mb-3">{t('settings.visualSettings.background')}</label>
-                                        
+
                                         {/* Slideshow option */}
-                                        <div 
+                                        <div
                                             className={`p-3 rounded-xl border cursor-pointer transition-colors mb-3`}
                                             style={{
                                                 backgroundColor: backgroundMode === 'slideshow' ? `${accentColor}20` : '#151515',
@@ -1725,7 +1718,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             onClick={() => handleBackgroundModeChange('slideshow')}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div 
+                                                <div
                                                     className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
                                                     style={{ borderColor: backgroundMode === 'slideshow' ? accentColor : 'rgba(255,255,255,0.3)' }}
                                                 >
@@ -1752,8 +1745,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         }}
                                                         onClick={() => handleBackgroundModeChange(bg.name)}
                                                     >
-                                                        <img 
-                                                            src={bg.url} 
+                                                        <img
+                                                            src={bg.url}
                                                             alt={bg.name}
                                                             className="w-full h-full object-cover"
                                                         />
@@ -1778,7 +1771,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <div className="space-y-6">
                                     {/* Online Mode Toggle */}
                                     <div className="space-y-3">
-                                        <div 
+                                        <div
                                             className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                             onClick={async () => {
                                                 const newValue = !onlineMode;
@@ -1796,11 +1789,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     <p className="text-xs text-white/40">{t('settings.networkSettings.onlineModeHint')}</p>
                                                 </div>
                                             </div>
-                                            <div 
+                                            <div
                                                 className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
                                                 style={{ backgroundColor: onlineMode ? accentColor : 'rgba(255,255,255,0.15)' }}
                                             >
-                                                <div 
+                                                <div
                                                     className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${onlineMode ? 'translate-x-6' : 'translate-x-1'}`}
                                                     style={{ backgroundColor: onlineMode ? accentTextColor : 'white' }}
                                                 />
@@ -1813,15 +1806,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <div>
                                             <label className="block text-sm text-white/60 mb-2">{t('settings.networkSettings.authServer')}</label>
                                             <p className="text-xs text-white/40 mb-4">{t('settings.networkSettings.authServerHint')}</p>
-                                            
+
                                             <div className="space-y-2">
                                                 {/* Default (sessions.sanasol.ws) */}
                                                 <div
-                                                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                                                        authMode === 'default' 
-                                                            ? 'border-white/20' 
-                                                            : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
-                                                    }`}
+                                                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${authMode === 'default'
+                                                        ? 'border-white/20'
+                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                        }`}
                                                     style={authMode === 'default' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                     onClick={async () => {
                                                         setAuthModeState('default');
@@ -1844,11 +1836,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                                 {/* Official (Mojang) */}
                                                 <div
-                                                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${
-                                                        authMode === 'official' 
-                                                            ? 'border-white/20' 
-                                                            : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
-                                                    }`}
+                                                    className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${authMode === 'official'
+                                                        ? 'border-white/20'
+                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                        }`}
                                                     style={authMode === 'official' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                     onClick={async () => {
                                                         setAuthModeState('official');
@@ -1871,11 +1862,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                                 {/* Custom */}
                                                 <div
-                                                    className={`rounded-xl border transition-all ${
-                                                        authMode === 'custom' 
-                                                            ? 'border-white/20' 
-                                                            : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
-                                                    }`}
+                                                    className={`rounded-xl border transition-all ${authMode === 'custom'
+                                                        ? 'border-white/20'
+                                                        : 'border-white/[0.06] hover:border-white/[0.12] bg-[#1c1c1e]'
+                                                        }`}
                                                     style={authMode === 'custom' ? { backgroundColor: `${accentColor}15`, borderColor: `${accentColor}50` } : undefined}
                                                 >
                                                     <div
@@ -1897,7 +1887,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                             {authMode === 'custom' && <Check size={12} style={{ color: accentTextColor }} strokeWidth={3} />}
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {/* Custom domain input */}
                                                     {authMode === 'custom' && (
                                                         <div className="px-4 pb-4">
@@ -2027,7 +2017,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <p className="text-xs text-white/40 mb-4">{t('settings.variablesSettings.commonPresetsHint')}</p>
                                         <div className="space-y-2">
                                             {/* Force X11 */}
-                                            <div 
+                                            <div
                                                 className={`p-3 rounded-xl border cursor-pointer transition-colors`}
                                                 style={{
                                                     backgroundColor: envForceX11 ? `${accentColor}15` : '#151515',
@@ -2041,11 +2031,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         <div className="text-[11px] text-white/40 mt-0.5">{t('settings.variablesSettings.forceX11Hint')}</div>
                                                         <code className="text-[10px] text-white/30 mt-1 block font-mono">SDL_VIDEODRIVER=x11</code>
                                                     </div>
-                                                    <div 
+                                                    <div
                                                         className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
                                                         style={{ backgroundColor: envForceX11 ? accentColor : 'rgba(255,255,255,0.15)' }}
                                                     >
-                                                        <div 
+                                                        <div
                                                             className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${envForceX11 ? 'translate-x-6' : 'translate-x-1'}`}
                                                             style={{ backgroundColor: 'white' }}
                                                         />
@@ -2054,7 +2044,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
 
                                             {/* Disable Vulkan Layers */}
-                                            <div 
+                                            <div
                                                 className={`p-3 rounded-xl border cursor-pointer transition-colors`}
                                                 style={{
                                                     backgroundColor: envDisableVkLayers ? `${accentColor}15` : '#151515',
@@ -2068,39 +2058,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                         <div className="text-[11px] text-white/40 mt-0.5">{t('settings.variablesSettings.disableVkLayersHint')}</div>
                                                         <code className="text-[10px] text-white/30 mt-1 block font-mono">VK_LOADER_LAYERS_DISABLE=all</code>
                                                     </div>
-                                                    <div 
+                                                    <div
                                                         className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
                                                         style={{ backgroundColor: envDisableVkLayers ? accentColor : 'rgba(255,255,255,0.15)' }}
                                                     >
-                                                        <div 
+                                                        <div
                                                             className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${envDisableVkLayers ? 'translate-x-6' : 'translate-x-1'}`}
-                                                            style={{ backgroundColor: 'white' }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Force AMD RADV Vulkan */}
-                                            <div 
-                                                className={`p-3 rounded-xl border cursor-pointer transition-colors`}
-                                                style={{
-                                                    backgroundColor: envForceAmdVulkan ? `${accentColor}15` : '#151515',
-                                                    borderColor: envForceAmdVulkan ? `${accentColor}50` : 'rgba(255,255,255,0.08)'
-                                                }}
-                                                onClick={() => handleEnvPresetToggle('forceAmdVulkan', !envForceAmdVulkan)}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <div className="text-white text-sm font-medium">{t('settings.variablesSettings.forceAmdVulkan')}</div>
-                                                        <div className="text-[11px] text-white/40 mt-0.5">{t('settings.variablesSettings.forceAmdVulkanHint')}</div>
-                                                        <code className="text-[10px] text-white/30 mt-1 block font-mono">VK_ICD_FILENAMES=...radeon_icd...</code>
-                                                    </div>
-                                                    <div 
-                                                        className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
-                                                        style={{ backgroundColor: envForceAmdVulkan ? accentColor : 'rgba(255,255,255,0.15)' }}
-                                                    >
-                                                        <div 
-                                                            className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${envForceAmdVulkan ? 'translate-x-6' : 'translate-x-1'}`}
                                                             style={{ backgroundColor: 'white' }}
                                                         />
                                                     </div>
@@ -2113,23 +2076,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     <div>
                                         <label className="block text-sm text-white/60 mb-2">{t('settings.variablesSettings.customEnvVars')}</label>
                                         <p className="text-xs text-white/40 mb-3">{t('settings.variablesSettings.customEnvVarsHint')}</p>
-                                        <div className="flex gap-2">
+                                        <div className={`p-1 rounded-xl border transition-all flex items-center bg-[#151515] ${gameEnvVarsFocus
+                                            ? 'border-white/20'
+                                            : 'border-white/[0.06] hover:border-white/[0.12]'
+                                            }`}
+                                            style={gameEnvVarsFocus ? { borderColor: `${accentColor}50`, backgroundColor: `${accentColor}08` } : undefined}
+                                        >
                                             <input
                                                 type="text"
                                                 value={gameEnvVars}
-                                                onChange={(e) => {
-                                                    setGameEnvVars(e.target.value);
-                                                    if (gameEnvVarsError) setGameEnvVarsError('');
+                                                onChange={(e) => setGameEnvVars(e.target.value)}
+                                                onBlur={() => {
+                                                    setGameEnvVarsFocus(false);
+                                                    handleSaveGameEnvVars();
                                                 }}
-                                                placeholder={t('settings.variablesSettings.customEnvVarsPlaceholder')}
-                                                className={`flex-1 h-12 px-4 rounded-xl ${gc} text-white text-sm placeholder-white/35 focus:outline-none font-mono`}
+                                                onFocus={() => setGameEnvVarsFocus(true)}
+                                                placeholder="VAR1=value VAR2=value"
+                                                className="w-full bg-transparent border-0 text-sm text-white px-3 py-2.5 outline-none placeholder:text-white/20 font-mono"
+                                                spellCheck={false}
                                             />
-                                            <button
-                                                onClick={handleSaveGameEnvVars}
-                                                className={`h-12 px-4 rounded-xl ${gc} flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors`}
-                                            >
-                                                <Check size={18} />
-                                            </button>
                                         </div>
                                         {gameEnvVarsError && (
                                             <p className="mt-2 text-xs text-yellow-300">{gameEnvVarsError}</p>
@@ -2151,7 +2116,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             <p className="text-sm text-yellow-400">{t('settings.dataSettings.gameRunningWarning')}</p>
                                         </div>
                                     )}
-                                    
+
                                     {/* Instance Folder */}
                                     <div>
                                         <label className="block text-sm text-white/60 mb-2">{t('settings.dataSettings.instanceFolder')}</label>
@@ -2291,88 +2256,88 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </div>
 
                                         <div className="pt-1">
-                                        {isLoadingContributors ? (
-                                            <div className="flex justify-center py-4">
-                                                <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: `${accentColor}30`, borderTopColor: accentColor }} />
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                {/* Maintainer & Auth Server Creator */}
-                                                <div className="flex flex-wrap gap-3 xl:gap-4">
-                                                    {maintainer && (
+                                            {isLoadingContributors ? (
+                                                <div className="flex justify-center py-4">
+                                                    <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: `${accentColor}30`, borderTopColor: accentColor }} />
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    {/* Maintainer & Auth Server Creator */}
+                                                    <div className="flex flex-wrap gap-3 xl:gap-4">
+                                                        {maintainer && (
+                                                            <button
+                                                                onClick={() => BrowserOpenURL(maintainer.html_url)}
+                                                                className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
+                                                            >
+                                                                <img
+                                                                    src={maintainer.avatar_url}
+                                                                    alt={maintainer.login}
+                                                                    className="w-12 h-12 rounded-full"
+                                                                />
+                                                                <div className="text-left">
+                                                                    <span className="text-white font-medium text-sm">{maintainer.login}</span>
+                                                                    <p className="text-xs text-white/40">{t('settings.aboutSettings.maintainerRole')}</p>
+                                                                </div>
+                                                            </button>
+                                                        )}
                                                         <button
-                                                            onClick={() => BrowserOpenURL(maintainer.html_url)}
+                                                            onClick={() => BrowserOpenURL('https://github.com/sanasol')}
                                                             className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
                                                         >
-                                                            <img 
-                                                                src={maintainer.avatar_url} 
-                                                                alt={maintainer.login}
+                                                            <img
+                                                                src="https://avatars.githubusercontent.com/u/1709666?v=4"
+                                                                alt="sanasol"
                                                                 className="w-12 h-12 rounded-full"
                                                             />
                                                             <div className="text-left">
-                                                                <span className="text-white font-medium text-sm">{maintainer.login}</span>
-                                                                <p className="text-xs text-white/40">{t('settings.aboutSettings.maintainerRole')}</p>
+                                                                <span className="text-white font-medium text-sm">sanasol</span>
+                                                                <p className="text-xs text-white/40">{t('settings.aboutSettings.authRole')}</p>
                                                             </div>
                                                         </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => BrowserOpenURL('https://github.com/sanasol')}
-                                                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
-                                                    >
-                                                        <img 
-                                                            src="https://avatars.githubusercontent.com/u/1709666?v=4" 
-                                                            alt="sanasol"
-                                                            className="w-12 h-12 rounded-full"
-                                                        />
-                                                        <div className="text-left">
-                                                            <span className="text-white font-medium text-sm">sanasol</span>
-                                                            <p className="text-xs text-white/40">{t('settings.aboutSettings.authRole')}</p>
-                                                        </div>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => BrowserOpenURL('https://github.com/freakdaniel')}
-                                                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
-                                                    >
-                                                        <img 
-                                                            src="https://avatars.githubusercontent.com/u/212660794?v=4" 
-                                                            alt="freakdaniel"
-                                                            className="w-12 h-12 rounded-full"
-                                                        />
-                                                        <div className="text-left">
-                                                            <span className="text-white font-medium text-sm">Daniel Freak</span>
-                                                            <p className="text-xs text-white/40">CoDev, Creator of ton features</p>
-                                                        </div>
-                                                    </button>
-                                                </div>
-
-                                                {/* Description */}
-                                                <p className="text-xs text-white/40 text-center xl:text-left">{t('settings.aboutSettings.contributorsDescription')}</p>
-
-                                                {/* Other Contributors */}
-                                                {otherContributors.length > 0 && (
-                                                    <div className="flex flex-wrap gap-3 sm:gap-4 justify-center xl:justify-start">
-                                                        {otherContributors.map((contributor) => (
-                                                            <button
-                                                                key={contributor.login}
-                                                                onClick={() => BrowserOpenURL(contributor.html_url)}
-                                                                className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors w-[88px]"
-                                                                title={`${contributor.login} - ${contributor.contributions} contributions`}
-                                                            >
-                                                                <img 
-                                                                    src={contributor.avatar_url} 
-                                                                    alt={contributor.login}
-                                                                    className="w-12 h-12 rounded-full"
-                                                                />
-                                                                <span className="text-xs text-white/60 max-w-full truncate text-center">
-                                                                    {truncateName(contributor.login, 10)}
-                                                                </span>
-                                                            </button>
-                                                        ))}
+                                                        <button
+                                                            onClick={() => BrowserOpenURL('https://github.com/freakdaniel')}
+                                                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
+                                                        >
+                                                            <img
+                                                                src="https://avatars.githubusercontent.com/u/212660794?v=4"
+                                                                alt="freakdaniel"
+                                                                className="w-12 h-12 rounded-full"
+                                                            />
+                                                            <div className="text-left">
+                                                                <span className="text-white font-medium text-sm">Daniel Freak</span>
+                                                                <p className="text-xs text-white/40">CoDev, Creator of ton features</p>
+                                                            </div>
+                                                        </button>
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
+
+                                                    {/* Description */}
+                                                    <p className="text-xs text-white/40 text-center xl:text-left">{t('settings.aboutSettings.contributorsDescription')}</p>
+
+                                                    {/* Other Contributors */}
+                                                    {otherContributors.length > 0 && (
+                                                        <div className="flex flex-wrap gap-3 sm:gap-4 justify-center xl:justify-start">
+                                                            {otherContributors.map((contributor) => (
+                                                                <button
+                                                                    key={contributor.login}
+                                                                    onClick={() => BrowserOpenURL(contributor.html_url)}
+                                                                    className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors w-[88px]"
+                                                                    title={`${contributor.login} - ${contributor.contributions} contributions`}
+                                                                >
+                                                                    <img
+                                                                        src={contributor.avatar_url}
+                                                                        alt={contributor.login}
+                                                                        className="w-12 h-12 rounded-full"
+                                                                    />
+                                                                    <span className="text-xs text-white/60 max-w-full truncate text-center">
+                                                                        {truncateName(contributor.login, 10)}
+                                                                    </span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Disclaimer */}
@@ -2424,14 +2389,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Data Moving Overlay */}
             <AnimatePresence>
                 {isMovingData && (
-                    <motion.div 
+                    <motion.div
                         className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0a0a0a]/95"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                     >
-                        <motion.div 
+                        <motion.div
                             className="max-w-lg w-full mx-8 text-center"
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2447,10 +2412,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             >
                                 <h2 className="text-2xl font-bold text-white mb-2">{t('settings.dataSettings.movingData')}</h2>
                                 <p className="text-white/60 mb-8">{t('settings.dataSettings.movingDataHint', { file: moveCurrentFile || '...' })}</p>
-                                
+
                                 {/* Progress bar */}
                                 <div className="relative h-3 bg-white/10 rounded-full overflow-hidden mb-4">
-                                    <motion.div 
+                                    <motion.div
                                         className="absolute inset-y-0 left-0 rounded-full"
                                         initial={{ width: 0 }}
                                         animate={{ width: `${moveProgress}%` }}
@@ -2458,7 +2423,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         style={{ backgroundColor: accentColor }}
                                     />
                                     {moveProgress === 0 && (
-                                        <motion.div 
+                                        <motion.div
                                             className="absolute inset-y-0 w-1/3 rounded-full"
                                             style={{
                                                 background: `linear-gradient(90deg, transparent, ${accentColor}80, transparent)`
@@ -2468,7 +2433,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         />
                                     )}
                                 </div>
-                                
+
                                 <div className="flex justify-center text-sm">
                                     <span className="text-white/80">{moveProgress > 0 ? `${moveProgress}%` : ''}</span>
                                 </div>
@@ -2508,7 +2473,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                 </div>
             )}
-            
+
             {/* Delete Instance Confirmation Modal */}
             {instanceToDelete && (
                 <div className={`fixed inset-0 z-[250] flex items-center justify-center bg-[#0a0a0a]/90`}>
@@ -2595,11 +2560,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                             onClick={() => handleExportInstance(showInstanceExportModal)}
                             disabled={exportingInstance !== null || !instanceExportPath}
-                            className={`w-full py-3 rounded-xl font-bold text-lg transition-all ${
-                                exportingInstance !== null || !instanceExportPath
-                                    ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                                    : 'hover:opacity-90'
-                            }`}
+                            className={`w-full py-3 rounded-xl font-bold text-lg transition-all ${exportingInstance !== null || !instanceExportPath
+                                ? 'bg-white/10 text-white/40 cursor-not-allowed'
+                                : 'hover:opacity-90'
+                                }`}
                             style={exportingInstance === null && instanceExportPath ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
                         >
                             {exportingInstance !== null ? (
@@ -2631,36 +2595,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <p className="text-white/50 text-xs mb-4">
                             {t('settings.importInstance.selectInstance')}
                         </p>
-                        
+
                         <div className="space-y-3 mb-6">
                             <div>
                                 <label className="text-xs text-white/60 mb-1 block">{t('common.branch')}</label>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setImportTargetBranch('release')}
-                                        className={`flex-1 px-3 py-2 text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${
-                                            importTargetBranch === 'release' 
-                                                ? 'bg-white/20 text-white' 
-                                                : 'bg-white/5 text-white/50 hover:text-white/70'
-                                        }`}
+                                        className={`flex-1 px-3 py-2 text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${importTargetBranch === 'release'
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-white/5 text-white/50 hover:text-white/70'
+                                            }`}
                                     >
                                         <Box size={14} />
                                         {t('common.release')}
                                     </button>
                                     <button
                                         onClick={() => setImportTargetBranch('pre-release')}
-                                        className={`flex-1 px-3 py-2 text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${
-                                            importTargetBranch === 'pre-release' 
-                                                ? 'bg-white/20 text-white' 
-                                                : 'bg-white/5 text-white/50 hover:text-white/70'
-                                        }`}
+                                        className={`flex-1 px-3 py-2 text-sm rounded-lg transition-all flex items-center justify-center gap-2 ${importTargetBranch === 'pre-release'
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-white/5 text-white/50 hover:text-white/70'
+                                            }`}
                                     >
                                         <FlaskConical size={14} />
                                         {t('common.preRelease')}
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label className="text-xs text-white/60 mb-1 block">{t('settings.instanceSettings.version')}</label>
                                 <select
@@ -2678,7 +2640,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowImportModal(null)}
@@ -2722,7 +2684,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                         <div className="flex-1 overflow-y-auto p-4">
                             {/* Slideshow option */}
-                            <div 
+                            <div
                                 className="p-3 rounded-xl border cursor-pointer transition-colors mb-4"
                                 style={{
                                     backgroundColor: backgroundMode === 'slideshow' ? `${accentColor}20` : '#151515',
@@ -2731,7 +2693,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 onClick={() => handleBackgroundModeChange('slideshow')}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div 
+                                    <div
                                         className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
                                         style={{ borderColor: backgroundMode === 'slideshow' ? accentColor : 'rgba(255,255,255,0.3)' }}
                                     >
@@ -2757,8 +2719,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }}
                                         onClick={() => handleBackgroundModeChange(bg.name)}
                                     >
-                                        <img 
-                                            src={bg.url} 
+                                        <img
+                                            src={bg.url}
                                             alt={bg.name}
                                             className="w-full h-full object-cover"
                                         />

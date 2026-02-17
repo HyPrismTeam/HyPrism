@@ -134,10 +134,12 @@ public class GpuDetectionService
             if (!string.IsNullOrEmpty(output))
             {
                 // Match lines with VGA compatible controller or 3D controller
-                var gpuLines = Regex.Matches(output, @"(?:VGA compatible controller|3D controller|Display controller):\s*(.+)", RegexOptions.IgnoreCase);
+                // Format: "00:02.0 VGA compatible controller: Intel Corporation..."
+                var gpuLines = Regex.Matches(output, @"^([0-9a-fA-F:\.]+)\s+(?:VGA compatible controller|3D controller|Display controller):\s*(.+)", RegexOptions.IgnoreCase | RegexOptions.Multiline);
                 foreach (Match match in gpuLines)
                 {
-                    var name = match.Groups[1].Value.Trim();
+                    var pciId = match.Groups[1].Value.Trim();
+                    var name = match.Groups[2].Value.Trim();
                     // Clean up common prefixes like "NVIDIA Corporation" etc.
                     name = Regex.Replace(name, @"\s*\(rev [0-9a-f]+\)$", "", RegexOptions.IgnoreCase).Trim();
                     
@@ -147,7 +149,8 @@ public class GpuDetectionService
                         {
                             Name = name,
                             Vendor = ExtractVendor(name),
-                            Type = ClassifyGpu(name)
+                            Type = ClassifyGpu(name),
+                            PciId = pciId
                         });
                     }
                 }
@@ -287,6 +290,9 @@ public class GpuAdapterInfo
     
     /// <summary>Vendor name (e.g., "NVIDIA", "AMD", "Intel")</summary>
     public string Vendor { get; set; } = "";
+    
+    /// <summary>PCI ID (Linux only, e.g. "0000:03:00.0")</summary>
+    public string PciId { get; set; } = "";
     
     /// <summary>GPU type: "dedicated" or "integrated"</summary>
     public string Type { get; set; } = "dedicated";
