@@ -162,7 +162,9 @@
       "closeLauncher": "Fermer après le lancement",
       "closeLauncherHint": "Fermer le lanceur quand le jeu démarre",
       "showAlphaMods": "Afficher les Mods Alpha",
-      "showAlphaModsHint": "Afficher les mods avec le type de version alpha dans le gestionnaire de mods"
+      "showAlphaModsHint": "Afficher les mods avec le type de version alpha dans le gestionnaire de mods",
+      "dualAuth": "DualAuth (Expérimental)",
+      "dualAuthHint": "Utilise un agent Java pour l'authentification serveur au lieu du patch statique du JAR. Peut provoquer des plantages ou des problèmes de connexion."
     },
     "javaSettings": {
       "javaRuntime": "Java Runtime",

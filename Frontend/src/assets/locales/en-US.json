@@ -168,7 +168,9 @@
       "mirrorUnavailable": "Unavailable",
       "mirrorDescription": "Community mirror is used as alternative source for game files when official servers are unavailable.",
       "showAlphaMods": "Show Alpha Mods",
-      "showAlphaModsHint": "Show mods with alpha release type in the mod manager"
+      "showAlphaModsHint": "Show mods with alpha release type in the mod manager",
+      "dualAuth": "DualAuth (Experimental)",
+      "dualAuthHint": "Uses a runtime Java Agent for server authentication instead of static JAR patching. May cause crashes or connection issues."
     },
     "downloads": {
       "title": "Downloads",

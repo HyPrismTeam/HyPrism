@@ -135,6 +135,7 @@ export interface SettingsSnapshot {
   dataDirectory: string;
   instanceDirectory: string;
   gpuPreference?: string;
+  useDualAuth?: boolean;
   launchOnStartup?: boolean;
   minimizeToTray?: boolean;
   animations?: boolean;

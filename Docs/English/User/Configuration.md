@@ -204,8 +204,9 @@ When one or more mods are selected in **Installed Mods**, bulk actions (like **E
 
 For non-official profiles using custom auth domains, HyPrism launches in **online authenticated mode**.
 
-- Only the client binary is patched for custom auth domains.
-- Server auth handling uses the DualAuth runtime agent (no `Server/HytaleServer.jar` rewrite).
+- **Legacy JAR patching (default):** Both the client binary and `Server/HytaleServer.jar` are statically patched to replace `hytale.com` with your custom auth domain. This is the stable, recommended approach.
+- **DualAuth (experimental):** Enabled via the `DualAuth (Experimental)` toggle in General settings. Only the client binary is patched; server authentication is handled by a runtime Java Agent downloaded from GitHub. May cause crashes — use at your own risk.
+- Switching between modes is safe: the launcher automatically manages `.original` backup files when toggling DualAuth on/off.
 - The auth domain is used as entered (for example `auth.example.com`); HyPrism no longer forces `sessions.` prefix.
 - For compatibility, if direct host fails, HyPrism also tries `sessions.<your-domain>` automatically.
 - Launch identity prefers auth-server profile name fields to reduce owner-name/token mismatch issues.

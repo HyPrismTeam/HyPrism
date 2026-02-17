@@ -347,6 +347,18 @@ public class SettingsService : ISettingsService
     }
 
     /// <inheritdoc/>
+    public bool GetUseDualAuth() => _configService.Configuration.UseDualAuth;
+
+    /// <inheritdoc/>
+    public bool SetUseDualAuth(bool useDualAuth)
+    {
+        _configService.Configuration.UseDualAuth = useDualAuth;
+        _configService.SaveConfig();
+        Logger.Info("Config", $"DualAuth mode set to: {useDualAuth}");
+        return true;
+    }
+
+    /// <inheritdoc/>
     public string GetGameEnvironmentVariables() => _configService.Configuration.GameEnvironmentVariables;
     
     /// <inheritdoc/>
@@ -359,4 +371,15 @@ public class SettingsService : ISettingsService
     }
 
     public string GetInstanceDirectory() => _configService.Configuration.InstanceDirectory;
+
+    /// <inheritdoc/>
+    public bool GetShowAlphaMods() => _configService.Configuration.ShowAlphaMods;
+
+    /// <inheritdoc/>
+    public bool SetShowAlphaMods(bool show)
+    {
+        _configService.Configuration.ShowAlphaMods = show;
+        _configService.SaveConfig();
+        return true;
+    }
 }

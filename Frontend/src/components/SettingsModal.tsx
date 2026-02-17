@@ -27,6 +27,8 @@ export interface InstalledVersionInfo {
 // Settings-backed helpers
 async function GetCloseAfterLaunch(): Promise<boolean> { return (await ipc.settings.get()).closeAfterLaunch ?? false; }
 async function SetCloseAfterLaunch(v: boolean): Promise<void> { await ipc.settings.update({ closeAfterLaunch: v }); }
+async function GetShowAlphaMods(): Promise<boolean> { return (await ipc.settings.get()).showAlphaMods ?? false; }
+async function SetShowAlphaMods(v: boolean): Promise<void> { await ipc.settings.update({ showAlphaMods: v }); }
 async function GetBackgroundMode(): Promise<string> { return (await ipc.settings.get()).backgroundMode ?? 'image'; }
 async function SetBackgroundMode(v: string): Promise<void> { await ipc.settings.update({ backgroundMode: v }); }
 async function GetCustomInstanceDir(): Promise<string> { return (await ipc.settings.get()).instanceDirectory ?? ''; }
@@ -177,6 +179,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [isOfficialTesting, setIsOfficialTesting] = useState(false);
     const [hasOfficialAccount, setHasOfficialAccount] = useState(false);
     const [closeAfterLaunch, setCloseAfterLaunch] = useState(false);
+    const [showAlphaMods, setShowAlphaMods] = useState(false);
     const [javaArguments, setJavaArguments] = useState('');
     const [javaRamMb, setJavaRamMb] = useState(4096);
     const [javaInitialRamMb, setJavaInitialRamMb] = useState(1024);
@@ -254,6 +257,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [authDomain, setAuthDomain] = useState('sessions.sanasol.ws');
     const [authMode, setAuthModeState] = useState<'default' | 'official' | 'custom'>('default');
     const [customAuthDomain, setCustomAuthDomain] = useState('');
+    const [useDualAuth, setUseDualAuth] = useState(false);
     const [_localAvatar, setLocalAvatar] = useState<string | null>(null);
 
     const parseJavaHeapMb = (args: string, flag: 'xmx' | 'xms'): number | null => {
@@ -347,6 +351,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 const closeAfter = await GetCloseAfterLaunch();
                 setCloseAfterLaunch(closeAfter);
 
+                const alphaMods = await GetShowAlphaMods();
+                setShowAlphaMods(alphaMods);
+
                 const folderPath = await GetLauncherFolderPath();
                 setLauncherFolderPath(folderPath);
 
@@ -357,6 +364,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 const settingsSnapshot = await ipc.settings.get();
                 const online = settingsSnapshot.onlineMode ?? true;
                 setOnlineMode(online);
+
+                // Load DualAuth mode
+                setUseDualAuth(settingsSnapshot.useDualAuth ?? false);
 
                 const loadedJavaArgs = settingsSnapshot.javaArguments;
                 const normalizedJavaArgs = typeof loadedJavaArgs === 'string' ? loadedJavaArgs : '';
@@ -726,6 +736,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         const newValue = !closeAfterLaunch;
         setCloseAfterLaunch(newValue);
         await SetCloseAfterLaunch(newValue);
+    };
+
+    const handleShowAlphaModsChange = async () => {
+        const newValue = !showAlphaMods;
+        setShowAlphaMods(newValue);
+        await SetShowAlphaMods(newValue);
     };
 
     const handleSaveJavaArguments = async () => {
@@ -1280,17 +1296,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
                                             onClick={handleCloseAfterLaunchChange}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center flex-shrink-0">
                                                     <Power size={16} className="text-white/70" />
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <span className="text-white text-sm font-medium">{t('settings.generalSettings.closeLauncher')}</span>
                                                     <p className="text-xs text-white/40">{t('settings.generalSettings.closeLauncherHint')}</p>
                                                 </div>
                                             </div>
                                             <div
-                                                className="w-12 h-7 rounded-full flex items-center transition-all duration-200"
+                                                className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
                                                 style={{ backgroundColor: closeAfterLaunch ? accentColor : 'rgba(255,255,255,0.15)' }}
                                             >
                                                 <div
@@ -1299,6 +1315,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Show Alpha Mods */}
+                                        <div
+                                            className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
+                                            onClick={handleShowAlphaModsChange}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                                                    <FlaskConical size={16} className="text-white/70" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-white text-sm font-medium">{t('settings.generalSettings.showAlphaMods')}</span>
+                                                    <p className="text-xs text-white/40">{t('settings.generalSettings.showAlphaModsHint')}</p>
+                                                </div>
+                                            </div>
+                                            <div
+                                                className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
+                                                style={{ backgroundColor: showAlphaMods ? accentColor : 'rgba(255,255,255,0.15)' }}
+                                            >
+                                                <div
+                                                    className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${showAlphaMods ? 'translate-x-6' : 'translate-x-1'}`}
+                                                    style={{ backgroundColor: showAlphaMods ? accentTextColor : 'white' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* DualAuth (Experimental) — only for non-official custom auth */}
+                                        {onlineMode && authMode !== 'official' && (
+                                            <div
+                                                className={`flex items-center justify-between p-4 rounded-2xl ${gc} cursor-pointer hover:border-white/[0.12] transition-all`}
+                                                onClick={async () => {
+                                                    const newValue = !useDualAuth;
+                                                    setUseDualAuth(newValue);
+                                                    await ipc.settings.update({ useDualAuth: newValue });
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                                                        <Server size={16} className="text-white/70" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-white text-sm font-medium">{t('settings.generalSettings.dualAuth')}</span>
+                                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase"
+                                                                style={{ backgroundColor: '#ef444420', color: '#ef4444', border: '1px solid #ef444430' }}>
+                                                                BETA
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-white/40">{t('settings.generalSettings.dualAuthHint')}</p>
+                                                    </div>
+                                                </div>
+                                                <div
+                                                    className="w-12 h-7 rounded-full flex items-center transition-all duration-200 flex-shrink-0"
+                                                    style={{ backgroundColor: useDualAuth ? accentColor : 'rgba(255,255,255,0.15)' }}
+                                                >
+                                                    <div
+                                                        className={`w-5 h-5 rounded-full shadow-md transform transition-all duration-200 ${useDualAuth ? 'translate-x-6' : 'translate-x-1'}`}
+                                                        style={{ backgroundColor: useDualAuth ? accentTextColor : 'white' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
 
                                     </div>
                                 </div>
@@ -2026,6 +2104,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
                                         </div>
                                     )}
+
+
                                 </div>
                             )}
 

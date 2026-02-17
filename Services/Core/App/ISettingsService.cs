@@ -258,6 +258,19 @@ public interface ISettingsService
     bool SetGpuPreference(string preference);
     
     /// <summary>
+    /// Gets whether the experimental DualAuth Java Agent is enabled.
+    /// When false (default), uses stable legacy JAR patching.
+    /// </summary>
+    bool GetUseDualAuth();
+
+    /// <summary>
+    /// Sets whether the experimental DualAuth Java Agent is enabled.
+    /// </summary>
+    /// <param name="useDualAuth">Whether to enable DualAuth.</param>
+    /// <returns><c>true</c> if the setting was successfully saved.</returns>
+    bool SetUseDualAuth(bool useDualAuth);
+
+    /// <summary>
     /// Gets the custom environment variables for game launch.
     /// </summary>
     /// <returns>Space-separated KEY=VALUE pairs.</returns>
@@ -275,5 +288,14 @@ public interface ISettingsService
     /// </summary>
     /// <returns>The absolute path to the instances directory.</returns>
     string GetInstanceDirectory();
-    
+
+    /// <summary>
+    /// Gets whether alpha release type mods should be shown in the mod manager.
+    /// </summary>
+    bool GetShowAlphaMods();
+
+    /// <summary>
+    /// Sets whether alpha release type mods should be shown in the mod manager.
+    /// </summary>
+    bool SetShowAlphaMods(bool show);
 }

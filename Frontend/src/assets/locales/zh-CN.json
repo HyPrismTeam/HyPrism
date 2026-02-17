@@ -162,7 +162,9 @@
       "closeLauncher": "启动后关闭",
       "closeLauncherHint": "游戏启动时自动关闭启动器",
       "showAlphaMods": "显示 Alpha 模组",
-      "showAlphaModsHint": "在模组管理器中显示 Alpha 发布类型的模组"
+      "showAlphaModsHint": "在模组管理器中显示 Alpha 发布类型的模组",
+      "dualAuth": "DualAuth（实验性）",
+      "dualAuthHint": "使用运行时 Java 代理进行服务器身份验证，而不是静态 JAR 补丁。可能导致崩溃或连接问题。"
     },
     "javaSettings": {
       "javaRuntime": "Java 运行时",

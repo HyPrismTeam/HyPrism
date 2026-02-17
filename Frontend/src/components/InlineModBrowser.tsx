@@ -94,6 +94,9 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
   const [error, setError] = useState<string | null>(null);
   const browseSelectionAnchorRef = useRef<number | null>(null);
 
+  // --- Settings ---
+  const [showAlphaMods, setShowAlphaMods] = useState(false);
+
   // --- Mod files cache ---
   const [modFilesCache, setModFilesCache] = useState<Map<string, ModFileInfo[]>>(new Map());
   const [selectedVersions, setSelectedVersions] = useState<Map<string, string>>(new Map());
@@ -135,6 +138,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
 
   useEffect(() => {
     ipc.mods.categories().then(cats => setCategories(cats || [])).catch(() => {});
+    ipc.settings.get().then(s => setShowAlphaMods(s.showAlphaMods ?? false)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -210,6 +214,10 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
     try {
       const result = await ipc.mods.files({ modId, pageSize: 50 });
       let files = result?.files ?? [];
+      // Filter out alpha releases (releaseType === 3) unless the setting is enabled
+      if (!showAlphaMods) {
+        files = files.filter(f => f.releaseType !== 3);
+      }
       files.sort((a, b) => new Date(b.fileDate).getTime() - new Date(a.fileDate).getTime());
       setModFilesCache(prev => new Map(prev).set(modId, files));
       if (files.length > 0 && !selectedVersions.has(modId)) {

@@ -45,7 +45,7 @@ namespace HyPrism.Services.Core.Ipc;
 /// @type Profile { id: string; name: string; uuid?: string; isOfficial?: boolean; avatar?: string; folderName?: string; }
 /// @type HytaleAuthStatus { loggedIn: boolean; username?: string; uuid?: string; error?: string; errorType?: string; }
 /// @type ProfileSnapshot { nick: string; uuid: string; avatarPath?: string; }
-/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; javaArguments?: string; useCustomJava?: boolean; customJavaPath?: string; systemMemoryMb?: number; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
+/// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; closeAfterLaunch: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; javaArguments?: string; useCustomJava?: boolean; customJavaPath?: string; systemMemoryMb?: number; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; useDualAuth?: boolean; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
 /// @type MirrorSpeedTestResult { mirrorId: string; mirrorUrl: string; mirrorName: string; pingMs: number; speedMBps: number; isAvailable: boolean; testedAt: string; }
 /// @type ModScreenshot { id: number; title: string; thumbnailUrl: string; url: string; }
 /// @type ModInfo { id: string; name: string; slug: string; summary: string; author: string; downloadCount: number; iconUrl: string; thumbnailUrl: string; categories: string[]; dateUpdated: string; latestFileId: string; screenshots: ModScreenshot[]; }
@@ -1437,6 +1437,8 @@ public class IpcService
                 instanceDirectory = settings.GetInstanceDirectory(),
                 gpuPreference = settings.GetGpuPreference(),
                 gameEnvironmentVariables = settings.GetGameEnvironmentVariables(),
+                useDualAuth = settings.GetUseDualAuth(),
+                showAlphaMods = settings.GetShowAlphaMods(),
                 launcherVersion = UpdateService.GetCurrentVersion()
             });
         });
@@ -1541,7 +1543,9 @@ public class IpcService
             case "customJavaPath": s.SetCustomJavaPath(val.GetString() ?? ""); break;
             case "gpuPreference": s.SetGpuPreference(val.GetString() ?? "dedicated"); break;
             case "gameEnvironmentVariables": s.SetGameEnvironmentVariables(val.GetString() ?? ""); break;
+            case "useDualAuth": s.SetUseDualAuth(val.GetBoolean()); break;
             case "hasCompletedOnboarding": s.SetHasCompletedOnboarding(val.GetBoolean()); break;
+            case "showAlphaMods": s.SetShowAlphaMods(val.GetBoolean()); break;
             default: Logger.Warning("IPC", $"Unknown setting key: {key}"); break;
         }
     }
@@ -1862,22 +1866,8 @@ public class IpcService
                     return;
                 }
                 
-                string? incompatibleReason = null;
-                var success = await modService.InstallModFileToInstanceAsync(modId, fileId, instancePath,
-                    (status, detail) =>
-                    {
-                        if (status == "incompatible")
-                            incompatibleReason = detail;
-                    });
-
-                if (!string.IsNullOrEmpty(incompatibleReason))
-                {
-                    Reply("hyprism:mods:install:reply", new { success = false, error = incompatibleReason });
-                }
-                else
-                {
-                    Reply("hyprism:mods:install:reply", success);
-                }
+                var success = await modService.InstallModFileToInstanceAsync(modId, fileId, instancePath);
+                Reply("hyprism:mods:install:reply", success);
             }
             catch (Exception ex)
             {

@@ -170,8 +170,6 @@ public class GameLauncher : IGameLauncher
 
         InvalidateAotCacheIfNeeded(versionPath);
 
-        QuarantineIncompatibleServerMods(versionPath, userDataDir);
-
         RestoreProfileSkinData(sessionUuid, userDataDir);
 
         LogLaunchInfo(executable, javaPath, versionPath, userDataDir, sessionUuid, launchPlayerName);
@@ -315,6 +313,8 @@ public class GameLauncher : IGameLauncher
         var effectiveAuthDomain = GetEffectiveCustomAuthDomain(logFallback: true);
         if (string.IsNullOrWhiteSpace(effectiveAuthDomain)) return;
 
+        bool useDualAuth = _config.UseDualAuth;
+
         _progressService.ReportDownloadProgress("patching", 0, "launch.detail.patching_init", null, 0, 0);
         try
         {
@@ -325,68 +325,127 @@ public class GameLauncher : IGameLauncher
             }
 
             Logger.Info("Game", $"Patching binary: hytale.com -> {baseDomain}");
+            Logger.Info("Game", $"Server patching mode: {(useDualAuth ? "DualAuth (experimental)" : "Legacy JAR patching")}");
             _progressService.ReportDownloadProgress("patching", 10, "launch.detail.patching_client", null, 0, 0);
 
             var patcher = new ClientPatcher(baseDomain);
 
-            // Patch only client binary.
-            // Server authentication is handled by DualAuth agent at runtime.
-            var patchResult = patcher.EnsureClientPatched(versionPath, (msg, progress) =>
+            if (useDualAuth)
             {
-                Logger.Info("Patcher", progress.HasValue ? $"{msg} ({progress}%)" : msg);
-                if (progress.HasValue)
+                // ── DualAuth mode (experimental): patch client only, use Java Agent for server ──
+
+                // If server JAR was previously patched by legacy mode, restore it first
+                // so DualAuth agent works with the original (unmodified) JAR.
+                if (ClientPatcher.IsServerJarPatched(versionPath))
                 {
-                    int mapped = 10 + (int)(progress.Value * 0.5);
-                    _progressService.ReportDownloadProgress("patching", mapped, msg, null, 0, 0);
+                    Logger.Info("Game", "Restoring server JAR from legacy patch before applying DualAuth");
+                    ClientPatcher.RestoreServerJarFromBackup(versionPath, (msg, progress) =>
+                    {
+                        Logger.Info("Patcher", progress.HasValue ? $"{msg} ({progress}%)" : msg);
+                    });
                 }
-            });
 
-            // DualAuth agent handles server-side auth flow.
-            Logger.Info("Game", $"Setting up DualAuth agent for auth domain: {baseDomain}");
-            _progressService.ReportDownloadProgress("patching", 65, "launch.detail.dualauth_setup", null, 0, 0);
-
-            try
-            {
-                var dualAuthResult = await DualAuthService.EnsureAgentAvailableAsync(_appDir, (msg, progress) =>
+                var patchResult = patcher.EnsureClientPatched(versionPath, (msg, progress) =>
                 {
-                    Logger.Info("DualAuth", progress.HasValue ? $"{msg} ({progress}%)" : msg);
+                    Logger.Info("Patcher", progress.HasValue ? $"{msg} ({progress}%)" : msg);
                     if (progress.HasValue)
                     {
-                        int mapped = 65 + (int)(progress.Value * 0.25);
+                        int mapped = 10 + (int)(progress.Value * 0.5);
                         _progressService.ReportDownloadProgress("patching", mapped, msg, null, 0, 0);
                     }
                 });
 
-                if (dualAuthResult.Success)
+                // DualAuth agent handles server-side auth flow at runtime.
+                Logger.Info("Game", $"Setting up DualAuth agent for auth domain: {baseDomain}");
+                _progressService.ReportDownloadProgress("patching", 65, "launch.detail.dualauth_setup", null, 0, 0);
+
+                try
                 {
-                    _dualAuthAgentPath = dualAuthResult.AgentPath;
-                    Logger.Success("Game", $"DualAuth agent ready: {_dualAuthAgentPath}");
+                    var dualAuthResult = await DualAuthService.EnsureAgentAvailableAsync(_appDir, (msg, progress) =>
+                    {
+                        Logger.Info("DualAuth", progress.HasValue ? $"{msg} ({progress}%)" : msg);
+                        if (progress.HasValue)
+                        {
+                            int mapped = 65 + (int)(progress.Value * 0.25);
+                            _progressService.ReportDownloadProgress("patching", mapped, msg, null, 0, 0);
+                        }
+                    });
+
+                    if (dualAuthResult.Success)
+                    {
+                        _dualAuthAgentPath = dualAuthResult.AgentPath;
+                        Logger.Success("Game", $"DualAuth agent ready: {_dualAuthAgentPath}");
+                    }
+                    else
+                    {
+                        Logger.Warning("Game", $"DualAuth agent setup failed: {dualAuthResult.Error}");
+                        Logger.Warning("Game", "Server authentication may not work correctly without DualAuth");
+                    }
+                }
+                catch (Exception dualAuthEx)
+                {
+                    Logger.Warning("Game", $"Error setting up DualAuth: {dualAuthEx.Message}");
+                }
+
+                if (patchResult.Success && patchResult.PatchCount > 0 && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    try
+                    {
+                        _progressService.ReportDownloadProgress("patching", 95, "launch.detail.resigning", null, 0, 0);
+                        Logger.Info("Game", "Re-signing patched binary...");
+                        string appBundle = Path.Combine(versionPath, "Client", "Hytale.app");
+                        bool signed = ClientPatcher.SignMacOSBinary(appBundle);
+                        if (signed) Logger.Success("Game", "Binary re-signed successfully");
+                        else Logger.Warning("Game", "Binary signing failed - game may not launch");
+                    }
+                    catch (Exception signEx)
+                    {
+                        Logger.Warning("Game", $"Error re-signing binary: {signEx.Message}");
+                    }
+                }
+            }
+            else
+            {
+                // ── Legacy mode (default/stable): patch both client binary AND server JAR ──
+                // This is the proven approach — statically modifies the JAR to replace
+                // sessions.hytale.com with sessions.<custom-domain>.
+                // Also clear DualAuth agent path to prevent agent injection.
+                _dualAuthAgentPath = null;
+
+                var patchResult = patcher.EnsureAllPatched(versionPath, (msg, progress) =>
+                {
+                    Logger.Info("Patcher", progress.HasValue ? $"{msg} ({progress}%)" : msg);
+                    if (progress.HasValue)
+                    {
+                        int mapped = 10 + (int)(progress.Value * 0.85);
+                        _progressService.ReportDownloadProgress("patching", mapped, msg, null, 0, 0);
+                    }
+                });
+
+                if (!patchResult.Success)
+                {
+                    Logger.Warning("Game", $"Legacy patching had issues: {patchResult.Error}");
                 }
                 else
                 {
-                    Logger.Warning("Game", $"DualAuth agent setup failed: {dualAuthResult.Error}");
-                    Logger.Warning("Game", "Server authentication may not work correctly without DualAuth");
+                    Logger.Success("Game", $"Legacy patching complete (client + server JAR). Patches applied: {patchResult.PatchCount}");
                 }
-            }
-            catch (Exception dualAuthEx)
-            {
-                Logger.Warning("Game", $"Error setting up DualAuth: {dualAuthEx.Message}");
-            }
 
-            if (patchResult.Success && patchResult.PatchCount > 0 && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                try
+                if (patchResult.Success && patchResult.PatchCount > 0 && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    _progressService.ReportDownloadProgress("patching", 95, "launch.detail.resigning", null, 0, 0);
-                    Logger.Info("Game", "Re-signing patched binary...");
-                    string appBundle = Path.Combine(versionPath, "Client", "Hytale.app");
-                    bool signed = ClientPatcher.SignMacOSBinary(appBundle);
-                    if (signed) Logger.Success("Game", "Binary re-signed successfully");
-                    else Logger.Warning("Game", "Binary signing failed - game may not launch");
-                }
-                catch (Exception signEx)
-                {
-                    Logger.Warning("Game", $"Error re-signing binary: {signEx.Message}");
+                    try
+                    {
+                        _progressService.ReportDownloadProgress("patching", 95, "launch.detail.resigning", null, 0, 0);
+                        Logger.Info("Game", "Re-signing patched binary...");
+                        string appBundle = Path.Combine(versionPath, "Client", "Hytale.app");
+                        bool signed = ClientPatcher.SignMacOSBinary(appBundle);
+                        if (signed) Logger.Success("Game", "Binary re-signed successfully");
+                        else Logger.Warning("Game", "Binary signing failed - game may not launch");
+                    }
+                    catch (Exception signEx)
+                    {
+                        Logger.Warning("Game", $"Error re-signing binary: {signEx.Message}");
+                    }
                 }
             }
 
@@ -640,208 +699,6 @@ public class GameLauncher : IGameLauncher
         return Convert.ToHexString(hash)[..16]; // 16 hex chars is sufficient for comparison
     }
 
-    /// <summary>
-    /// Disables mods whose ServerVersion in manifest.json is incompatible with the installed server.
-    /// Mods with ServerVersion "*" (wildcard) or without a manifest are left alone.
-    /// Incompatible mods are moved to a "Mods_Disabled" subfolder so the server doesn't load them.
-    /// </summary>
-    private void QuarantineIncompatibleServerMods(string versionPath, string userDataDir)
-    {
-        string serverJarPath = Path.Combine(versionPath, "Server", "HytaleServer.jar");
-        if (!File.Exists(serverJarPath))
-        {
-            Logger.Info("Game", "No server JAR found — skipping mod compatibility check");
-            return;
-        }
-
-        if (!TryReadServerVersionFromManifest(serverJarPath, out string? currentServerVersion) ||
-            string.IsNullOrWhiteSpace(currentServerVersion))
-        {
-            Logger.Warning("Game", "Could not read server version from HytaleServer.jar manifest — skipping mod compatibility check");
-            return;
-        }
-
-        Logger.Info("Game", $"Server version: {currentServerVersion}");
-
-        string modsDir = Path.Combine(userDataDir, "Mods");
-        // The game may create a plain file named "Mods" — replace it with a directory
-        if (File.Exists(modsDir))
-        {
-            Logger.Warning("Game",
-                $"Found a file where the Mods directory should be ({modsDir}), removing it");
-            File.Delete(modsDir);
-        }
-        if (!Directory.Exists(modsDir))
-        {
-            Logger.Info("Game", "No Mods directory found — nothing to quarantine");
-            return;
-        }
-
-        string disabledDir = Path.Combine(userDataDir, "Mods_Disabled");
-        var jarFiles = Directory.GetFiles(modsDir, "*.jar", SearchOption.TopDirectoryOnly);
-        int quarantinedCount = 0;
-
-        foreach (var jarPath in jarFiles)
-        {
-            try
-            {
-                if (!TryReadServerVersionFromManifest(jarPath, out string? modServerVersion))
-                    continue; // No manifest or no ServerVersion — assume compatible
-
-                if (string.IsNullOrWhiteSpace(modServerVersion) || modServerVersion.Trim() == "*")
-                    continue; // Wildcard — compatible with any server version
-
-                if (string.Equals(modServerVersion.Trim(), currentServerVersion.Trim(), StringComparison.OrdinalIgnoreCase))
-                    continue; // Exact match — compatible
-
-                // Incompatible: move to Mods_Disabled
-                Directory.CreateDirectory(disabledDir);
-                string fileName = Path.GetFileName(jarPath);
-                string destPath = Path.Combine(disabledDir, fileName);
-
-                // If a file with the same name exists in disabled dir, overwrite
-                if (File.Exists(destPath))
-                    File.Delete(destPath);
-
-                File.Move(jarPath, destPath);
-                quarantinedCount++;
-
-                Logger.Warning("Game",
-                    $"Quarantined incompatible mod '{fileName}': " +
-                    $"mod requires ServerVersion '{modServerVersion}', " +
-                    $"but server is '{currentServerVersion}'");
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning("Game", $"Failed to check/quarantine mod '{Path.GetFileName(jarPath)}': {ex.Message}");
-            }
-        }
-
-        // Also restore previously quarantined mods that are now compatible
-        if (Directory.Exists(disabledDir))
-        {
-            var disabledJars = Directory.GetFiles(disabledDir, "*.jar", SearchOption.TopDirectoryOnly);
-            int restoredCount = 0;
-
-            foreach (var jarPath in disabledJars)
-            {
-                try
-                {
-                    if (!TryReadServerVersionFromManifest(jarPath, out string? modServerVersion))
-                    {
-                        // No version requirement — restore it
-                        RestoreModFromQuarantine(jarPath, modsDir);
-                        restoredCount++;
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(modServerVersion) || modServerVersion.Trim() == "*")
-                    {
-                        RestoreModFromQuarantine(jarPath, modsDir);
-                        restoredCount++;
-                        continue;
-                    }
-
-                    if (string.Equals(modServerVersion.Trim(), currentServerVersion.Trim(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        RestoreModFromQuarantine(jarPath, modsDir);
-                        restoredCount++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warning("Game", $"Failed to check/restore quarantined mod '{Path.GetFileName(jarPath)}': {ex.Message}");
-                }
-            }
-
-            if (restoredCount > 0)
-                Logger.Info("Game", $"Restored {restoredCount} previously quarantined mod(s) that are now compatible");
-
-            // Clean up empty disabled dir
-            try
-            {
-                if (Directory.Exists(disabledDir) && !Directory.EnumerateFileSystemEntries(disabledDir).Any())
-                    Directory.Delete(disabledDir);
-            }
-            catch { /* ignore */ }
-        }
-
-        if (quarantinedCount > 0)
-        {
-            Logger.Warning("Game",
-                $"Quarantined {quarantinedCount} incompatible mod(s). " +
-                $"They have been moved to Mods_Disabled and will be restored automatically when a compatible server version is installed.");
-
-            _progressService.ReportError("mod_incompatible",
-                $"{quarantinedCount} mod(s) disabled due to server version mismatch (server: {currentServerVersion}). " +
-                $"They will be restored automatically when the server is updated to a compatible version.",
-                $"Quarantined mods moved to {disabledDir}");
-        }
-    }
-
-    /// <summary>
-    /// Moves a mod JAR from the Mods_Disabled directory back to the active Mods directory.
-    /// </summary>
-    private static void RestoreModFromQuarantine(string quarantinedJarPath, string modsDir)
-    {
-        string fileName = Path.GetFileName(quarantinedJarPath);
-        string destPath = Path.Combine(modsDir, fileName);
-
-        if (File.Exists(destPath))
-            File.Delete(destPath);
-
-        File.Move(quarantinedJarPath, destPath);
-        Logger.Info("Game", $"Restored compatible mod from quarantine: {fileName}");
-    }
-
-    private static bool TryReadServerVersionFromManifest(string jarPath, out string? serverVersion)
-    {
-        serverVersion = null;
-
-        try
-        {
-            using var archive = ZipFile.OpenRead(jarPath);
-            var manifestEntry = archive.Entries.FirstOrDefault(e =>
-                e.FullName.Equals("manifest.json", StringComparison.OrdinalIgnoreCase));
-            if (manifestEntry == null)
-                return false;
-
-            using var stream = manifestEntry.Open();
-            using var doc = JsonDocument.Parse(stream);
-            foreach (var property in doc.RootElement.EnumerateObject())
-            {
-                if (!property.Name.Equals("ServerVersion", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (property.Value.ValueKind == JsonValueKind.String)
-                {
-                    serverVersion = property.Value.GetString();
-                    return !string.IsNullOrWhiteSpace(serverVersion);
-                }
-
-                return false;
-            }
-        }
-        catch
-        {
-            return false;
-        }
-
-        return false;
-    }
-
-    private static bool IsKnownInvalidServerVersion(string? serverVersion)
-    {
-        if (string.IsNullOrWhiteSpace(serverVersion))
-            return false;
-
-        string normalized = serverVersion.Trim();
-        if (normalized == "*")
-            return false;
-
-        return Regex.IsMatch(normalized, @"^\d{4}\.\d{2}\.\d{2}-[a-zA-Z0-9]+$");
-    }
-
     private void LogLaunchInfo(string executable, string javaPath, string gameDir, string userDataDir, string sessionUuid, string launchPlayerName)
     {
         Logger.Info("Game", $"Launching: {executable}");
@@ -928,10 +785,11 @@ public class GameLauncher : IGameLauncher
 
     /// <summary>
     /// Applies DualAuth environment variables for custom auth server authentication.
+    /// Only applies when DualAuth mode is enabled in settings.
     /// </summary>
     private void ApplyDualAuthEnvironment(ProcessStartInfo startInfo)
     {
-        if (string.IsNullOrEmpty(_dualAuthAgentPath) || IsOfficialServerMode())
+        if (!_config.UseDualAuth || string.IsNullOrEmpty(_dualAuthAgentPath) || IsOfficialServerMode())
             return;
 
         string authDomain = DeriveAuthDomain(GetEffectiveCustomAuthDomain(logFallback: false));
@@ -1337,11 +1195,12 @@ export __NV_PRIME_RENDER_OFFLOAD=0
     /// Builds DualAuth environment variable lines for the Unix launch script.
     /// Returns a string with variable assignments to be placed before 'exec env'.
     /// Each variable is quoted individually to handle paths with spaces.
+    /// Only active when DualAuth mode is enabled in settings.
     /// </summary>
     private string BuildDualAuthEnvLines()
     {
-        if (string.IsNullOrEmpty(_dualAuthAgentPath) || IsOfficialServerMode())
-            return "# No DualAuth (official server mode or agent unavailable)\nDUALAUTH_JAVA_TOOL_OPTIONS=\"\"\nDUALAUTH_AUTH_DOMAIN=\"\"\nDUALAUTH_TRUST_ALL=\"\"\nDUALAUTH_TRUST_OFFICIAL=\"\"\n\n";
+        if (!_config.UseDualAuth || string.IsNullOrEmpty(_dualAuthAgentPath) || IsOfficialServerMode())
+            return "# No DualAuth (legacy patching mode, official server, or agent unavailable)\nDUALAUTH_JAVA_TOOL_OPTIONS=\"\"\nDUALAUTH_AUTH_DOMAIN=\"\"\nDUALAUTH_TRUST_ALL=\"\"\nDUALAUTH_TRUST_OFFICIAL=\"\"\n\n";
 
         string authDomain = DeriveAuthDomain(GetEffectiveCustomAuthDomain(logFallback: false));
 

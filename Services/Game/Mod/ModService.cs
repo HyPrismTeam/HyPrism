@@ -1,7 +1,6 @@
 using HyPrism.Services.Core.App;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Game.Instance;
-using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using HyPrism.Models;
@@ -398,19 +397,6 @@ public class ModService : IModService
 
             if (!downloaded)
             {
-                return false;
-            }
-
-            // ── Post-download server version compatibility check ──
-            // Read the mod's manifest.json → ServerVersion and compare with the
-            // server's Implementation-Version from HytaleServer.jar.
-            if (!CheckModServerCompatibility(filePath, instancePath, out string? incompatibilityReason))
-            {
-                // Remove the incompatible file we just downloaded.
-                try { File.Delete(filePath); } catch { /* best-effort */ }
-                Logger.Warning("ModService",
-                    $"Mod '{cfFile.FileName}' is incompatible with the server: {incompatibilityReason}");
-                onProgress?.Invoke("incompatible", incompatibilityReason ?? "unknown version mismatch");
                 return false;
             }
             
@@ -940,15 +926,6 @@ public class ModService : IModService
             var destPath = Path.Combine(modsPath, fileName);
             
             File.Copy(sourcePath, destPath, true);
-
-            // Server version compatibility check
-            if (fileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) &&
-                !CheckModServerCompatibility(destPath, instancePath, out string? incompatReason))
-            {
-                try { File.Delete(destPath); } catch { /* best-effort */ }
-                Logger.Warning("ModService", $"Local mod '{fileName}' is incompatible: {incompatReason}");
-                return false;
-            }
             
             // Add to manifest
             var mods = GetInstanceInstalledMods(instancePath);
@@ -988,15 +965,6 @@ public class ModService : IModService
             var destPath = Path.Combine(modsPath, fileName);
             var bytes = Convert.FromBase64String(base64Content);
             await File.WriteAllBytesAsync(destPath, bytes);
-
-            // Server version compatibility check
-            if (fileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) &&
-                !CheckModServerCompatibility(destPath, instancePath, out string? incompatReason))
-            {
-                try { File.Delete(destPath); } catch { /* best-effort */ }
-                Logger.Warning("ModService", $"Base64 mod '{fileName}' is incompatible: {incompatReason}");
-                return false;
-            }
             
             // Add to manifest
             var mods = GetInstanceInstalledMods(instancePath);
@@ -1023,108 +991,6 @@ public class ModService : IModService
         }
     }
     
-    /// <summary>
-    /// <summary>
-    /// Extracts a clean version string from CurseForge DisplayName or FileName.
-    // ========== Server Version Compatibility Helpers ==========
-
-    /// <summary>
-    /// Reads the <c>ServerVersion</c> field from a mod JAR's top-level <c>manifest.json</c>.
-    /// Returns <c>null</c> when the JAR has no manifest or no ServerVersion field.
-    /// </summary>
-    private static string? ReadModServerVersion(string jarPath)
-    {
-        try
-        {
-            using var archive = ZipFile.OpenRead(jarPath);
-            var entry = archive.Entries.FirstOrDefault(e =>
-                e.FullName.Equals("manifest.json", StringComparison.OrdinalIgnoreCase));
-            if (entry == null) return null;
-
-            using var stream = entry.Open();
-            using var doc = JsonDocument.Parse(stream);
-
-            if (doc.RootElement.TryGetProperty("ServerVersion", out var sv) &&
-                sv.ValueKind == JsonValueKind.String)
-            {
-                return sv.GetString();
-            }
-        }
-        catch
-        {
-            // Malformed JAR / JSON — treat as unknown
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Reads the server's own build version from the <c>META-INF/MANIFEST.MF</c>
-    /// inside <c>Server/HytaleServer.jar</c> (field <c>Implementation-Version</c>).
-    /// </summary>
-    private static string? ReadHytaleServerVersion(string instancePath)
-    {
-        var serverJar = Path.Combine(instancePath, "Server", "HytaleServer.jar");
-        if (!File.Exists(serverJar)) return null;
-
-        try
-        {
-            using var archive = ZipFile.OpenRead(serverJar);
-            var manifestEntry = archive.Entries.FirstOrDefault(e =>
-                e.FullName.Equals("META-INF/MANIFEST.MF", StringComparison.OrdinalIgnoreCase));
-            if (manifestEntry == null) return null;
-
-            using var reader = new StreamReader(manifestEntry.Open());
-            while (reader.ReadLine() is { } line)
-            {
-                if (line.StartsWith("Implementation-Version:", StringComparison.OrdinalIgnoreCase))
-                {
-                    return line["Implementation-Version:".Length..].Trim();
-                }
-            }
-        }
-        catch
-        {
-            // Malformed archive — treat as unknown
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Checks whether a downloaded mod JAR is compatible with the instance's
-    /// Hytale server.  Returns <c>true</c> when compatible (or when compatibility
-    /// cannot be determined).  When incompatible, <paramref name="reason"/> contains
-    /// a human-readable description.
-    /// </summary>
-    private static bool CheckModServerCompatibility(
-        string modJarPath,
-        string instancePath,
-        out string? reason)
-    {
-        reason = null;
-
-        var modSV = ReadModServerVersion(modJarPath);
-
-        // No ServerVersion → compatible with any server
-        if (string.IsNullOrWhiteSpace(modSV) || modSV.Trim() == "*")
-            return true;
-
-        var serverSV = ReadHytaleServerVersion(instancePath);
-        if (string.IsNullOrWhiteSpace(serverSV))
-        {
-            // Can't determine server version — don't block the install
-            return true;
-        }
-
-        if (string.Equals(modSV.Trim(), serverSV.Trim(), StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        reason = $"Mod requires server version '{modSV.Trim()}' " +
-                 $"but instance has server version '{serverSV.Trim()}'";
-        return false;
-    }
-
     /// <summary>
     /// Tries to extract a semver-like version string from a display name or filename.
     /// Looks for semver-like patterns (e.g., "1.2.7", "0.3.1-beta") and returns the first match.

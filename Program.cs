@@ -116,6 +116,7 @@ class Program
             var baseDir = AppContext.BaseDirectory;
             var candidates = new[]
             {
+                Path.Combine(baseDir, "wwwroot", "icon.png"),
                 Path.Combine(baseDir, "Build", "icon.png"),
                 Path.Combine(baseDir, "icon.png"),
                 Path.GetFullPath(Path.Combine(baseDir, "..", "Build", "icon.png")),

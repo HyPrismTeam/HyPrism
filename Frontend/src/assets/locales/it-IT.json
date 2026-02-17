@@ -163,7 +163,9 @@
       "closeLauncher": "Chiudi dopo il lancio",
       "closeLauncherHint": "Chiudi il launcher all'avvio del gioco",
       "showAlphaMods": "Mostra mod in Alpha",
-      "showAlphaModsHint": "Mostra mod in fase Alpha nel gestore mod"
+      "showAlphaModsHint": "Mostra mod in fase Alpha nel gestore mod",
+      "dualAuth": "DualAuth (Sperimentale)",
+      "dualAuthHint": "Utilizza un agente Java per l'autenticazione del server invece del patching statico del JAR. Potrebbe causare crash o problemi di connessione."
     },
     "javaSettings": {
       "javaRuntime": "Java runtime",
