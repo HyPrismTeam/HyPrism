@@ -903,10 +903,21 @@ exec env ""${{ENV_ARGS[@]}}"" ""{executable}"" {argsString}
             // Detect the vendor of the dedicated GPU
             var adapters = _gpuDetectionService.GetAdapters();
             var dedicatedGpu = adapters.FirstOrDefault(a => a.Type == "dedicated");
+
+            if (dedicatedGpu != null && !string.IsNullOrEmpty(dedicatedGpu.PciId))
+            {
+                // Use explicit PCI ID for DRI_PRIME if available for more precise selection
+                Logger.Info("Game", $"Using dedicated GPU PCI ID for DRI_PRIME: {dedicatedGpu.PciId}");
+                sb.AppendLine($"export DRI_PRIME=pci:{dedicatedGpu.PciId}");
+            }
+            else
+            {
+                // Fallback to DRI_PRIME=1 if PCI ID detection failed or not applicable
+                Logger.Info("Game", "Using generic DRI_PRIME=1 for dedicated GPU");
+                sb.AppendLine("export DRI_PRIME=1");
+            }
+
             var vendor = dedicatedGpu?.Vendor?.ToUpperInvariant() ?? "";
-            
-            // DRI_PRIME is universal for Mesa-based drivers
-            sb.AppendLine("export DRI_PRIME=1");
             
             if (vendor == "NVIDIA")
             {
@@ -924,17 +935,6 @@ exec env ""${{ENV_ARGS[@]}}"" ""{executable}"" {argsString}
             else if (vendor == "AMD")
             {
                 Logger.Info("Game", "GPU preference: dedicated (AMD env vars in launch script)");
-                
-                // For AMD Vulkan — find the ICD file to ensure correct GPU selection
-                var amdIcdPath = TryGetLinuxAmdVulkanIcdPath();
-                if (!string.IsNullOrWhiteSpace(amdIcdPath))
-                {
-                    sb.AppendLine($"export VK_ICD_FILENAMES=\"{amdIcdPath}\"");
-                    Logger.Info("Game", $"Applied AMD Vulkan ICD override: {amdIcdPath}");
-                }
-                
-                // Disable Vulkan validation layers for better performance
-                sb.AppendLine("export VK_LOADER_LAYERS_DISABLE=all");
             }
             else
             {
@@ -1005,51 +1005,6 @@ export __NV_PRIME_RENDER_OFFLOAD=0
     }
 
     /// <summary>
-    /// Attempts to locate the AMD Vulkan ICD JSON file on Linux.
-    /// Returns the path to the ICD file, or null if not found.
-    /// </summary>
-    private static string? TryGetLinuxAmdVulkanIcdPath()
-    {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            return null;
-
-        // Standard paths for AMD Vulkan ICD files (RADV / AMDVLK)
-        var candidates = new[]
-        {
-            "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json",
-            "/usr/share/vulkan/icd.d/radeon_icd.json",
-            "/usr/share/vulkan/icd.d/amd_icd64.json",
-            "/etc/vulkan/icd.d/radeon_icd.x86_64.json",
-            "/etc/vulkan/icd.d/radeon_icd.json",
-        };
-
-        foreach (var path in candidates)
-        {
-            if (File.Exists(path))
-                return path;
-        }
-
-        // Fallback: search for any radeon/amd ICD file
-        foreach (var dir in new[] { "/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d" })
-        {
-            if (!Directory.Exists(dir)) continue;
-            
-            try
-            {
-                foreach (var file in Directory.GetFiles(dir, "*radeon*.json"))
-                    return file;
-                foreach (var file in Directory.GetFiles(dir, "*amd*.json"))
-                    return file;
-            }
-            catch
-            {
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
     /// Builds custom environment variable lines for the Unix launch script.
     /// Parses KEY=VALUE pairs from config and adds them to ENV_ARGS.
     /// </summary>
@@ -1065,6 +1020,10 @@ export __NV_PRIME_RENDER_OFFLOAD=0
         var lines = customEnv.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         var validCount = 0;
         
+        // Regex for parsing space-separated KEY=VALUE pairs (supports quotes)
+        // Matches: KEY="VALUE" OR KEY='VALUE' OR KEY=VALUE
+        var envVarRegex = new Regex(@"(?<key>[A-Za-z_][A-Za-z0-9_]*)=(?<value>""[^""]*""|'[^']*'|[^""'\s]+)", RegexOptions.Compiled);
+
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
@@ -1072,21 +1031,48 @@ export __NV_PRIME_RENDER_OFFLOAD=0
             if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
                 continue;
             
-            // Validate KEY=VALUE format
-            var eqIndex = trimmed.IndexOf('=');
-            if (eqIndex <= 0) continue;
-            
-            var key = trimmed[..eqIndex].Trim();
-            var value = trimmed[(eqIndex + 1)..].Trim();
-            
-            // Validate key is a valid env var name (alphanumeric + underscore, starts with letter/underscore)
-            if (!Regex.IsMatch(key, @"^[A-Za-z_][A-Za-z0-9_]*$"))
-                continue;
-            
-            // Escape value for bash
-            var escapedValue = EscapeForBashDoubleQuoted(value);
-            sb.AppendLine($"ENV_ARGS+=({key}=\"{escapedValue}\")");
-            validCount++;
+            // Check if line contains multiple assignments (heuristic: "KEY=" appearing after whitespace)
+            // If so, use regex parsing to robustly extract multiple variables from one line
+            bool isMultiVarLine = Regex.IsMatch(trimmed, @"\s+[A-Za-z_][A-Za-z0-9_]*=");
+
+            if (isMultiVarLine)
+            {
+                var matches = envVarRegex.Matches(trimmed);
+                foreach (Match match in matches)
+                {
+                    var key = match.Groups["key"].Value;
+                    var val = match.Groups["value"].Value;
+
+                    // Remove surrounding quotes if present
+                    if ((val.StartsWith('"') && val.EndsWith('"')) || (val.StartsWith('\'') && val.EndsWith('\'')))
+                    {
+                        if (val.Length >= 2) val = val.Substring(1, val.Length - 2);
+                    }
+
+                    var escaped = EscapeForBashDoubleQuoted(val);
+                    sb.AppendLine($"ENV_ARGS+=({key}=\"{escaped}\")");
+                    validCount++;
+                }
+            }
+            else
+            {
+                // Classic parsing: treat entire remainder of line as value
+                // Validate KEY=VALUE format
+                var eqIndex = trimmed.IndexOf('=');
+                if (eqIndex <= 0) continue;
+                
+                var key = trimmed[..eqIndex].Trim();
+                var value = trimmed[(eqIndex + 1)..].Trim();
+                
+                // Validate key is a valid env var name (alphanumeric + underscore, starts with letter/underscore)
+                if (!Regex.IsMatch(key, @"^[A-Za-z_][A-Za-z0-9_]*$"))
+                    continue;
+                
+                // Escape value for bash
+                var escapedValue = EscapeForBashDoubleQuoted(value);
+                sb.AppendLine($"ENV_ARGS+=({key}=\"{escapedValue}\")");
+                validCount++;
+            }
         }
         
         if (validCount > 0)
