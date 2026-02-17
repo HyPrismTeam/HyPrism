@@ -20,9 +20,6 @@ const backgroundImages = Object.entries(allBackgrounds)
 // Create a map for quick lookup
 const backgroundMap = Object.fromEntries(backgroundImages.map(bg => [bg.name, bg.url]));
 
-// Use first bg image as fallback if array somehow ends up empty (shouldn't happen with glob)
-// No separate fallback file needed since we have bg_* images
-
 // Configuration
 const TRANSITION_DURATION = 1000; // 1 second crossfade
 const IMAGE_DURATION = 15000; // 15 seconds per image
@@ -30,6 +27,15 @@ const IMAGE_DURATION = 15000; // 15 seconds per image
 interface BackgroundImageProps {
   mode?: string; // 'slideshow', a specific background name like 'bg_1', or 'color:#hexcode'
 }
+
+// Simple, bulletproof "breathing" animation — scale only, no translate, no edge issues.
+// Uses a single CSS @keyframes defined once, running forever via `infinite alternate`.
+const BREATHE_STYLE = `
+  @keyframes bg-breathe {
+    0%   { transform: scale(1); }
+    100% { transform: scale(1.06); }
+  }
+`;
 
 export const BackgroundImage: React.FC<BackgroundImageProps> = memo(({ mode = 'slideshow' }) => {
   const [currentIndex, setCurrentIndex] = useState(() => 
@@ -97,9 +103,12 @@ export const BackgroundImage: React.FC<BackgroundImageProps> = memo(({ mode = 's
 
   return (
     <>
+      {/* Single global keyframe — injected once */}
+      <style>{BREATHE_STYLE}</style>
+
       {/* Background container */}
       <div className="absolute inset-0 overflow-hidden bg-black">
-        {/* Background image - no parallax, just fade transitions */}
+        {/* Background image with gentle breathing zoom */}
         <div
           className="absolute inset-0"
           style={{
@@ -111,6 +120,10 @@ export const BackgroundImage: React.FC<BackgroundImageProps> = memo(({ mode = 's
             src={currentImageUrl}
             alt=""
             className="w-full h-full object-cover"
+            style={{
+              transformOrigin: 'center center',
+              animation: 'bg-breathe 25s ease-in-out infinite alternate',
+            }}
           />
         </div>
         

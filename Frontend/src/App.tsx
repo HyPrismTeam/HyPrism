@@ -238,7 +238,8 @@ const App: React.FC = () => {
   const officialServerBlocked = isOfficialServerMode && !isOfficialProfile;
 
   // Background, news, and accent color settings
-  const [backgroundMode, setBackgroundMode] = useState<string>('slideshow');
+  // Initialize as null to prevent flash — don't render background until config is loaded
+  const [backgroundMode, setBackgroundMode] = useState<string | null>(null);
   const [_accentColor, setAccentColor] = useState<string>('#FFA845'); // Used only for SettingsModal callback
   const [isMuted, setIsMuted] = useState<boolean>(false);
   
@@ -1022,7 +1023,7 @@ const App: React.FC = () => {
 
   return (
     <div className="relative w-screen h-screen bg-[#090909] text-white overflow-hidden font-sans select-none">
-      <BackgroundImage mode={backgroundMode} />
+      {backgroundMode !== null && <BackgroundImage mode={backgroundMode} />}
 
       {/* Darkening overlay for background */}
       <div className="absolute inset-0 z-[5] bg-black/50 pointer-events-none" />
