@@ -3,10 +3,21 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <!-- Electron.NET application metadata -->
@@ -18,7 +29,7 @@
     <Company>HyPrism</Company>
     <Copyright>Copyright © 2026 HyPrism Team</Copyright>
     <License>GPL-3.0-only</License>
-    <ProjectUrl>https://github.com/yyyumeniku/HyPrism</ProjectUrl>
+    <ProjectUrl>https://github.com/HyPrismTeam/HyPrism</ProjectUrl>
     <ElectronVersion>34.2.0</ElectronVersion>
     <ElectronSkipMigrationChecks>true</ElectronSkipMigrationChecks>
   </PropertyGroup>
