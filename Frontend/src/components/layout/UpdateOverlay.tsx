@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
-import { DownloadCloud } from 'lucide-react';
+import { DownloadCloud, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 
@@ -10,9 +10,12 @@ interface UpdateOverlayProps {
   progress: number;
   downloaded: number;
   total: number;
+  status?: string;
+  failed?: boolean;
+  onClose?: () => void;
 }
 
-export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, downloaded, total }) => {
+export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, downloaded, total, status, failed, onClose }) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
 
@@ -22,6 +25,17 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
       animate={{ opacity: 1 }}
       className={`absolute inset-0 z-[100] bg-[#090909]/95  flex flex-col items-center justify-center p-20 text-center`}
     >
+      {failed && (
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 active:scale-95 transition-all text-white/80"
+          aria-label="Close"
+          title="Close"
+        >
+          <X size={20} />
+        </button>
+      )}
+
       <motion.div
         animate={{
           y: [0, -10, 0],
@@ -37,12 +51,20 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
       </motion.div>
 
       <h1 className="text-5xl font-black mb-4 tracking-tight text-white">
-        {t('updateOverlay.title')}
+        {failed ? 'Failed updating' : t('updateOverlay.title')}
       </h1>
 
-      <p className="text-gray-400 mb-12 max-w-md text-lg font-medium">
-        {t('updateOverlay.message')}
-      </p>
+      {!failed && (
+        <p className="text-gray-400 mb-12 max-w-md text-lg font-medium">
+          {t('updateOverlay.message')}
+        </p>
+      )}
+
+      {!!status?.trim() && (
+        <p className="text-sm text-gray-300 mb-6 font-medium">
+          {status}
+        </p>
+      )}
 
       {/* Progress bar */}
       <div className="w-full max-w-md">
@@ -59,7 +81,7 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
 
         <div className="flex justify-between items-center mt-4 text-sm">
           <span className="text-gray-400">
-            {formatBytes(downloaded)} / {formatBytes(total)}
+            {total > 0 ? `${formatBytes(downloaded)} / ${formatBytes(total)}` : (failed ? ' ' : 'Installing')}
           </span>
           <span className="font-bold" style={{ color: accentColor }}>{Math.round(progress)}%</span>
         </div>

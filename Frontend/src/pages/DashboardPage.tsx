@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Play, Download, Loader2, X, RefreshCw, User, ShieldAlert, Info } from 'lucide-react';
+import { Play, Download, Loader2, X, RefreshCw, User, ShieldAlert, Info, ArrowRight } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
 
 import { ipc, InstanceInfo } from '@/lib/ipc';
@@ -367,6 +367,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                 </motion.button>
               )}
             </div>
+
+            {props.updateAvailable && props.launcherUpdateInfo?.latestVersion && (
+              <div className="mt-0.5 flex items-center gap-1 text-[10px] animate-rgb" style={{ color: accentColor }}>
+                <span className="font-medium">
+                  {props.launcherUpdateInfo.currentVersion || props.launcherVersion}
+                </span>
+                <ArrowRight size={12} />
+                <span className="font-medium">
+                  {props.launcherUpdateInfo.latestVersion}
+                </span>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -393,41 +405,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           </button>
         </motion.div>
       </div>
-
-      {/* Launcher update banner */}
-      {props.updateAvailable && props.launcherUpdateInfo?.latestVersion && (
-        <div className="w-full mt-4 rounded-2xl border border-white/10 bg-white/5 px-5 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <div className="text-sm font-black text-white tracking-tight">
-                A NEW VERSION OF THE LAUNCHER IS AVAILABLE
-              </div>
-              <div className="text-xs text-white/60">
-                Current: <span className="text-white/80 font-semibold">{props.launcherUpdateInfo.currentVersion || props.launcherVersion}</span>
-                <span className="mx-2 text-white/20">•</span>
-                New: <span className="text-white/80 font-semibold">{props.launcherUpdateInfo.latestVersion}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={props.onLauncherUpdate}
-              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-[0.98] transition-all text-xs font-bold text-white"
-            >
-              <Download size={14} className="inline mr-2" />
-              Update
-            </button>
-          </div>
-
-          {!!props.launcherUpdateInfo.changelog?.trim() && (
-            <div className="mt-3">
-              <div className="text-[11px] text-white/40 mb-1">Changelog</div>
-              <div className="text-xs text-white/70 whitespace-pre-wrap max-h-40 overflow-auto rounded-xl bg-black/20 border border-white/10 px-3 py-2">
-                {props.launcherUpdateInfo.changelog}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Center: Logo + Label + Play Bar */}
       <div className="flex-1 flex flex-col items-center justify-center gap-3">

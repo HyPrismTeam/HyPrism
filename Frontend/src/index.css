@@ -133,6 +133,15 @@ button:focus-visible {
   }
 }
 
+@keyframes hue-rotate {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
@@ -146,6 +155,13 @@ button:focus-visible {
 .animate-gradient {
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
+}
+
+.animate-rgb {
+  display: inline-flex;
+  align-items: center;
+  animation: hue-rotate 2s linear infinite;
+  will-change: filter;
 }
 
 /* ── Page Layout ─────────────────────────────────────────── */

@@ -202,6 +202,8 @@ const App: React.FC = () => {
   const [updateAsset, setUpdateAsset] = useState<any>(null);
   const [isUpdatingLauncher, setIsUpdatingLauncher] = useState<boolean>(false);
   const [updateStats, setUpdateStats] = useState({ d: 0, t: 0 });
+  const [launcherUpdateStatus, setLauncherUpdateStatus] = useState<string>('');
+  const [launcherUpdateFailed, setLauncherUpdateFailed] = useState<boolean>(false);
 
   // Modal state
   const [showDelete, setShowDelete] = useState<boolean>(false);
@@ -695,9 +697,27 @@ const App: React.FC = () => {
       console.log('Update available:', asset);
     });
 
-    const unsubUpdateProgress = EventsOn('update:progress', (_stage: string, progress: number, _message: string, _file: string, _speed: string, downloaded: number, total: number) => {
-      setProgress(progress);
-      setUpdateStats({ d: downloaded, t: total });
+    const unsubUpdateProgress = EventsOn('update:progress', (data: any) => {
+      const pct = typeof data?.progress === 'number' ? data.progress : 0;
+      const downloadedBytes = typeof data?.downloadedBytes === 'number' ? data.downloadedBytes : 0;
+      const totalBytes = typeof data?.totalBytes === 'number' ? data.totalBytes : 0;
+      const message = typeof data?.message === 'string' ? data.message : '';
+      const stage = typeof data?.stage === 'string' ? data.stage : '';
+
+      setProgress(pct);
+      setUpdateStats({ d: downloadedBytes, t: totalBytes });
+      setLauncherUpdateStatus(message);
+
+      if (stage === 'error') {
+        setLauncherUpdateFailed(true);
+
+        const hasDownloadedFile = !!data?.hasDownloadedFile;
+        if (hasDownloadedFile) {
+          setLauncherUpdateStatus('DONT WORRY! the launcher is downloaded in the download folders, u can do a manual install!');
+        } else if (!message?.trim()) {
+          setLauncherUpdateStatus('Failed updating');
+        }
+      }
     });
 
     const unsubError = EventsOn('error', (err: any) => {
@@ -724,19 +744,21 @@ const App: React.FC = () => {
     setIsUpdatingLauncher(true);
     setProgress(0);
     setUpdateStats({ d: 0, t: 0 });
+    setLauncherUpdateStatus('');
+    setLauncherUpdateFailed(false);
 
     try {
-      await Update();
+      const ok = await Update();
+      // On success the app will restart; keep overlay visible until exit.
+      if (ok) return;
+      setLauncherUpdateFailed(true);
+      setLauncherUpdateStatus((prev) => prev?.trim() ? prev : 'Failed updating');
     } catch (err) {
       console.error('Update failed:', err);
-      setError({
-        type: 'UPDATE_ERROR',
-        message: t('app.failedUpdate'),
-        technical: err instanceof Error ? err.message : String(err),
-        timestamp: new Date().toISOString()
-      });
+      setLauncherUpdateFailed(true);
+      setLauncherUpdateStatus((prev) => prev?.trim() ? prev : 'Failed updating');
     } finally {
-      setIsUpdatingLauncher(false);
+      // No-op: handled above so successful update doesn't flash-hide the overlay.
     }
   };
 
@@ -1021,6 +1043,15 @@ const App: React.FC = () => {
           progress={progress}
           downloaded={updateStats.d}
           total={updateStats.t}
+          status={launcherUpdateStatus}
+          failed={launcherUpdateFailed}
+          onClose={launcherUpdateFailed ? () => {
+            setIsUpdatingLauncher(false);
+            setLauncherUpdateFailed(false);
+            setLauncherUpdateStatus('');
+            setProgress(0);
+            setUpdateStats({ d: 0, t: 0 });
+          } : undefined}
         />
       )}
 

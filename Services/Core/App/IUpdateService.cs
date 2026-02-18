@@ -12,6 +12,12 @@ public interface IUpdateService
     /// Raised when a new launcher update is available. Payload contains version info.
     /// </summary>
     event Action<object>? LauncherUpdateAvailable;
+
+    /// <summary>
+    /// Raised during launcher update download/install to report progress to the UI.
+    /// Payload is an anonymous object compatible with the IPC type LauncherUpdateProgress.
+    /// </summary>
+    event Action<object>? LauncherUpdateProgress;
     
     /// <summary>
     /// Gets the current launcher version string (e.g., "2.0.3").

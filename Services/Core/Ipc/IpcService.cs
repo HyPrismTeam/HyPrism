@@ -64,6 +64,7 @@ namespace HyPrism.Services.Core.Ipc;
 /// @type VersionInfo { version: number; source: 'Official' | 'Mirror'; isLatest: boolean; }
 /// @type VersionListResponse { versions: VersionInfo[]; hasOfficialAccount: boolean; officialSourceAvailable: boolean; }
 /// @type LauncherUpdateInfo { currentVersion: string; latestVersion: string; changelog?: string; downloadUrl?: string; assetName?: string; releaseUrl?: string; isBeta?: boolean; }
+/// @type LauncherUpdateProgress { stage: string; progress: number; message: string; downloadedBytes?: number; totalBytes?: number; downloadedFilePath?: string; hasDownloadedFile?: boolean; }
 public class IpcService
 {
     private readonly IServiceProvider _services;
@@ -250,6 +251,7 @@ public class IpcService
     // @ipc invoke hyprism:update:check -> { success: boolean }
     // @ipc invoke hyprism:update:install -> boolean 300000
     // @ipc event hyprism:update:available -> LauncherUpdateInfo
+    // @ipc event hyprism:update:progress -> LauncherUpdateProgress
 
     private void RegisterUpdateHandlers()
     {
@@ -259,6 +261,11 @@ public class IpcService
         updateService.LauncherUpdateAvailable += (info) =>
         {
             try { Reply("hyprism:update:available", info); } catch { /* swallow */ }
+        };
+
+        updateService.LauncherUpdateProgress += (progress) =>
+        {
+            try { Reply("hyprism:update:progress", progress); } catch { /* swallow */ }
         };
 
         // Explicit check (useful for manual refresh or debugging)
@@ -283,6 +290,16 @@ public class IpcService
             {
                 var ok = await updateService.UpdateAsync(null);
                 Reply("hyprism:update:install:reply", ok);
+
+                if (ok)
+                {
+                    // Give IPC a moment to flush, then exit. The updater script will restart the app.
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(750);
+                        try { Electron.App.Exit(); } catch { Environment.Exit(0); }
+                    });
+                }
             }
             catch (Exception ex)
             {

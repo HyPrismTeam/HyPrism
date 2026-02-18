@@ -54,6 +54,11 @@ public class UpdateService : IUpdateService
     public event Action<object>? LauncherUpdateAvailable;
 
     /// <summary>
+    /// Raised during launcher update download/install to report progress.
+    /// </summary>
+    public event Action<object>? LauncherUpdateProgress;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="UpdateService"/> class.
     /// </summary>
     /// <param name="httpClient">The HTTP client for API requests.</param>
@@ -76,9 +81,65 @@ public class UpdateService : IUpdateService
         _instanceService = instanceService;
         _browserService = browserService;
         _progressNotificationService = progressNotificationService;
+
+        // GitHub API requires a User-Agent; keep this safe even if DI didn't configure it.
+        try
+        {
+            if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
+            {
+                _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("HyPrismLauncher/1.0");
+            }
+        }
+        catch
+        {
+            // Non-fatal
+        }
+    }
+
+    private void EmitLauncherUpdateProgress(
+        string stage,
+        double progress,
+        string message,
+        long downloadedBytes = 0,
+        long totalBytes = 0,
+        string? downloadedFilePath = null,
+        bool? hasDownloadedFile = null)
+    {
+        try
+        {
+            LauncherUpdateProgress?.Invoke(new
+            {
+                stage,
+                progress = Math.Clamp(progress, 0, 100),
+                message,
+                downloadedBytes,
+                totalBytes,
+                downloadedFilePath,
+                hasDownloadedFile
+            });
+        }
+        catch
+        {
+            // Progress events must never break update flow.
+        }
     }
 
     private Config _config => _configService.Configuration;
+
+    private static string? TryGetDownloadsDirectory()
+    {
+        try
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (string.IsNullOrWhiteSpace(home)) return null;
+            var downloads = Path.Combine(home, "Downloads");
+            return Directory.Exists(downloads) ? downloads : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private string GetInstalledLauncherBranchOrInit(string desiredBranch)
     {
@@ -197,6 +258,12 @@ public class UpdateService : IUpdateService
                 string? assetName = null;
                 TryPickBestAssetForCurrentPlatform(release, out downloadUrl, out assetName);
 
+                if (string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(assetName))
+                {
+                    Logger.Warning("Update", $"Update found ({bestVersion}) but no compatible asset was found for this platform; skipping notification");
+                    return;
+                }
+
                 var changelog = release.TryGetProperty("body", out var bodyEl) ? bodyEl.GetString() : null;
 
                 var updateInfo = new
@@ -206,8 +273,8 @@ public class UpdateService : IUpdateService
                     latestVersion = bestVersion,
                     currentVersion = currentVersion,
                     changelog = changelog ?? string.Empty,
-                    downloadUrl = downloadUrl ?? "",
-                    assetName = assetName ?? "",
+                    downloadUrl = downloadUrl,
+                    assetName = assetName,
                     releaseUrl = release.GetProperty("html_url").GetString() ?? "",
                     isBeta = launcherBranch == "beta"
                 };
@@ -226,6 +293,8 @@ public class UpdateService : IUpdateService
     }
     public async Task<bool> UpdateAsync(JsonElement[]? args)
     {
+        string? downloadedUpdatePath = null;
+        bool downloadCompleted = false;
         try
         {
             var launcherBranch = GetLauncherBranch();
@@ -269,7 +338,6 @@ public class UpdateService : IUpdateService
             if (!targetRelease.HasValue || string.IsNullOrWhiteSpace(targetVersion))
             {
                 Logger.Error("Update", $"No suitable {(isBetaChannel ? "pre-release" : "release")} found");
-                _browserService.OpenURL(ReleasesPageUrl);
                 return false;
             }
             
@@ -288,27 +356,44 @@ public class UpdateService : IUpdateService
             if (string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(assetName))
             {
                 Logger.Error("Update", "Could not find matching asset in latest release; opening releases page");
-                _browserService.OpenURL(ReleasesPageUrl);
                 return false;
             }
 
-            var updateDir = Path.Combine(Path.GetTempPath(), "HyPrism", "launcher-update");
+            var updateDir = TryGetDownloadsDirectory() ?? Path.Combine(Path.GetTempPath(), "HyPrism", "launcher-update");
+
             Directory.CreateDirectory(updateDir);
             var targetPath = Path.Combine(updateDir, assetName);
+            downloadedUpdatePath = targetPath;
 
             Logger.Info("Update", $"Downloading latest launcher to {targetPath}");
+            EmitLauncherUpdateProgress("download", 0, $"Downloading {assetName}...", 0, 0);
             using (var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 response.EnsureSuccessStatusCode();
+                var total = response.Content.Headers.ContentLength ?? 0;
                 await using var stream = await response.Content.ReadAsStreamAsync();
                 await using var file = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
                 var buffer = new byte[8192];
                 int read;
+                long downloaded = 0;
+                var lastReport = Stopwatch.StartNew();
                 while ((read = await stream.ReadAsync(buffer)) > 0)
                 {
                     await file.WriteAsync(buffer.AsMemory(0, read));
+
+                    downloaded += read;
+                    if (lastReport.ElapsedMilliseconds >= 150)
+                    {
+                        var pct = total > 0 ? (downloaded / (double)total) * 80.0 : 0.0;
+                        EmitLauncherUpdateProgress("download", pct, "Downloading...", downloaded, total);
+                        lastReport.Restart();
+                    }
                 }
+
+                EmitLauncherUpdateProgress("download", 80, "Download complete", downloaded, total);
             }
+
+            downloadCompleted = File.Exists(targetPath);
 
             // Platform-specific installation
 
@@ -324,14 +409,25 @@ public class UpdateService : IUpdateService
                 // Non-fatal
             }
 
+            EmitLauncherUpdateProgress("install", 85, "Installing...", 0, 0);
             await InstallUpdateAsync(targetPath);
+
+            EmitLauncherUpdateProgress("install", 100, "Restarting launcher...", 0, 0);
             
             return true;
         }
         catch (Exception ex)
         {
             Logger.Error("Update", $"Update failed: {ex.Message}");
-            _browserService.OpenURL(ReleasesPageUrl);
+            var hasFile = downloadCompleted && !string.IsNullOrWhiteSpace(downloadedUpdatePath) && File.Exists(downloadedUpdatePath);
+            EmitLauncherUpdateProgress(
+                "error",
+                0,
+                ex.Message,
+                0,
+                0,
+                downloadedUpdatePath,
+                hasFile);
             return false;
         }
     }
@@ -454,6 +550,7 @@ public class UpdateService : IUpdateService
         {
             if (targetPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
+                EmitLauncherUpdateProgress("install", 90, "Extracting update...", 0, 0);
                 var extractedExe = ExtractZipAndFindWindowsExe(targetPath);
                 if (string.IsNullOrWhiteSpace(extractedExe))
                     throw new Exception("Could not find .exe inside update .zip");
@@ -488,7 +585,6 @@ rm -f ""{currentExe}""
 cp -f ""{newBinaryPath}"" ""{currentExe}""
 chmod +x ""{currentExe}"" 2>/dev/null || true
 ""{currentExe}"" &
-rm -f ""{newBinaryPath}""
 rm -f ""$0""
 ";
 
@@ -503,8 +599,7 @@ rm -f ""$0""
                 CreateNoWindow = true
             });
 
-            Logger.Info("Update", "Update script started, exiting launcher...");
-            Environment.Exit(0);
+            Logger.Info("Update", "Update script started");
         }
         catch (Exception ex)
         {
@@ -515,6 +610,7 @@ rm -f ""$0""
 
     private async Task InstallMacOSZipUpdateAsync(string zipPath)
     {
+        EmitLauncherUpdateProgress("install", 90, "Extracting update...", 0, 0);
         var extractDir = Path.Combine(Path.GetTempPath(), "HyPrism", "launcher-update", "extract", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(extractDir);
         ZipFile.ExtractToDirectory(zipPath, extractDir, true);
@@ -542,7 +638,6 @@ rm -f ""$0""
 sleep 2
 rm -rf ""{currentAppPath}""
 cp -R ""{appCandidate}"" ""{currentAppPath}""
-rm -f ""{zipPath}""
 open ""{currentAppPath}""
 rm -f ""$0""
 ";
@@ -555,8 +650,7 @@ rm -f ""$0""
                 UseShellExecute = false,
                 CreateNoWindow = true
             });
-            Logger.Info("Update", "Update script started, exiting launcher...");
-            Environment.Exit(0);
+            Logger.Info("Update", "Update script started");
             return;
         }
 
@@ -615,17 +709,48 @@ rm -f ""$0""
         if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
             return;
 
-        static bool EndsWithAny(string name, params string[] suffixes) => suffixes.Any(s => name.EndsWith(s, StringComparison.OrdinalIgnoreCase));
+        static int ScoreAsset(string name)
+        {
+            // Higher is better.
+            var lower = name.ToLowerInvariant();
 
-        // 1) Prefer known HyPrism asset naming if present
-        string[] preferredSuffixes;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            preferredSuffixes = [".dmg", ".zip", ".tar.gz"];
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            preferredSuffixes = [".exe", ".zip"];
-        else
-            preferredSuffixes = [".AppImage", ".tar.gz", ".zip"];
+            // Avoid installer-ish Windows assets when we can.
+            var looksLikeInstaller = lower.Contains("setup") || lower.Contains("installer") || lower.Contains("install");
 
+            // Prefer matching current architecture if present in the name.
+            var arch = RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => "arm64",
+                Architecture.X64 => "x64",
+                Architecture.X86 => "x86",
+                _ => ""
+            };
+            var hasArchHint = !string.IsNullOrWhiteSpace(arch) && lower.Contains(arch);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                if (lower.EndsWith(".dmg")) return 300 + (hasArchHint ? 10 : 0);
+                if (lower.EndsWith(".zip")) return 250 + (hasArchHint ? 10 : 0);
+                if (lower.EndsWith(".tar.gz")) return 200 + (hasArchHint ? 10 : 0);
+                return 0;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Prefer portable archives first.
+                if (lower.EndsWith(".zip")) return 300 + (hasArchHint ? 10 : 0);
+                if (lower.EndsWith(".exe")) return looksLikeInstaller ? 0 : (200 + (hasArchHint ? 10 : 0));
+                return 0;
+            }
+
+            // Linux
+            if (lower.EndsWith(".appimage")) return 300 + (hasArchHint ? 10 : 0);
+            if (lower.EndsWith(".tar.gz")) return 250 + (hasArchHint ? 10 : 0);
+            if (lower.EndsWith(".zip")) return 200 + (hasArchHint ? 10 : 0);
+            return 0;
+        }
+
+        (string name, string url, int score)? best = null;
         foreach (var asset in assets.EnumerateArray())
         {
             var name = asset.TryGetProperty("name", out var n) ? n.GetString() : null;
@@ -634,12 +759,18 @@ rm -f ""$0""
             var url = urlEl.GetString();
             if (string.IsNullOrWhiteSpace(url)) continue;
 
-            if (EndsWithAny(name, preferredSuffixes))
-            {
-                assetName = name;
-                downloadUrl = url;
-                return;
-            }
+            var score = ScoreAsset(name);
+            if (score <= 0) continue;
+
+            if (best == null || score > best.Value.score)
+                best = (name, url, score);
+        }
+
+        if (best != null)
+        {
+            assetName = best.Value.name;
+            downloadUrl = best.Value.url;
+            return;
         }
 
         // 2) Fallback: first asset with a download URL
@@ -649,6 +780,13 @@ rm -f ""$0""
             var url = asset.TryGetProperty("browser_download_url", out var urlEl) ? urlEl.GetString() : null;
             if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(url))
             {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    var lower = name.ToLowerInvariant();
+                    var looksLikeInstaller = lower.Contains("setup") || lower.Contains("installer") || lower.Contains("install");
+                    if (looksLikeInstaller && lower.EndsWith(".exe"))
+                        continue;
+                }
                 assetName = name;
                 downloadUrl = url;
                 return;
@@ -691,7 +829,8 @@ rm -f ""$0""
             {
                 throw new Exception($"Could not find mount point. Output: {mountOutput}");
             }
-            
+
+            EmitLauncherUpdateProgress("install", 90, "Extracting update...", 0, 0);
             Logger.Info("Update", $"DMG mounted at: {mountPoint}");
             
             // Find the .app in the mounted DMG
@@ -701,6 +840,7 @@ rm -f ""$0""
                 Process.Start("hdiutil", $"detach \"{mountPoint}\" -force");
                 throw new Exception("No .app found in DMG");
             }
+
             
             // Get current app path
             var currentExe = Environment.ProcessPath;
@@ -734,7 +874,6 @@ sleep 2
 rm -rf ""{currentAppPath}""
 cp -R ""{appInDmg}"" ""{currentAppPath}""
 hdiutil detach ""{mountPoint}"" -force
-rm -f ""{dmgPath}""
 open ""{currentAppPath}""
 rm -f ""$0""
 ";
@@ -751,8 +890,7 @@ rm -f ""$0""
                 CreateNoWindow = true
             });
             
-            Logger.Info("Update", "Update script started, exiting launcher...");
-            Environment.Exit(0);
+            Logger.Info("Update", "Update script started");
         }
         catch (Exception ex)
         {
@@ -779,7 +917,7 @@ rm -f ""$0""
             var batchContent = $@"@echo off
 timeout /t 2 /nobreak >nul
 del ""{currentExe}"" 2>nul
-move /y ""{exePath}"" ""{currentExe}""
+copy /y ""{exePath}"" ""{currentExe}"" >nul
 start """" ""{currentExe}""
 del ""%~f0""
 ";
@@ -795,8 +933,7 @@ del ""%~f0""
             };
             Process.Start(psi);
 
-            Logger.Info("Update", "Starting update script and exiting...");
-            Environment.Exit(0);
+            Logger.Info("Update", "Starting update script");
         }
         catch (Exception ex)
         {
@@ -851,7 +988,7 @@ del ""%~f0""
                 var scriptContent = $@"#!/bin/bash
 sleep 2
 rm -f ""{currentExe}""
-mv ""{targetPath}"" ""{currentExe}""
+cp -f ""{targetPath}"" ""{currentExe}""
 chmod +x ""{currentExe}""
 ""{currentExe}"" &
 rm -f ""$0""
@@ -868,8 +1005,7 @@ rm -f ""$0""
                     CreateNoWindow = true
                 });
                 
-                Logger.Info("Update", "Update script started, exiting launcher...");
-                Environment.Exit(0);
+                Logger.Info("Update", "Update script started");
             }
             else
             {
@@ -880,7 +1016,7 @@ rm -f ""$0""
                 var scriptContent = $@"#!/bin/bash
 sleep 2
 rm -f ""{currentExe}""
-mv ""{targetPath}"" ""{currentExe}""
+cp -f ""{targetPath}"" ""{currentExe}""
 chmod +x ""{currentExe}"" 2>/dev/null || true
 ""{currentExe}"" &
 rm -f ""$0""
@@ -895,8 +1031,7 @@ rm -f ""$0""
                     CreateNoWindow = true
                 });
 
-                Logger.Info("Update", "Update script started, exiting launcher...");
-                Environment.Exit(0);
+                Logger.Info("Update", "Update script started");
             }
         }
         catch (Exception ex)
