@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from '
 import { useTranslation } from 'react-i18next';
 import { ipc } from '@/lib/ipc';
 import { useAccentColor } from '../contexts/AccentColorContext';
+import { Button, IconButton, LinkButton } from '@/components/ui/Controls';
 
 interface NewsItem {
     title: string;
@@ -141,13 +142,14 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                             </button>
                         </>
                     )}
-                    <button
+                    <IconButton
+                        size="sm"
                         onClick={() => setIsMinimized(!isMinimized)}
-                        className='p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all'
                         title={isMinimized ? t('news.expand') : t('news.minimize')}
+                        className="w-7 h-7"
                     >
                         {isMinimized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                    </button>
+                    </IconButton>
                 </div>
             </div>
 
@@ -160,12 +162,12 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                     <div className="flex items-center justify-center py-8">
                         <div className="text-center">
                             <p className="text-red-400 mb-3 text-sm">{error}</p>
-                            <button
+                            <Button
                                 onClick={() => fetchNews(limit, true)}
-                                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm"
+                                size="sm"
                             >
                                 {t('news.tryAgain')}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 ) : filteredNews.length > 0 ? (
@@ -206,12 +208,12 @@ export const NewsPreview: React.FC<NewsPreviewProps> = memo(({ getNews, isPaused
                                 <RefreshCw size={12} className='animate-spin' />
                             </div>
                         )}
-                        <button
+                        <LinkButton
                             onClick={() => openLink("https://hytale.com/news")}
-                            className='w-full font-semibold hover:underline cursor-pointer text-xs mt-0.5'
+                            className='w-full font-semibold text-xs mt-0.5'
                             style={{ color: accentColor }}>
                             {t('news.readMore')} →
-                        </button>
+                        </LinkButton>
                     </div>
                 ) : (
                     <div className="flex items-center justify-center py-4">

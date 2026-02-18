@@ -2,13 +2,20 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Download, Package, Loader2, AlertCircle,
-  Check, ChevronDown, Upload,
+  Check, Upload,
   ArrowLeft, X
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import { ipc, type ModInfo, type ModCategory, type ModFileInfo } from '@/lib/ipc';
-import { ImageLightbox } from '@/components/ui/Controls';
+import {
+  Button,
+  IconButton,
+  LinkButton,
+  DropdownTriggerButton,
+  MenuItemButton,
+  ImageLightbox,
+} from '@/components/ui/Controls';
 
 // ------- Helpers -------
 
@@ -506,13 +513,14 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
         <div className="flex items-center gap-3">
           {/* Back button */}
           {onBack && (
-            <button
+            <IconButton
+              variant="ghost"
               onClick={onBack}
-              className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
+              className="!rounded-xl flex-shrink-0"
               title={t('common.back')}
             >
               <ArrowLeft size={18} />
-            </button>
+            </IconButton>
           )}
 
           {/* Search input */}
@@ -530,30 +538,25 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
 
           {/* Category dropdown */}
           <div className="relative" ref={categoryDropdownRef}>
-            <button
+            <DropdownTriggerButton
+              label={getCategoryName(selectedCategory)}
+              open={isCategoryDropdownOpen}
               onClick={() => { setIsCategoryDropdownOpen(!isCategoryDropdownOpen); setIsSortDropdownOpen(false); }}
-              className="h-10 px-3 rounded-xl bg-[#2c2c2e] border border-white/[0.08] text-white/70 text-sm flex items-center gap-2 hover:border-white/20 transition-all whitespace-nowrap"
-            >
-              {getCategoryName(selectedCategory)}
-              <ChevronDown size={14} className={`transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+            />
             {isCategoryDropdownOpen && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto">
                 {categories.map(cat => (
-                  <button
+                  <MenuItemButton
                     key={cat.id}
                     onClick={() => { setSelectedCategory(cat.id); setIsCategoryDropdownOpen(false); }}
-                    className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors ${
-                      selectedCategory === cat.id ? 'text-white' : 'text-white/60'
-                    }`}
-                    style={selectedCategory === cat.id ? { backgroundColor: `${accentColor}20` } : undefined}
+                    className={selectedCategory === cat.id ? '!text-white bg-white/[0.08]' : ''}
                   >
                     {(() => {
                       const key = `modManager.category.${cat.name.replace(/[\s\\/]+/g, '_').toLowerCase()}`;
                       const translated = t(key);
                       return translated !== key ? translated : cat.name;
                     })()}
-                  </button>
+                  </MenuItemButton>
                 ))}
               </div>
             )}
@@ -561,26 +564,21 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
 
           {/* Sort dropdown */}
           <div className="relative" ref={sortDropdownRef}>
-            <button
+            <DropdownTriggerButton
+              label={getSortName(selectedSortField)}
+              open={isSortDropdownOpen}
               onClick={() => { setIsSortDropdownOpen(!isSortDropdownOpen); setIsCategoryDropdownOpen(false); }}
-              className="h-10 px-3 rounded-xl bg-[#2c2c2e] border border-white/[0.08] text-white/70 text-sm flex items-center gap-2 hover:border-white/20 transition-all whitespace-nowrap"
-            >
-              {getSortName(selectedSortField)}
-              <ChevronDown size={14} className={`transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+            />
             {isSortDropdownOpen && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
                 {sortOptions.map(opt => (
-                  <button
+                  <MenuItemButton
                     key={opt.id}
                     onClick={() => { setSelectedSortField(opt.id); setIsSortDropdownOpen(false); }}
-                    className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors ${
-                      selectedSortField === opt.id ? 'text-white' : 'text-white/60'
-                    }`}
-                    style={selectedSortField === opt.id ? { backgroundColor: `${accentColor}20` } : undefined}
+                    className={selectedSortField === opt.id ? '!text-white bg-white/[0.08]' : ''}
                   >
                     {opt.name}
-                  </button>
+                  </MenuItemButton>
                 ))}
               </div>
             )}
@@ -594,20 +592,20 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
               {selectedMods.size} {t('modManager.modsSelected')}
             </span>
             <div className="flex items-center gap-2">
-              <button
+              <LinkButton
                 onClick={() => setSelectedMods(new Set())}
-                className="px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                className="text-xs"
               >
                 {t('common.clear')}
-              </button>
-              <button
+              </LinkButton>
+              <Button
+                size="sm"
+                variant="primary"
                 onClick={handleDownloadSelected}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all"
-                style={{ backgroundColor: accentColor, color: accentTextColor }}
               >
                 <Download size={12} />
                 {t('modManager.downloadSelected')}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -655,7 +653,9 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
           >
             <AlertCircle size={14} />
             <span className="flex-1 truncate">{error}</span>
-            <button onClick={() => setError(null)} className="p-0.5 hover:text-white transition-colors"><X size={14} /></button>
+            <IconButton variant="ghost" title={t('common.dismiss')} onClick={() => setError(null)} className="h-6 w-6">
+              <X size={14} />
+            </IconButton>
           </motion.div>
         )}
       </AnimatePresence>
@@ -752,13 +752,13 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <button
+                        <LinkButton
                           onClick={(e) => handleOpenModPage(e, mod)}
-                          className="text-white font-medium truncate hover:underline underline-offset-2 text-left"
+                          className="!text-white font-medium truncate text-left underline-offset-2"
                           title="Open CurseForge page"
                         >
                           {mod.name}
-                        </button>
+                        </LinkButton>
                         {isInstalled && (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 flex-shrink-0">
                             {t('modManager.installedBadge')}
@@ -816,19 +816,21 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
             >
               {/* Close detail */}
               <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
-                <button
+                <LinkButton
                   onClick={(e) => handleOpenModPage(e, selectedMod)}
-                  className="text-white font-bold text-lg truncate flex-1 text-left hover:underline underline-offset-2"
+                  className="!text-white font-bold text-lg truncate flex-1 text-left underline-offset-2"
                   title="Open CurseForge page"
                 >
                   {selectedMod.name}
-                </button>
-                <button
+                </LinkButton>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
                   onClick={() => setSelectedMod(null)}
-                  className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all ml-2"
+                  className="ml-2"
                 >
                   <X size={16} />
-                </button>
+                </IconButton>
               </div>
 
               {/* Screenshots carousel */}
@@ -890,19 +892,19 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                         const fileId = normalizeId(file.id);
                         const isFileInstalled = installedFileIds?.has(fileId) ?? false;
                         return (
-                        <button
+                        <MenuItemButton
                           key={file.id}
                           onClick={() => {
                             const selectedModId = normalizeId(selectedMod.id);
                             setDetailSelectedFileId(fileId);
                             setSelectedVersions(prev => new Map(prev).set(selectedModId, fileId));
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all border ${
+                          className={`!block !px-3 !py-2 !rounded-lg border ${
                             isFileInstalled
                               ? 'border-green-500/30 bg-green-500/10'
                               : detailSelectedFileId === fileId
                                 ? 'border-white/20 bg-[#2c2c2e]'
-                                : 'border-transparent hover:bg-[#252527]'
+                                : 'border-transparent !hover:bg-[#252527]'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -925,7 +927,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                           {file.gameVersions && file.gameVersions.length > 0 && (
                             <span className="text-white/30 text-xs">{file.gameVersions.join(', ')}</span>
                           )}
-                        </button>
+                        </MenuItemButton>
                         );
                       })}
                     </div>
@@ -937,7 +939,8 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                   const fileId = detailSelectedFileId || normalizeId(selectedModFiles[0]?.id);
                   const isSelectedFileInstalled = fileId ? (installedFileIds?.has(fileId) ?? false) : false;
                   return (
-                    <button
+                    <Button
+                      variant="primary"
                       onClick={() => {
                         const selectedModId = normalizeId(selectedMod.id);
                         if (fileId && !isSelectedFileInstalled && selectedModId) {
@@ -945,12 +948,12 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                         }
                       }}
                       disabled={isDownloading || selectedModFiles.length === 0 || isSelectedFileInstalled}
-                      className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-40 ${
+                      className={`w-full font-bold ${
                         isSelectedFileInstalled ? 'cursor-default' : ''
                       }`}
                       style={isSelectedFileInstalled
                         ? { backgroundColor: 'rgba(34, 197, 94, 0.15)', color: 'rgb(74, 222, 128)' }
-                        : { backgroundColor: accentColor, color: accentTextColor }
+                        : undefined
                       }
                     >
                       {isDownloading ? (
@@ -961,7 +964,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = ({
                         <Download size={16} />
                       )}
                       {isSelectedFileInstalled ? t('modManager.installedBadge') : t('modManager.download')}
-                    </button>
+                    </Button>
                   );
                 })()}
               </div>

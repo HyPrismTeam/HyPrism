@@ -52,13 +52,23 @@
 **Что использовать**
 - `Button` — базовая кнопка для большинства действий
 - `IconButton` — квадратные действия только с иконкой (refresh/copy/export и т.д.)
+- `LinkButton` — кнопка в стиле ссылки для текстовых действий (без одноразовых `className` кнопок)
+- `LauncherActionButton` — градиентные основные действия (Play/Stop/Download/Update/Select) с "лаунчерным" шрифтом/весом
 - `SegmentedControl` — переключатели в стиле табов с бегунком (как в Instances)
 - `AccentSegmentedControl` — обёртка над `SegmentedControl`, автоматически применяющая текущий accent-стиль (используется для фильтров в Logs и табов Instances)
 - `Switch` — accent-reactive переключатель
 - `ScrollArea` — единообразный overflow + опциональный `thin-scrollbar`
 - `ImageLightbox` — просмотр скриншотов по центру с навигацией `1/3 < >`
+- `DropdownTriggerButton` — стандартный триггер dropdown (label + chevron + состояние open)
 - `MenuActionButton` — полноширинные пункты меню для hover-меню (например, Worlds overlay)
 - `MenuItemButton` — полноширинные пункты для context/popover меню (заменяет одноразовые `button className="..."` в меню)
+- `ModalFooterActions` — стандартная строка действий в футере модалки (отступы + граница + фон)
+
+**Размеры IconButton**
+- Используйте `IconButton size="sm" | "md" | "lg"` вместо ручных `h-/w-` классов.
+
+**Варианты IconButton**
+- Используйте `variant="overlay"` для навигации в скриншотах/lightbox (без glass hover).
 
 **Правило**
 - Если хочется написать новую кнопку с кастомным `className="...rounded...hover..."` — лучше использовать `Button`/`IconButton` из `@/components/ui/Controls`.

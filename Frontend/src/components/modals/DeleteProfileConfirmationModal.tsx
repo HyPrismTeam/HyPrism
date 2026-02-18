@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { Button, IconButton, ModalFooterActions } from '@/components/ui/Controls';
 
 import { ModalOverlay } from './ModalOverlay';
 
@@ -38,12 +39,9 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
             </div>
             <h2 className="text-lg font-bold text-white">{t('deleteProfile.title')}</h2>
           </div>
-          <button
-            onClick={onCancel}
-            className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-          >
+          <IconButton variant="ghost" size="sm" onClick={onCancel} title={t('common.close')}>
             <X size={18} />
-          </button>
+          </IconButton>
         </div>
 
         {/* Content */}
@@ -75,23 +73,15 @@ export const DeleteProfileConfirmationModal: React.FC<DeleteProfileConfirmationM
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-5 border-t border-white/10 bg-black/30">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-gray-300 hover:bg-white/10 transition-colors font-medium"
-          >
+        <ModalFooterActions>
+          <Button onClick={onCancel} className="flex-1">
             {t('deleteProfile.cancel')}
-          </button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onConfirm}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
-          >
+          </Button>
+          <Button variant="danger" onClick={onConfirm} className="flex-1 bg-red-500 text-white font-bold hover:bg-red-600">
             <Trash2 size={16} />
             {t('deleteProfile.delete')}
-          </motion.button>
-        </div>
+          </Button>
+        </ModalFooterActions>
       </motion.div>
     </ModalOverlay>
   );

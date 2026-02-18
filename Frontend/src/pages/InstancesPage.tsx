@@ -19,7 +19,7 @@ import { GameBranch } from '@/constants/enums';
 import { CreateInstanceModal } from '../components/modals/CreateInstanceModal';
 import { EditInstanceModal } from '../components/modals/EditInstanceModal';
 import { PageContainer } from '@/components/ui/PageContainer';
-import { AccentSegmentedControl, IconButton, MenuActionButton, MenuItemButton } from '@/components/ui/Controls';
+import { AccentSegmentedControl, Button, IconButton, LauncherActionButton, LinkButton, MenuActionButton, MenuItemButton } from '@/components/ui/Controls';
 
 // IPC calls for instance operations - uses invoke to send to backend
 const ExportInstance = async (instanceId: string): Promise<string> => {
@@ -1542,13 +1542,14 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   // Game running on THIS instance → Stop
                   if (isThisRunning) {
                     return (
-                      <button
+                      <LauncherActionButton
+                        variant="stop"
                         onClick={() => handleLaunchInstance(selectedInstance)}
-                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg bg-gradient-to-r from-red-600 to-red-500 text-white"
+                        className="h-10 px-4 rounded-xl text-sm"
                       >
                         <X size={16} />
                         {t('main.stop')}
-                      </button>
+                      </LauncherActionButton>
                     );
                   }
 
@@ -1582,14 +1583,10 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   // Game running on ANOTHER instance → disabled
                   if (isGameRunning && runningIdentityKnown) {
                     return (
-                      <button
-                        disabled
-                        className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all opacity-50 cursor-not-allowed"
-                        style={{ backgroundColor: '#555', color: accentTextColor }}
-                      >
+                      <LauncherActionButton variant="play" disabled className="h-10 px-4 text-sm">
                         <Play size={16} fill="currentColor" />
                         {t('main.play')}
-                      </button>
+                      </LauncherActionButton>
                     );
                   }
 
@@ -1597,16 +1594,15 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   if (!isInstalled) {
                     const anotherDownloading = isDownloading && !isThisDownloading;
                     return (
-                      <button
+                      <LauncherActionButton
+                        variant="download"
                         onClick={() => !anotherDownloading && handleLaunchInstance(selectedInstance)}
                         disabled={anotherDownloading}
-                        className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white ${
-                          anotherDownloading ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-110 active:scale-[0.98]'
-                        }`}
+                        className="h-10 px-4 rounded-xl text-sm"
                       >
                         <Download size={16} />
                         {t('main.download')}
-                      </button>
+                      </LauncherActionButton>
                     );
                   }
 
@@ -1614,14 +1610,10 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   if (officialServerBlocked) {
                     return (
                       <div className="relative group">
-                        <button
-                          disabled
-                          className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all opacity-50 cursor-not-allowed"
-                          style={{ backgroundColor: '#555', color: accentTextColor }}
-                        >
+                        <LauncherActionButton variant="play" disabled className="h-10 px-4 text-sm">
                           <Play size={16} fill="currentColor" />
                           {t('main.play')}
-                        </button>
+                        </LauncherActionButton>
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
                           {t('main.officialServerBlocked')}
                         </div>
@@ -1630,25 +1622,22 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                   }
 
                   return (
-                    <button
+                    <LauncherActionButton
+                      variant="play"
                       onClick={() => handleLaunchInstance(selectedInstance)}
-                      className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:brightness-110 active:scale-[0.98] shadow-lg"
-                      style={{ backgroundColor: accentColor, color: accentTextColor }}
+                      className="h-10 px-4 rounded-xl text-sm"
                     >
                       <Play size={16} fill="currentColor" />
                       {t('main.play')}
-                    </button>
+                    </LauncherActionButton>
                   );
                 })()}
 
                 {/* Settings Menu */}
                 <div className="relative" ref={instanceMenuRef}>
-                  <button
-                    onClick={() => setShowInstanceMenu(!showInstanceMenu)}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-all"
-                  >
+                  <IconButton onClick={() => setShowInstanceMenu(!showInstanceMenu)}>
                     <MoreVertical size={18} />
-                  </button>
+                  </IconButton>
 
                   {showInstanceMenu && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-[#1c1c1e] border border-white/[0.08] rounded-xl shadow-xl z-50 overflow-hidden">
@@ -1825,14 +1814,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 ml-auto">
-                      <button
-                        onClick={() => void loadInstalledMods()}
-                        disabled={isLoadingMods}
-                        className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
-                        title={t('common.refresh')}
-                      >
+                      <IconButton variant="ghost" onClick={() => void loadInstalledMods()} disabled={isLoadingMods} title={t('common.refresh')}>
                         <RotateCw size={16} className={isLoadingMods ? 'animate-spin' : ''} />
-                      </button>
+                      </IconButton>
 
                       <button
                         onClick={() => setShowBulkUpdateConfirm(true)}
@@ -1908,14 +1892,10 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                         <Package size={48} className="mb-4 opacity-40" />
                         <p className="text-lg font-medium text-white/60">{t('modManager.noModsInstalled')}</p>
                         <p className="text-sm mt-1">{t('modManager.clickInstallContent')}</p>
-                        <button
-                          onClick={() => onTabChange?.('browse')}
-                          className="mt-4 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg"
-                          style={{ backgroundColor: accentColor, color: accentTextColor }}
-                        >
+                        <Button variant="primary" onClick={() => onTabChange?.('browse')} className="mt-4 shadow-lg">
                           <Plus size={16} />
                           {t('instances.installContent')}
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div className="p-4">
@@ -1970,7 +1950,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                 {/* Info (no description in Installed) */}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <button
+                                    <LinkButton
                                       onClick={(e) => {
                                         if (cfUrlFromDetails) {
                                           e.preventDefault();
@@ -1980,11 +1960,11 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                         }
                                         handleOpenModPage(e, mod);
                                       }}
-                                      className="text-white font-medium truncate hover:underline underline-offset-2 text-left"
+                                      className="text-white font-medium truncate text-left"
                                       title="Open CurseForge page"
                                     >
                                       {displayName}
-                                    </button>
+                                    </LinkButton>
                                     {hasUpdate && (
                                       <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-500/20 text-green-400 flex-shrink-0">
                                         {t('modManager.updateBadge')}
@@ -2069,13 +2049,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                 </div>
 
                                 {/* Actions */}
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setModToDelete(mod); }}
-                                  className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
-                                  title={t('common.delete')}
-                                >
+                                <IconButton variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setModToDelete(mod); }} className="!w-7 !h-7 text-white/30 hover:text-red-400 hover:bg-red-500/10 flex-shrink-0" title={t('common.delete')}>
                                   <Trash2 size={14} />
-                                </button>
+                                </IconButton>
                               </div>
                             );
                           })}
@@ -2198,11 +2174,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                                   {t('common.openFolder')}
                                 </MenuActionButton>
                                 <div className="h-px bg-white/10" />
-                                <MenuActionButton
-                                  variant="danger"
-                                  onClick={(e) => handleDeleteSave(e, save.name)}
-                                  className="bg-red-500/10"
-                                >
+                                <MenuActionButton onClick={(e) => handleDeleteSave(e, save.name)}>
                                   <Trash2 size={18} />
                                   {t('common.delete')}
                                 </MenuActionButton>
@@ -2237,14 +2209,10 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
             <Box size={64} className="mb-4 text-white/20" />
             <p className="text-xl font-medium text-white/70">{t('instances.noInstances')}</p>
             <p className="text-sm mt-2 text-white/40 text-center max-w-xs">{t('instances.createInstanceHint')}</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="mt-6 px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:opacity-90 shadow-lg"
-              style={{ backgroundColor: accentColor, color: accentTextColor }}
-            >
+            <Button variant="primary" onClick={() => setShowCreateModal(true)} className="mt-6 px-6 py-3 font-bold shadow-lg">
               <Plus size={18} />
               {t('instances.createInstance')}
-            </button>
+            </Button>
           </div>
         ) : (
           /* No Instance Selected */
@@ -2296,14 +2264,12 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {t('instances.deleteConfirm')} <strong>{getInstanceDisplayName(instanceToDelete)}</strong>?
               </p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setInstanceToDelete(null)}
-                  className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all">
+                <Button onClick={() => setInstanceToDelete(null)}>
                   {t('common.cancel')}
-                </button>
-                <button onClick={() => handleDelete(instanceToDelete)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all">
+                </Button>
+                <Button variant="danger" onClick={() => handleDelete(instanceToDelete)}>
                   {t('common.delete')}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </motion.div>
@@ -2331,17 +2297,13 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                 {t('modManager.deleteModConfirm')} <strong>{modToDelete.name}</strong>?
               </p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setModToDelete(null)}
-                  className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all">
+                <Button onClick={() => setModToDelete(null)}>
                   {t('common.cancel')}
-                </button>
-                <button 
-                  onClick={() => handleDeleteMod(modToDelete)}
-                  disabled={isDeletingMod}
-                  className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all flex items-center gap-2">
+                </Button>
+                <Button variant="danger" onClick={() => handleDeleteMod(modToDelete)} disabled={isDeletingMod}>
                   {isDeletingMod && <Loader2 size={14} className="animate-spin" />}
                   {t('common.delete')}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </motion.div>
@@ -2376,13 +2338,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                       : t('modManager.allUpToDate')}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowBulkUpdateConfirm(false)}
-                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
-                  title={t('common.close')}
-                >
+                <IconButton variant="ghost" onClick={() => setShowBulkUpdateConfirm(false)} title={t('common.close')}>
                   <X size={16} />
-                </button>
+                </IconButton>
               </div>
 
               {bulkUpdateList.length > 0 && (
@@ -2522,23 +2480,20 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
               )}
 
               <div className="flex justify-end gap-2 mt-5">
-                <button
-                  onClick={() => setShowBulkUpdateConfirm(false)}
-                  className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                >
+                <Button onClick={() => setShowBulkUpdateConfirm(false)}>
                   {t('common.cancel')}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={async () => {
                     await handleBulkUpdateMods();
                     setShowBulkUpdateConfirm(false);
                   }}
                   disabled={bulkUpdateList.length === 0 || isUpdatingMods || selectedBulkUpdateIds.size === 0}
-                  className="px-4 py-2 rounded-xl text-sm font-medium bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-all disabled:opacity-50 flex items-center gap-2"
+                  className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/20"
                 >
                   {isUpdatingMods && <Loader2 size={14} className="animate-spin" />}
                   {isUpdatingMods ? t('modManager.updating') : `${t('modManager.updateAll')} (${selectedBulkUpdateIds.size})`}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </motion.div>
@@ -2573,13 +2528,9 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
                       : t('modManager.noModsInstalled')}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowBulkDeleteConfirm(false)}
-                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all"
-                  title={t('common.close')}
-                >
+                <IconButton variant="ghost" onClick={() => setShowBulkDeleteConfirm(false)} title={t('common.close')}>
                   <X size={16} />
-                </button>
+                </IconButton>
               </div>
 
               {bulkDeleteList.length > 0 && (
@@ -2656,23 +2607,20 @@ export const InstancesPage: React.FC<InstancesPageProps> = ({
               )}
 
               <div className="flex justify-end gap-2 mt-5">
-                <button
-                  onClick={() => setShowBulkDeleteConfirm(false)}
-                  className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                >
+                <Button onClick={() => setShowBulkDeleteConfirm(false)}>
                   {t('common.cancel')}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
                   onClick={async () => {
                     await handleBulkDeleteMods(selectedBulkDeleteIds);
                     setShowBulkDeleteConfirm(false);
                   }}
                   disabled={bulkDeleteList.length === 0 || isDeletingMod || selectedBulkDeleteIds.size === 0}
-                  className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {isDeletingMod && <Loader2 size={14} className="animate-spin" />}
                   {`${t('modManager.deleteSelected')} (${selectedBulkDeleteIds.size})`}
-                </button>
+                </Button>
               </div>
             </motion.div>
           </motion.div>

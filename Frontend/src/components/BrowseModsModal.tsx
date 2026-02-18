@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAccentColor } from '../contexts/AccentColorContext';
+import { Button, IconButton, LinkButton, DropdownTriggerButton, MenuItemButton } from '@/components/ui/Controls';
 
 import { ipc } from '@/lib/ipc';
 
@@ -616,28 +617,25 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
+              <Button
+                variant="primary"
                 onClick={handleDownloadSelected}
                 disabled={isDownloading || selectedMods.size === 0}
-                className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
-                  selectedMods.size > 0 ? '' : 'opacity-50 cursor-not-allowed'
-                }`}
-                style={selectedMods.size > 0 ? { backgroundColor: accentColor, color: accentTextColor } : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
               >
                 <Download size={16} />
                 {t('modManager.installSelected')} {selectedMods.size > 0 && `(${selectedMods.size})`}
-              </button>
-              <button
+              </Button>
+              <IconButton
+                variant="ghost"
+                title={t('modManager.addMods')}
                 onClick={handleBrowseModFiles}
                 disabled={isImporting}
-                className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
-                title={t('modManager.addMods')}
               >
                 <FilePlus2 size={20} />
-              </button>
-              <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white">
+              </IconButton>
+              <IconButton variant="ghost" title={t('common.close')} onClick={onClose}>
                 <X size={20} />
-              </button>
+              </IconButton>
             </div>
           </div>
 
@@ -656,41 +654,39 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
 
             {/* Category dropdown */}
             <div ref={categoryDropdownRef} className="relative">
-              <button
+              <DropdownTriggerButton
+                label={getCategoryName()}
+                open={isCategoryDropdownOpen}
                 onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                className="h-10 px-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm hover:border-white/20 flex items-center gap-2 min-w-[140px] whitespace-nowrap"
-              >
-                <span className="truncate">{getCategoryName()}</span>
-                <ChevronDown
-                  size={14}
-                  className={`absolute right-3 text-white/40 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
+                className="min-w-[140px]"
+              />
 
               {isCategoryDropdownOpen && (
                 <div className="absolute top-full left-0 mt-2 z-[100] min-w-[200px] max-h-60 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-y-auto">
-                  <button
+                  <MenuItemButton
                     onClick={() => {
                       setSelectedCategory(0);
                       setIsCategoryDropdownOpen(false);
                     }}
-                    className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors ${selectedCategory === 0 ? 'bg-white/5' : 'text-white/70'}`}
-                    style={selectedCategory === 0 ? { color: accentColor } : undefined}
+                    className={selectedCategory === 0 ? 'bg-white/5' : ''}
                   >
-                    {t('modManager.allCategories')}
-                  </button>
+                    <span style={selectedCategory === 0 ? { color: accentColor } : undefined}>
+                      {t('modManager.allCategories')}
+                    </span>
+                  </MenuItemButton>
                   {categories.map((cat) => (
-                    <button
+                    <MenuItemButton
                       key={cat.id}
                       onClick={() => {
                         setSelectedCategory(cat.id);
                         setIsCategoryDropdownOpen(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors ${selectedCategory === cat.id ? 'bg-white/5' : 'text-white/70'}`}
-                      style={selectedCategory === cat.id ? { color: accentColor } : undefined}
+                      className={selectedCategory === cat.id ? 'bg-white/5' : ''}
                     >
-                      {t(cat.name)}
-                    </button>
+                      <span style={selectedCategory === cat.id ? { color: accentColor } : undefined}>
+                        {t(cat.name)}
+                      </span>
+                    </MenuItemButton>
                   ))}
                 </div>
               )}
@@ -698,35 +694,32 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
 
             {/* Sort dropdown */}
             <div ref={sortDropdownRef} className="relative">
-              <button
+              <DropdownTriggerButton
+                prefix={t('modManager.sortBy')}
+                label={sortOptions.find(s => s.id === selectedSortField)?.name || t('modManager.sortTotalDownloads')}
+                open={isSortDropdownOpen}
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="h-10 px-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm hover:border-white/20 flex items-center gap-2 min-w-[160px] whitespace-nowrap"
-              >
-                <span className="text-white/50 mr-1">{t('modManager.sortBy')}</span>
-                <span className="truncate">{sortOptions.find(s => s.id === selectedSortField)?.name || t('modManager.sortTotalDownloads')}</span>
-                <ChevronDown
-                  size={14}
-                  className={`absolute right-3 text-white/40 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
+                className="min-w-[160px]"
+              />
 
               {isSortDropdownOpen && (
                 <div className="absolute top-full right-0 mt-2 z-[100] min-w-[180px] bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-hidden">
                   {sortOptions.map((option) => (
-                    <button
+                    <MenuItemButton
                       key={option.id}
                       onClick={() => {
                         setSelectedSortField(option.id);
                         setIsSortDropdownOpen(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors flex items-center justify-between ${selectedSortField === option.id ? 'bg-white/5' : 'text-white/70'}`}
-                      style={selectedSortField === option.id ? { color: accentColor } : undefined}
+                      className={`justify-between ${selectedSortField === option.id ? 'bg-white/5' : ''}`}
                     >
-                      {option.name}
+                      <span style={selectedSortField === option.id ? { color: accentColor } : undefined}>
+                        {option.name}
+                      </span>
                       {selectedSortField === option.id && (
                         <Check size={14} style={{ color: accentColor }} />
                       )}
-                    </button>
+                    </MenuItemButton>
                   ))}
                 </div>
               )}
@@ -738,9 +731,14 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
             <div className="mx-4 mt-3 p-3 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3 flex-shrink-0">
               <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
               <span className="text-red-400 text-sm flex-1">{error}</span>
-              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
+              <IconButton
+                variant="ghost"
+                title={t('common.dismiss')}
+                onClick={() => setError(null)}
+                className="h-8 w-8 text-red-400 hover:text-red-300"
+              >
                 <X size={16} />
-              </button>
+              </IconButton>
             </div>
           )}
 
@@ -805,17 +803,17 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <button
+                              <LinkButton
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (mod.slug) {
                                     BrowserOpenURL(`https://www.curseforge.com/hytale/mods/${mod.slug}`);
                                   }
                                 }}
-                                className="text-white font-medium truncate text-left hover:opacity-80"
+                                className="text-white font-medium truncate text-left"
                               >
                                 {mod.name}
-                              </button>
+                              </LinkButton>
                             </div>
                             <div className="flex items-center gap-2 text-white/50 text-xs mt-1">
                               <span>{mod.author || mod.authors?.[0]?.name || t('modManager.releaseType.unknown')}</span>
@@ -854,16 +852,16 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <button
+                      <LinkButton
                         onClick={() => {
                           if (selectedMod.slug) {
                             BrowserOpenURL(`https://www.curseforge.com/hytale/mods/${selectedMod.slug}`);
                           }
                         }}
-                        className="text-lg font-bold text-white truncate hover:opacity-80 text-left block w-full"
+                        className="text-lg font-bold text-white truncate text-left block w-full"
                       >
                         {selectedMod.name}
-                      </button>
+                      </LinkButton>
                       <p className="text-white/50 text-sm truncate">
                         {selectedMod.author || selectedMod.authors?.[0]?.name || ''}
                       </p>
@@ -918,18 +916,22 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
                           </button>
                           {screenshots.length > 1 && (
                             <>
-                              <button
+                              <IconButton
+                                variant="overlay"
+                                size="sm"
                                 onClick={() => setActiveScreenshot((prev) => (prev > 0 ? prev - 1 : screenshots.length - 1))}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white/80 hover:bg-black/80"
+                                className="absolute left-2 top-1/2 -translate-y-1/2"
                               >
                                 <ChevronLeft size={16} />
-                              </button>
-                              <button
+                              </IconButton>
+                              <IconButton
+                                variant="overlay"
+                                size="sm"
                                 onClick={() => setActiveScreenshot((prev) => (prev < screenshots.length - 1 ? prev + 1 : 0))}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white/80 hover:bg-black/80"
+                                className="absolute right-2 top-1/2 -translate-y-1/2"
                               >
                                 <ChevronRight size={16} />
-                              </button>
+                              </IconButton>
                               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
                                 {screenshots.map((_, i) => (
                                   <button
@@ -984,19 +986,15 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
                     </div>
 
                     {/* Install button */}
-                    <button
+                    <Button
+                      variant={selectedMods.has(selectedMod.id) ? 'primary' : 'default'}
                       onClick={() => toggleModSelection(selectedMod)}
-                      className={`w-full py-3 rounded-xl text-sm font-medium ${
-                        selectedMods.has(selectedMod.id)
-                          ? ''
-                          : 'bg-white/10 text-white hover:bg-white/20'
-                      }`}
-                      style={selectedMods.has(selectedMod.id) ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
+                      className="w-full"
                     >
                       {selectedMods.has(selectedMod.id)
                         ? t('modManager.selectedForInstall')
                         : t('modManager.selectForInstall')}
-                    </button>
+                    </Button>
                   </div>
                 </>
               ) : (
@@ -1061,12 +1059,13 @@ export const BrowseModsModal: React.FC<BrowseModsModalProps> = ({
             className={`fixed inset-0 flex items-center justify-center z-[250] bg-[#0a0a0a]/98`}
             onClick={() => setFullscreenImage(null)}
           >
-            <button
+            <IconButton
+              variant="overlay"
               onClick={() => setFullscreenImage(null)}
-              className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+              className="absolute top-4 right-4"
             >
               <X size={24} />
-            </button>
+            </IconButton>
             <img
               src={fullscreenImage.url}
               alt={fullscreenImage.title}

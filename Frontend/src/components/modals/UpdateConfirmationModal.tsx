@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, HardDrive, AlertTriangle, Copy, SkipForward } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { Button, IconButton } from '@/components/ui/Controls';
 
 interface UpdateConfirmationModalProps {
     oldVersion: number;
@@ -21,7 +22,7 @@ export const UpdateConfirmationModal = ({
     onCancel
 }: UpdateConfirmationModalProps) => {
     const { t } = useTranslation();
-    const { accentColor, accentTextColor } = useAccentColor();
+    const { accentColor } = useAccentColor();
   
     const [isLoading, setIsLoading] = useState(false);
 
@@ -56,12 +57,9 @@ export const UpdateConfirmationModal = ({
                             {t('updateConfirmation.title')}
                         </h2>
                     </div>
-                    <button
-                        onClick={onCancel}
-                        className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-                    >
+                    <IconButton variant="ghost" size="sm" onClick={onCancel} className="w-8 h-8">
                         <X size={16} />
-                    </button>
+                    </IconButton>
                 </div>
 
                 {/* Content */}
@@ -96,23 +94,23 @@ export const UpdateConfirmationModal = ({
                             </div>
 
                             <div className="flex flex-col gap-2">
-                                <button
+                                <Button
+                                    variant="primary"
                                     onClick={handleConfirmWithCopy}
                                     disabled={isLoading}
-                                    className="w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 hover:opacity-90"
-                                    style={{ backgroundColor: accentColor, color: accentTextColor }}
+                                    className="w-full h-12"
                                 >
                                     <Copy size={18} />
                                     {t('updateConfirmation.updateCopyData')}
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={handleConfirmWithoutCopy}
                                     disabled={isLoading}
-                                    className="w-full h-12 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                                    className="w-full h-12"
                                 >
                                     <SkipForward size={18} />
                                     {t('updateConfirmation.updateWithoutCopy')}
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     ) : (
@@ -121,23 +119,23 @@ export const UpdateConfirmationModal = ({
                                 {t('updateConfirmation.readyMessage')}
                             </p>
 
-                            <button
+                            <Button
+                                variant="primary"
                                 onClick={handleConfirmWithoutCopy}
                                 disabled={isLoading}
-                                className="w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 hover:opacity-90"
-                                style={{ backgroundColor: accentColor, color: accentTextColor }}
+                                className="w-full h-12"
                             >
                                 {t('updateConfirmation.updateNow')}
-                            </button>
+                            </Button>
                         </div>
                     )}
 
-                    <button
+                    <Button
                         onClick={onCancel}
-                        className="w-full h-10 rounded-xl text-white/40 hover:text-white/70 text-sm transition-colors"
+                        className="w-full h-10 text-white/40 hover:text-white/70 bg-transparent border-transparent hover:bg-transparent"
                     >
                         {t('common.cancel')}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

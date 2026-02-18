@@ -69,7 +69,7 @@ const DeleteGame = _stub('DeleteGame', false);
 const ResetOnboarding = _stub('ResetOnboarding', undefined as void);
 const ImportInstanceFromZip = _stub('ImportInstanceFromZip', true);
 import { useAccentColor } from '../contexts/AccentColorContext';
-import { Button } from '@/components/ui/Controls';
+import { Button, IconButton, LinkButton } from '@/components/ui/Controls';
 import { DeveloperUiCatalog } from '@/components/dev/DeveloperUiCatalog';
 
 import { DiscordIcon } from './icons/DiscordIcon';
@@ -231,6 +231,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const gc = 'glass-control-solid';
     const [contributors, setContributors] = useState<Contributor[]>([]);
     const [isLoadingContributors, setIsLoadingContributors] = useState(false);
+    const [contributorsError, setContributorsError] = useState<string | null>(null);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
     const branchDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -489,14 +490,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     useEffect(() => {
         if (activeTab === 'about' && contributors.length === 0 && !isLoadingContributors) {
             setIsLoadingContributors(true);
+            setContributorsError(null);
             fetch('https://api.github.com/repos/HyPrismTeam/HyPrism/contributors')
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) {
                         setContributors(data);
+                    } else {
+                        const msg = (data && typeof data === 'object' && 'message' in data)
+                            ? String((data as any).message)
+                            : 'Failed to load contributors';
+                        setContributorsError(msg);
                     }
                 })
-                .catch(err => console.error('Failed to load contributors:', err))
+                .catch(err => {
+                    console.error('Failed to load contributors:', err);
+                    setContributorsError(err instanceof Error ? err.message : 'Failed to load contributors');
+                })
                 .finally(() => setIsLoadingContributors(false));
         }
     }, [activeTab, contributors.length, isLoadingContributors]);
@@ -1045,8 +1055,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return name.slice(0, maxLength - 2) + '...';
     };
 
+    const maintainerFallback: Contributor = {
+        login: 'yyyumeniku',
+        avatar_url: 'https://avatars.githubusercontent.com/u/108021304?v=4',
+        html_url: 'https://github.com/yyyumeniku',
+        contributions: 0,
+    };
+
     // Get the maintainer (yyyumeniku)
-    const maintainer = contributors.find(c => c.login.toLowerCase() === 'yyyumeniku');
+    const maintainer = contributors.find(c => c.login.toLowerCase() === 'yyyumeniku') ?? maintainerFallback;
     const otherContributors = contributors.filter(c => !['yyyumeniku', 'freakdaniel'].includes(c.login.toLowerCase()));
 
     return (
@@ -1108,9 +1125,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
                                 <h3 className="text-white font-medium">{tabs.find(t => t.id === activeTab)?.label}</h3>
                                 {!isPageMode && onClose && (
-                                    <button onClick={onClose} className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors">
+                                    <IconButton variant="ghost" size="sm" onClick={onClose} title={t('common.close')}>
                                         <X size={18} />
-                                    </button>
+                                    </IconButton>
                                 )}
                             </div>
                         )}
@@ -1129,14 +1146,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     {rosettaWarning.command}
                                                 </code>
                                                 {rosettaWarning.tutorialUrl && (
-                                                    <button
+                                                    <LinkButton
                                                         onClick={() => BrowserOpenURL(rosettaWarning.tutorialUrl!)}
-                                                        className="flex items-center gap-1 text-xs hover:opacity-80 transition-colors w-fit"
+                                                        className="text-xs w-fit"
                                                         style={{ color: accentColor }}
                                                     >
                                                         <ExternalLink size={12} />
                                                         {t('settings.generalSettings.watchTutorial')}
-                                                    </button>
+                                                    </LinkButton>
                                                 )}
                                             </div>
                                         </div>
@@ -1917,11 +1934,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 {backgroundImages.map((bg) => (
                                                     <div
                                                         key={bg.name}
-                                                        className="relative aspect-video rounded-lg overflow-hidden cursor-pointer border-2 transition-all"
-                                                        style={{
-                                                            borderColor: backgroundMode === bg.name ? accentColor : 'transparent',
-                                                            boxShadow: backgroundMode === bg.name ? `0 0 0 2px ${accentColor}30` : 'none'
-                                                        }}
+                                                        className="relative aspect-video rounded-lg overflow-hidden cursor-pointer border border-white/[0.06] transition-all hover:border-white/20"
+                                                        style={
+                                                            backgroundMode === bg.name
+                                                                ? { boxShadow: `inset 0 0 0 2px ${accentColor}` }
+                                                                : undefined
+                                                        }
                                                         onClick={() => handleBackgroundModeChange(bg.name)}
                                                     >
                                                         <img
@@ -2085,7 +2103,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                     placeholder="auth.example.com"
                                                                     className="flex-1 h-10 px-3 rounded-lg bg-[#1c1c1e] border border-white/[0.08] text-white text-sm placeholder-white/30 focus:outline-none focus:border-white/20 transition-colors"
                                                                 />
-                                                                <button
+                                                                <Button
+                                                                    variant="primary"
                                                                     onClick={async () => {
                                                                         if (customAuthDomain.trim()) {
                                                                             setAuthDomain(customAuthDomain.trim());
@@ -2094,11 +2113,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                         }
                                                                     }}
                                                                     disabled={!customAuthDomain.trim()}
-                                                                    className="px-4 h-10 rounded-lg text-sm font-medium transition-all disabled:opacity-40"
-                                                                    style={{ backgroundColor: accentColor, color: accentTextColor }}
                                                                 >
                                                                     {t('common.save')}
-                                                                </button>
+                                                                </Button>
                                                             </div>
                                                             {authDomain && authDomain !== 'sessions.sanasol.ws' && authDomain !== 'sessionserver.hytale.com' && (
                                                                 <p className="text-xs text-white/30 mt-2">
@@ -2366,21 +2383,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Launcher Folder Actions */}
                                     <div className="space-y-3">
-                                        <button
-                                            onClick={handleOpenLauncherFolder}
-                                            className={`w-full h-12 px-4 rounded-xl ${gc} flex items-center gap-3 text-white/70 hover:text-white hover:border-white/20 transition-colors`}
-                                        >
+                                        <Button onClick={handleOpenLauncherFolder} className="w-full h-12 justify-start">
                                             <FolderOpen size={18} />
-                                            <span>{t('settings.dataSettings.openLauncherFolder')}</span>
-                                        </button>
+                                            {t('settings.dataSettings.openLauncherFolder')}
+                                        </Button>
 
-                                        <button
-                                            onClick={() => setShowDeleteConfirm(true)}
-                                            className={`w-full h-12 px-4 rounded-xl ${gc} !border-red-500/30 flex items-center gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors`}
-                                        >
+                                        <Button variant="danger" onClick={() => setShowDeleteConfirm(true)} className="w-full h-12 justify-start">
                                             <Trash2 size={18} />
-                                            <span>{t('settings.dataSettings.deleteAllData')}</span>
-                                        </button>
+                                            {t('settings.dataSettings.deleteAllData')}
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -2424,16 +2435,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 </button>
                                             </div>
 
-                                            <button
+                                            <Button
                                                 onClick={async () => {
                                                     await ResetOnboarding();
                                                     localStorage.removeItem('hyprism_onboarding_done');
                                                     window.location.reload();
                                                 }}
-                                                className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm"
+                                                className="w-full"
                                             >
                                                 {t('settings.aboutSettings.replayIntro')}
-                                            </button>
+                                            </Button>
                                         </div>
 
                                         <div className="pt-1">
@@ -2493,6 +2504,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                                     {/* Description */}
                                                     <p className="text-xs text-white/40 text-center xl:text-left">{t('settings.aboutSettings.contributorsDescription')}</p>
+
+                                                    {contributorsError ? (
+                                                        <p className="text-xs text-white/35 text-center xl:text-left">{contributorsError}</p>
+                                                    ) : null}
 
                                                     {/* Other Contributors */}
                                                     {otherContributors.length > 0 && (
@@ -2640,18 +2655,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             {t('settings.deleteAllData.message')}
                         </p>
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
-                            >
+                            <Button onClick={() => setShowDeleteConfirm(false)} className="flex-1">
                                 {t('common.cancel')}
-                            </button>
-                            <button
-                                onClick={handleDeleteLauncherData}
-                                className="flex-1 h-10 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
-                            >
+                            </Button>
+                            <Button variant="danger" onClick={handleDeleteLauncherData} className="flex-1">
                                 {t('common.delete')}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -2673,18 +2682,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 .replace('{{version}}', instanceToDelete.version === 0 ? t('common.latest') : `v${instanceToDelete.version}`)}
                         </p>
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => setInstanceToDelete(null)}
-                                className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
-                            >
+                            <Button onClick={() => setInstanceToDelete(null)} className="flex-1">
                                 {t('common.cancel')}
-                            </button>
-                            <button
-                                onClick={handleDeleteInstance}
-                                className="flex-1 h-10 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
-                            >
+                            </Button>
+                            <Button variant="danger" onClick={handleDeleteInstance} className="flex-1">
                                 {t('common.delete')}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -2696,12 +2699,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className={`p-6 w-full max-w-md mx-4 glass-panel-static-solid`}>
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-white">{t('settings.instanceSettings.exportInstance')}</h3>
-                            <button
-                                onClick={() => setShowInstanceExportModal(null)}
-                                className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
-                            >
+                            <IconButton variant="ghost" onClick={() => setShowInstanceExportModal(null)}>
                                 <X size={20} />
-                            </button>
+                            </IconButton>
                         </div>
 
                         {/* Export Type - ZIP Only */}
@@ -2730,24 +2730,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                     placeholder={t('settings.exportInstance.selectExportFolder')}
                                     className="flex-1 px-4 py-2 bg-[#252525] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-white/30"
                                 />
-                                <button
-                                    onClick={handleBrowseInstanceExportFolder}
-                                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-                                >
+                                <IconButton onClick={handleBrowseInstanceExportFolder}>
                                     <FolderOpen size={20} />
-                                </button>
+                                </IconButton>
                             </div>
                         </div>
 
                         {/* Export Button */}
-                        <button
+                        <Button
+                            variant="primary"
                             onClick={() => handleExportInstance(showInstanceExportModal)}
                             disabled={exportingInstance !== null || !instanceExportPath}
-                            className={`w-full py-3 rounded-xl font-bold text-lg transition-all ${exportingInstance !== null || !instanceExportPath
-                                ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                                : 'hover:opacity-90'
-                                }`}
-                            style={exportingInstance === null && instanceExportPath ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
+                            className="w-full py-3 font-bold text-lg"
                         >
                             {exportingInstance !== null ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -2757,7 +2751,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             ) : (
                                 t('common.export')
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
@@ -2825,19 +2819,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
 
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowImportModal(null)}
-                                disabled={isImportingInstance}
-                                className="flex-1 h-10 rounded-xl bg-white/5 text-white/70 hover:bg-white/10 transition-colors"
-                            >
+                            <Button onClick={() => setShowImportModal(null)} disabled={isImportingInstance} className="flex-1">
                                 {t('common.cancel')}
-                            </button>
-                            <button
-                                onClick={handleImportInstance}
-                                disabled={isImportingInstance}
-                                className="flex-1 h-10 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                                style={{ backgroundColor: accentColor, color: accentTextColor }}
-                            >
+                            </Button>
+                            <Button variant="primary" onClick={handleImportInstance} disabled={isImportingInstance} className="flex-1">
                                 {isImportingInstance ? (
                                     <>
                                         <Loader2 size={16} className="animate-spin" />
@@ -2846,7 +2831,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 ) : (
                                     t('common.import')
                                 )}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -2858,12 +2843,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className={`max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden glass-panel-static-solid`}>
                         <div className="flex items-center justify-between p-4 border-b border-white/5">
                             <h3 className="text-lg font-bold text-white">{t('settings.visualSettings.chooseBackground')}</h3>
-                            <button
-                                onClick={() => setShowAllBackgrounds(false)}
-                                className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
-                            >
+                            <IconButton variant="ghost" onClick={() => setShowAllBackgrounds(false)}>
                                 <X size={20} />
-                            </button>
+                            </IconButton>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4">
                             {/* Slideshow option */}

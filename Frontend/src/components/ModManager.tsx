@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ipc } from '@/lib/ipc';
+import { Button, DropdownTriggerButton, IconButton, LinkButton, MenuItemButton } from '@/components/ui/Controls';
 
 // Alias for compatibility
 const BrowserOpenURL = (url: string) => ipc.browser.open(url);
@@ -127,15 +128,16 @@ const ConfirmModal: React.FC<{
         <p className="text-white/60 text-sm mb-4">{message}</p>
         {children}
         <div className="flex gap-3 mt-4">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2 rounded-xl bg-white/10 text-white text-sm hover:bg-white/20"
-          >
+          <Button onClick={onCancel} className="flex-1 bg-white/10 text-white hover:bg-white/20 border border-transparent">
             {t('common.cancel')}
-          </button>
-          <button onClick={onConfirm} className={`flex-1 py-2 rounded-xl text-sm ${confirmColor}`} style={{ ...confirmStyle, color: confirmTextColor }}>
+          </Button>
+          <Button
+            onClick={onConfirm}
+            className={`flex-1 ${confirmColor} border border-transparent`}
+            style={{ ...confirmStyle, color: confirmTextColor }}
+          >
             {confirmText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1187,10 +1189,11 @@ export const ModManager: React.FC<ModManagerProps> = ({
         {(() => {
           const actionButtons = (
             <>
-              <button
+              <IconButton
+                variant="ghost"
                 onClick={handleCheckUpdates}
                 disabled={isLoadingUpdates || isDownloading}
-                className="p-2 rounded-xl hover:bg-white/10 text-green-400 hover:text-green-300 disabled:opacity-50 relative"
+                className="text-green-400 hover:text-green-300 relative"
                 title={updateCount > 0 ? t('modManager.updatesAvailableCount').replace('{{count}}', updateCount.toString()) : t('modManager.checkForUpdates')}
               >
                 <RefreshCw size={20} className={isLoadingUpdates ? 'animate-spin' : ''} />
@@ -1202,14 +1205,14 @@ export const ModManager: React.FC<ModManagerProps> = ({
                     {updateCount > 99 ? '99+' : updateCount}
                   </span>
                 )}
-              </button>
-              <button
+              </IconButton>
+              <IconButton
+                variant="ghost"
                 onClick={(activeTab === 'browse' && selectedBrowseMods.size > 0) || (activeTab === 'installed' && selectedInstalledMods.size > 0) ? showDownloadConfirmation : undefined}
                 disabled={isDownloading || !((activeTab === 'browse' && selectedBrowseMods.size > 0) || (activeTab === 'installed' && selectedInstalledMods.size > 0))}
-                className={`p-2 rounded-xl ${(activeTab === 'browse' && selectedBrowseMods.size > 0) || (activeTab === 'installed' && selectedInstalledMods.size > 0)
+                className={(activeTab === 'browse' && selectedBrowseMods.size > 0) || (activeTab === 'installed' && selectedInstalledMods.size > 0)
                   ? ''
-                  : 'text-white/20 cursor-not-allowed'
-                  }`}
+                  : 'text-white/20 cursor-not-allowed'}
                 style={(activeTab === 'browse' && selectedBrowseMods.size > 0) || (activeTab === 'installed' && selectedInstalledMods.size > 0) ? { color: accentColor } : undefined}
                 title={
                   activeTab === 'browse' && selectedBrowseMods.size > 0
@@ -1220,41 +1223,43 @@ export const ModManager: React.FC<ModManagerProps> = ({
                 }
               >
                 <Download size={20} />
-              </button>
-              <button
+              </IconButton>
+              <IconButton
+                variant="ghost"
                 onClick={activeTab === 'installed' && (selectedInstalledMods.size > 0 || highlightedInstalledMods.size > 0) ? showDeleteConfirmation : undefined}
                 disabled={activeTab !== 'installed' || (selectedInstalledMods.size === 0 && highlightedInstalledMods.size === 0)}
-                className={`p-2 rounded-xl  ${activeTab === 'installed' && (selectedInstalledMods.size > 0 || highlightedInstalledMods.size > 0)
+                className={activeTab === 'installed' && (selectedInstalledMods.size > 0 || highlightedInstalledMods.size > 0)
                   ? 'text-red-400 hover:bg-red-500/10'
-                  : 'text-white/20 cursor-not-allowed'
-                  }`}
+                  : 'text-white/20 cursor-not-allowed'}
                 title={(selectedInstalledMods.size > 0 || highlightedInstalledMods.size > 0) ? t(`Delete {{count}} mod(s)`).replace('{{count}}', (selectedInstalledMods.size + highlightedInstalledMods.size).toString()) : t('modManager.selectModsToDelete')}
               >
                 <Trash2 size={20} />
-              </button>
-              <button
+              </IconButton>
+              <IconButton
+                variant="ghost"
                 onClick={handleBrowseModFiles}
                 disabled={isImporting}
-                className={`p-2 rounded-xl hover:bg-white/10 ${isImporting ? 'text-white/20 cursor-not-allowed' : 'text-white/60 hover:text-white'}`}
+                className={isImporting ? 'text-white/20 cursor-not-allowed' : ''}
                 title={t('modManager.addMods')}
               >
                 <FilePlus2 size={20} />
-              </button>
-              <button
+              </IconButton>
+              <IconButton
+                variant="ghost"
                 onClick={handleOpenExportModal}
                 disabled={installedMods.length === 0}
-                className={`p-2 rounded-xl hover:bg-white/10 ${installedMods.length > 0 ? 'text-white/60 hover:text-white' : 'text-white/20 cursor-not-allowed'}`}
+                className={installedMods.length > 0 ? '' : 'text-white/20 cursor-not-allowed'}
                 title={t('modManager.exportMods')}
               >
                 <Upload size={20} />
-              </button>
-              <button
+              </IconButton>
+              <IconButton
+                variant="ghost"
                 onClick={handleOpenFolder}
-                className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
                 title={t('modManager.openModsFolder')}
               >
                 <FolderOpen size={20} />
-              </button>
+              </IconButton>
             </>
           );
 
@@ -1282,9 +1287,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   </div>
                   <div className="flex items-center gap-1">
                     {actionButtons}
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white">
+                    <IconButton variant="ghost" title={t('common.close')} onClick={onClose}>
                       <X size={20} />
-                    </button>
+                    </IconButton>
                   </div>
                 </div>
               )}
@@ -1359,43 +1364,37 @@ export const ModManager: React.FC<ModManagerProps> = ({
 
             {/* Category dropdown */}
             <div ref={categoryDropdownRef} className="relative">
-              <button
+              <DropdownTriggerButton
+                open={isCategoryDropdownOpen}
                 onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                className="h-10 px-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm hover:border-white/20 flex items-center gap-2 min-w-[140px] whitespace-nowrap"
-              >
-                <span className="truncate">{getCategoryName()}</span>
-                <ChevronDown
-                  size={14}
-                  className={`absolute right-3 text-white/40 transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
+                label={getCategoryName()}
+                className="min-w-[140px]"
+              />
 
               {isCategoryDropdownOpen && (
                 <div className="absolute top-full left-0 mt-2 z-[100] min-w-[200px] max-h-60 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-y-auto">
-                  <button
+                  <MenuItemButton
                     onClick={() => {
                       setSelectedCategory(0);
                       setIsCategoryDropdownOpen(false);
                     }}
-                    className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors ${selectedCategory === 0 ? 'bg-white/5' : 'text-white/70'
-                      }`}
+                    className={selectedCategory === 0 ? 'bg-white/5' : ''}
                     style={selectedCategory === 0 ? { color: accentColor } : undefined}
                   >
                     {t('modManager.allCategories')}
-                  </button>
+                  </MenuItemButton>
                   {categories.map((cat) => (
-                    <button
+                    <MenuItemButton
                       key={cat.id}
                       onClick={() => {
                         setSelectedCategory(cat.id);
                         setIsCategoryDropdownOpen(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors ${selectedCategory === cat.id ? 'bg-white/5' : 'text-white/70'
-                        }`}
+                      className={selectedCategory === cat.id ? 'bg-white/5' : ''}
                       style={selectedCategory === cat.id ? { color: accentColor } : undefined}
                     >
                       {t(cat.name)}
-                    </button>
+                    </MenuItemButton>
                   ))}
                 </div>
               )}
@@ -1403,36 +1402,31 @@ export const ModManager: React.FC<ModManagerProps> = ({
 
             {/* Sort dropdown */}
             <div ref={sortDropdownRef} className="relative">
-              <button
+              <DropdownTriggerButton
+                open={isSortDropdownOpen}
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                className="h-10 px-4 pr-10 rounded-xl bg-white/5 border border-white/10 text-white/80 text-sm hover:border-white/20 flex items-center gap-2 min-w-[160px] whitespace-nowrap"
-              >
-                <span className="text-white/50 mr-1">{t('modManager.sortBy')}</span>
-                <span className="truncate">{sortOptions.find(s => s.id === selectedSortField)?.name || t('modManager.sortTotalDownloads')}</span>
-                <ChevronDown
-                  size={14}
-                  className={`absolute right-3 text-white/40 transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
+                prefix={t('modManager.sortBy')}
+                label={sortOptions.find(s => s.id === selectedSortField)?.name || t('modManager.sortTotalDownloads')}
+                className="min-w-[160px]"
+              />
 
               {isSortDropdownOpen && (
                 <div className="absolute top-full right-0 mt-2 z-[100] min-w-[180px] bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-hidden">
                   {sortOptions.map((option) => (
-                    <button
+                    <MenuItemButton
                       key={option.id}
                       onClick={() => {
                         setSelectedSortField(option.id);
                         setIsSortDropdownOpen(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-sm text-left hover:bg-white/10 transition-colors flex items-center justify-between ${selectedSortField === option.id ? 'bg-white/5' : 'text-white/70'
-                        }`}
+                      className={`justify-between ${selectedSortField === option.id ? 'bg-white/5' : ''}`}
                       style={selectedSortField === option.id ? { color: accentColor } : undefined}
                     >
                       {option.name}
                       {selectedSortField === option.id && (
                         <Check size={14} style={{ color: accentColor }} />
                       )}
-                    </button>
+                    </MenuItemButton>
                   ))}
                 </div>
               )}
@@ -1445,9 +1439,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
           <div className="mx-4 mt-3 p-3 bg-red-500/20 border border-red-500/30 rounded-xl flex items-center gap-3 flex-shrink-0">
             <AlertCircle size={18} className="text-red-400 flex-shrink-0" />
             <span className="text-red-400 text-sm flex-1">{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
+            <IconButton variant="ghost" size="sm" onClick={() => setError(null)} className="!w-7 !h-7 text-red-400 hover:text-red-300">
               <X size={16} />
-            </button>
+            </IconButton>
           </div>
         )}
 
@@ -1675,17 +1669,17 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <button
+                              <LinkButton
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (mod.slug) {
                                     BrowserOpenURL(`https://www.curseforge.com/hytale/mods/${mod.slug}`);
                                   }
                                 }}
-                                className="text-white font-medium truncate text-left hover:opacity-80"
+                                className="text-white font-medium truncate text-left hover:no-underline"
                               >
                                 {mod.name}
-                              </button>
+                              </LinkButton>
                               {isInstalled && (
                                 <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400 flex-shrink-0">
                                   {t('modManager.installedBadge')}
@@ -1806,13 +1800,13 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           <>
                             <button
                               onClick={() => setActiveScreenshot((prev) => (prev > 0 ? prev - 1 : screenshots.length - 1))}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white/80 hover:bg-black/80"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-white/70 hover:text-white transition-colors z-10"
                             >
                               <ChevronLeft size={16} />
                             </button>
                             <button
                               onClick={() => setActiveScreenshot((prev) => (prev < screenshots.length - 1 ? prev + 1 : 0))}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white/80 hover:bg-black/80"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-white/70 hover:text-white transition-colors z-10"
                             >
                               <ChevronRight size={16} />
                             </button>
@@ -2038,12 +2032,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
           <div className="relative w-full max-w-lg mx-4 overflow-hidden glass-panel-static-solid">
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">{t('modManager.checkForUpdates')}</h3>
-              <button
-                onClick={() => setShowUpdatesModal(false)}
-                className="p-1 hover:bg-white/10 rounded-lg"
-              >
+              <IconButton variant="ghost" size="sm" onClick={() => setShowUpdatesModal(false)} className="!w-8 !h-8">
                 <X size={18} className="text-white/60" />
-              </button>
+              </IconButton>
             </div>
 
             <div className="p-4 max-h-80 overflow-y-auto">
@@ -2086,7 +2077,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
                           <span className="text-green-400">{mod.latestVersion || 'Latest'}</span>
                         </div>
                       </div>
-                      <button
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           if (mod.slug) {
                             BrowserOpenURL(`https://www.curseforge.com/hytale/mods/${mod.slug}/files`);
@@ -2094,11 +2087,11 @@ export const ModManager: React.FC<ModManagerProps> = ({
                             BrowserOpenURL(`https://www.curseforge.com/hytale/mods/${mod.curseForgeId}/files`);
                           }
                         }}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white flex-shrink-0"
+                        className="!w-8 !h-8 bg-white/5 hover:bg-white/10 flex-shrink-0"
                         title={t('modManager.viewChangelog')}
                       >
                         <FileText size={14} />
-                      </button>
+                      </IconButton>
                     </div>
                   ))}
                 </div>
@@ -2106,17 +2099,14 @@ export const ModManager: React.FC<ModManagerProps> = ({
             </div>
 
             <div className="p-4 border-t border-white/10 flex justify-end gap-2">
-              <button
-                onClick={() => setShowUpdatesModal(false)}
-                className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-medium hover:bg-white/20"
-              >
+              <Button onClick={() => setShowUpdatesModal(false)}>
                 {t('common.close')}
-              </button>
+              </Button>
               {modsWithUpdates.length > 0 && (
-                <button
+                <Button
                   onClick={() => handleConfirmUpdate(modsWithUpdates)}
                   disabled={isDownloading}
-                  className="px-4 py-2 rounded-xl bg-green-500 text-white text-sm font-medium hover:bg-green-600 disabled:opacity-50 flex items-center gap-2"
+                  className="bg-green-500 text-white hover:bg-green-600"
                 >
                   {isDownloading ? (
                     <>
@@ -2129,7 +2119,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
                       {t('modManager.updateAll')} ({modsWithUpdates.length})
                     </>
                   )}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -2214,12 +2204,15 @@ export const ModManager: React.FC<ModManagerProps> = ({
           className="fixed inset-0 flex items-center justify-center z-[60] bg-[#0a0a0a]/98"
           onClick={() => setFullscreenImage(null)}
         >
-          <button
+          <IconButton
+            variant="ghost"
+            size="sm"
             onClick={() => setFullscreenImage(null)}
-            className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+            title={t('common.close')}
+            className="absolute top-4 right-4 z-20 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white"
           >
             <X size={24} />
-          </button>
+          </IconButton>
             <img
               src={fullscreenImage.url}
               alt={fullscreenImage.title}
@@ -2245,12 +2238,9 @@ export const ModManager: React.FC<ModManagerProps> = ({
           <div className="p-6 w-full max-w-md glass-panel-static-solid">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">{t('modManager.exportMods')}</h3>
-              <button
-                onClick={() => setShowExportModal(false)}
-                className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white"
-              >
+              <IconButton variant="ghost" onClick={() => setShowExportModal(false)}>
                 <X size={20} />
-              </button>
+              </IconButton>
             </div>
 
             {/* Export Type */}
@@ -2297,25 +2287,18 @@ export const ModManager: React.FC<ModManagerProps> = ({
                   placeholder={t('modManager.exportType.selectFolder')}
                   className="flex-1 px-4 py-2 bg-[#252525] border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-white/30"
                 />
-                <button
-                  onClick={handleBrowseExportFolder}
-                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-                >
+                <IconButton onClick={handleBrowseExportFolder}>
                   <FolderOpen size={20} />
-                </button>
+                </IconButton>
               </div>
             </div>
 
             {/* Export Button */}
-            <button
+            <Button
+              variant="primary"
               onClick={handleExport}
               disabled={isExporting || !exportPath}
-              className={`w-full py-3 rounded-xl font-bold text-lg transition-all ${
-                isExporting || !exportPath
-                  ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                  : 'hover:opacity-90'
-              }`}
-              style={!isExporting && exportPath ? { backgroundColor: accentColor, color: accentTextColor } : undefined}
+              className="w-full py-3 font-bold text-lg"
             >
               {isExporting ? (
                 <span className="flex items-center justify-center gap-2">
@@ -2325,7 +2308,7 @@ export const ModManager: React.FC<ModManagerProps> = ({
               ) : (
                 t('common.export')
               )}
-            </button>
+            </Button>
           </div>
         </div>
       )}

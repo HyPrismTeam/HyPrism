@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, RefreshCw, Check, User, Edit3, Copy, CheckCircle, Plus, Trash2, Dices, FolderOpen, CopyPlus, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccentColor } from '../contexts/AccentColorContext';
+import { Button, IconButton } from '@/components/ui/Controls';
 
 import { ipc, Profile } from '@/lib/ipc';
 import { DeleteProfileConfirmationModal } from './modals/DeleteProfileConfirmationModal';
@@ -534,21 +535,22 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                             </span>
                                         </button>
                                         <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
+                                            <IconButton
+                                                size="sm"
                                                 onClick={(e) => handleDuplicateProfile(profile.id, e)}
-                                                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
                                                 title={t('profiles.duplicateProfile')}
                                             >
                                                 <CopyPlus size={14} />
-                                            </button>
+                                            </IconButton>
                                             {!isCurrentProfile && (
-                                                <button
+                                                <IconButton
+                                                    size="sm"
+                                                    className="text-red-400/60 hover:text-red-400 hover:bg-red-500/20"
                                                     onClick={(e) => handleDeleteProfile(profile.id, e)}
-                                                    className="p-1.5 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/20 transition-all"
                                                     title={t('profiles.deleteProfile')}
                                                 >
                                                     <Trash2 size={14} />
-                                                </button>
+                                                </IconButton>
                                             )}
                                         </div>
                                     </div>
@@ -564,13 +566,13 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                         
                         {/* Create New Profile Button at Bottom */}
                         <div className="px-2 pt-4 border-t border-white/[0.04] mx-2">
-                            <button
+                            <Button
                                 onClick={handleCreateProfile}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/40 text-sm transition-colors"
+                                className="w-full border-dashed border-white/20 text-white/40 hover:text-white/60 hover:border-white/40"
                             >
                                 <Plus size={14} />
                                 <span>{t('profiles.createNew')}</span>
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
@@ -580,12 +582,12 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                         <div className="flex items-center justify-between p-4 border-b border-white/[0.04]">
                             <h3 className="text-white font-medium">{showWizard ? t('profiles.wizard.title') : t('profiles.editor')}</h3>
                             {!isPageMode && (
-                                <button
+                                <IconButton
+                                    variant="ghost"
                                     onClick={onClose}
-                                    className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
                                 >
                                     <X size={20} />
-                                </button>
+                                </IconButton>
                             )}
                         </div>
 
@@ -638,24 +640,19 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         className="bg-[#2c2c2e] text-white text-xl font-bold px-3 py-1 rounded-lg border outline-none w-48 text-center"
                                                         style={{ borderColor: accentColor }}
                                                     />
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
+                                                    <IconButton
                                                         onClick={() => setEditUsername(generateRandomName())}
-                                                        className="p-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
+                                                        className="bg-white/10 text-white/70 hover:bg-white/20"
                                                         title={t('profiles.generateName')}
                                                     >
                                                         <Dices size={16} />
-                                                    </motion.button>
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
+                                                    </IconButton>
+                                                    <IconButton
                                                         onClick={handleSaveUsername}
-                                                        className="p-2 rounded-lg"
                                                         style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
                                                     >
                                                         <Check size={16} />
-                                                    </motion.button>
+                                                    </IconButton>
                                                 </div>
                                             ) : (
                                                 <>
@@ -666,9 +663,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                         </span>
                                                     ) : (
                                                         <>
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.1 }}
-                                                                whileTap={{ scale: 0.9 }}
+                                                            <IconButton
                                                                 onClick={async () => {
                                                                     const newName = generateRandomName();
                                                                     await SetNick(newName);
@@ -676,23 +671,21 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                                     setEditUsername(newName);
                                                                     onProfileUpdate?.();
                                                                 }}
-                                                                className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5"
+                                                                className="text-white/40 hover:text-white/80 hover:bg-white/5"
                                                                 title={t('profiles.generateName')}
                                                             >
                                                                 <Dices size={14} />
-                                                            </motion.button>
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.1 }}
-                                                                whileTap={{ scale: 0.9 }}
+                                                            </IconButton>
+                                                            <IconButton
                                                                 onClick={() => {
                                                                     setEditUsername(username);
                                                                     setIsEditingUsername(true);
                                                                 }}
-                                                                className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/5"
+                                                                className="text-white/40 hover:text-white/80 hover:bg-white/5"
                                                                 title={t('profiles.editUsername')}
                                                             >
                                                                 <Edit3 size={14} />
-                                                            </motion.button>
+                                                            </IconButton>
                                                         </>
                                                     )}
                                                 </>
@@ -712,24 +705,21 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                         <div className="flex items-center justify-between mb-2">
                                             <label className="text-sm text-white/60">{t('profiles.playerUuid')}</label>
                                             <div className="flex items-center gap-1">
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
+                                                <IconButton
+                                                    size="sm"
                                                     onClick={handleCopyUuid}
-                                                    className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10"
+                                                    className="text-white/40 hover:text-white/80 hover:bg-white/10"
                                                     title={t('profiles.copyUuid')}
                                                 >
                                                     {copiedUuid ? <CheckCircle size={14} className="text-green-400" /> : <Copy size={14} />}
-                                                </motion.button>
+                                                </IconButton>
                                                 {isCurrentOfficial ? (
                                                     <span className="p-1.5 rounded-lg text-white/20" title={t('profiles.officialLocked')}>
                                                         <Lock size={14} />
                                                     </span>
                                                 ) : (
                                                     <>
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
+                                                        <IconButton
                                                             onClick={async () => {
                                                                 const newUuid = generateUUID();
                                                                 await SetUUID(newUuid);
@@ -737,23 +727,21 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                                 setEditUuid(newUuid);
                                                                 onProfileUpdate?.();
                                                             }}
-                                                            className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10"
+                                                            className="text-white/40 hover:text-white/80 hover:bg-white/10"
                                                             title={t('profiles.randomUuid')}
                                                         >
                                                             <Dices size={14} />
-                                                        </motion.button>
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
+                                                        </IconButton>
+                                                        <IconButton
                                                             onClick={() => {
                                                                 setEditUuid(uuid);
                                                                 setIsEditingUuid(true);
                                                             }}
-                                                            className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10"
+                                                            className="text-white/40 hover:text-white/80 hover:bg-white/10"
                                                             title={t('profiles.editUuid')}
                                                         >
                                                             <Edit3 size={14} />
-                                                        </motion.button>
+                                                        </IconButton>
                                                     </>
                                                 )}
                                             </div>
@@ -770,25 +758,20 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                                     className="flex-1 bg-[#1c1c1e] text-white font-mono text-sm px-3 py-2 rounded-lg border outline-none"
                                                     style={{ borderColor: accentColor }}
                                                 />
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
+                                                <IconButton
                                                     onClick={handleRandomizeUuid}
-                                                    className="p-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20"
+                                                    className="bg-white/10 text-white/70 hover:bg-white/20"
                                                     title={t('profiles.randomUuid')}
                                                 >
                                                     <Dices size={16} />
-                                                </motion.button>
-                                                <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
+                                                </IconButton>
+                                                <IconButton
                                                     onClick={handleSaveUuid}
-                                                    className="p-2 rounded-lg"
                                                     style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
                                                     title={t('profiles.saveUuid')}
                                                 >
                                                     <Check size={16} />
-                                                </motion.button>
+                                                </IconButton>
                                             </div>
                                         ) : (
                                             <p className="text-white font-mono text-sm truncate">{uuid}</p>
@@ -796,15 +779,13 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
                                     </div>
 
                                     {/* Open Profile Folder Button */}
-                                    <motion.button
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
+                                    <Button
                                         onClick={() => OpenCurrentProfileFolder()}
-                                        className="w-full p-4 rounded-2xl bg-[#2c2c2e] border border-white/[0.06] hover:border-white/20 flex items-center justify-center gap-2 text-white/60 hover:text-white transition-colors"
+                                        className="w-full p-4 rounded-2xl bg-[#2c2c2e] border-white/[0.06] hover:border-white/20 text-white/60 hover:text-white"
                                     >
                                         <FolderOpen size={18} />
                                         <span className="text-sm">{t('profiles.openFolder')}</span>
-                                    </motion.button>
+                                    </Button>
 
                                     {/* Save Status */}
                                     {saveStatus === 'saved' && (

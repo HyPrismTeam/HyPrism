@@ -22,6 +22,7 @@ import {
     Cpu
 } from 'lucide-react';
 import { ipc } from '@/lib/ipc';
+import { Button, IconButton, LinkButton } from '@/components/ui/Controls';
 
 // Alias for compatibility
 const BrowserOpenURL = (url: string) => ipc.browser.open(url);
@@ -602,28 +603,25 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                         }}
                     >
                         {/* Continue button */}
-                        <button
+                        <Button
+                            variant="primary"
                             onClick={handleEnterAuth}
-                            className="flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg"
-                            style={{ 
-                                backgroundColor: accentColor, 
-                                color: accentTextColor
-                            }}
+                            className="px-8 py-4 text-lg rounded-2xl font-semibold hover:scale-105 hover:shadow-lg"
                         >
                             {t('common.continue')}
                             <ArrowRight size={22} />
-                        </button>
+                        </Button>
                     </div>
                 </div>
                 
                 {/* Skip button - visible during entire onboarding */}
-                <button
+                <LinkButton
                     onClick={handleSkip}
-                    className="absolute bottom-8 right-8 z-10 flex items-center gap-2 font-semibold text-sm text-white/60 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
+                    className="absolute bottom-8 right-8 z-10 font-semibold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
                 >
                     <SkipForward size={16} />
                     {t('onboarding.skip')}
-                </button>
+                </LinkButton>
                 
                 {/* CSS animations */}
                 <style>{`
@@ -696,14 +694,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                         
                         {/* Buttons */}
                         <div className="w-full space-y-3">
-                            <button
+                            <Button
+                                variant="primary"
                                 onClick={handleLogin}
                                 disabled={isAuthenticating}
-                                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                style={{ 
-                                    backgroundColor: accentColor, 
-                                    color: accentTextColor
-                                }}
+                                className="w-full px-6 py-4 rounded-xl font-semibold hover:opacity-90"
                             >
                                 {isAuthenticating ? (
                                     <Loader2 size={20} className="animate-spin" />
@@ -711,29 +706,29 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                     <LogIn size={20} />
                                 )}
                                 {isAuthenticating ? t('onboarding.auth.authenticating') : t('onboarding.auth.login')}
-                            </button>
+                            </Button>
                             
-                            <button
+                            <Button
                                 onClick={handleSkipAuth}
                                 disabled={isAuthenticating}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+                                className="w-full px-6 py-3 rounded-xl"
                             >
                                 <SkipForward size={18} />
                                 {t('onboarding.auth.skip')}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
                 
                 {/* Skip entire onboarding button */}
-                <button
+                <LinkButton
                     onClick={handleSkip}
                     disabled={isLoading || isAuthenticating}
-                    className="absolute bottom-8 right-8 z-10 flex items-center gap-2 font-semibold text-sm text-white/60 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute bottom-8 right-8 z-10 font-semibold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
                 >
                     <SkipForward size={16} />
                     {t('onboarding.skip')}
-                </button>
+                </LinkButton>
                 
                 {/* CSS animations */}
                 <style>{`
@@ -893,14 +888,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                         className="flex-1 h-12 px-4 rounded-xl bg-[#1a1a1a]/80 border border-white/10 text-white text-sm focus:outline-none focus:border-white/30"
                                         maxLength={16}
                                     />
-                                    <button
+                                    <IconButton
                                         onClick={handleGenerateUsername}
                                         disabled={isGeneratingUsername}
-                                        className="h-12 px-4 rounded-xl bg-[#1a1a1a]/80 border border-white/10 flex items-center gap-2 text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50"
                                         title={t('onboarding.generateUsername')}
+                                        size="lg"
+                                        style={{ height: '3rem', width: '3rem', borderRadius: '0.75rem' }}
                                     >
                                         <RefreshCw size={18} className={isGeneratingUsername ? 'animate-spin' : ''} />
-                                    </button>
+                                    </IconButton>
                                 </div>
                                 <p className="text-xs text-white/40 mt-2">{t('onboarding.usernameHint')}</p>
                             </div>
@@ -1098,13 +1094,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                         onChange={(e) => setInstanceDir(e.target.value)}
                                         className="flex-1 h-12 px-4 rounded-xl bg-[#0a0a0a]/80 border border-white/10 text-white text-sm focus:outline-none focus:border-white/30 truncate"
                                     />
-                                    <button
+                                    <Button
                                         onClick={handleBrowseInstanceDir}
-                                        className="h-12 px-4 rounded-xl bg-[#0a0a0a]/80 border border-white/10 flex items-center gap-2 text-white/60 hover:text-white hover:border-white/20 transition-colors"
+                                        className="h-12 px-4 rounded-xl"
                                     >
                                         <FolderOpen size={18} />
                                         <span className="text-sm">{t('common.browse')}</span>
-                                    </button>
+                                    </Button>
                                 </div>
                                 <p className="text-xs text-white/40 mt-2">{t('onboarding.filesStoredHere')}</p>
                             </div>
@@ -1140,27 +1136,30 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                             
                             {/* Social Buttons */}
                             <div className="flex justify-center gap-4">
-                                <button
+                                <IconButton
+                                    variant="ghost"
                                     onClick={openGitHub}
-                                    className="opacity-80 hover:opacity-100 transition-opacity"
                                     title="GitHub"
+                                    size="lg"
                                 >
                                     <Github size={28} className="text-white" />
-                                </button>
-                                <button
+                                </IconButton>
+                                <IconButton
+                                    variant="ghost"
                                     onClick={openDiscord}
-                                    className="opacity-80 hover:opacity-100 transition-opacity"
                                     title="Discord"
+                                    size="lg"
                                 >
                                     <DiscordIcon size={28} color="white" />
-                                </button>
-                                <button
+                                </IconButton>
+                                <IconButton
+                                    variant="ghost"
                                     onClick={openBugReport}
-                                    className="opacity-80 hover:opacity-100 transition-opacity"
                                     title={t('onboarding.bugReport')}
+                                    size="lg"
                                 >
                                     <Bug size={28} className="text-white" />
-                                </button>
+                                </IconButton>
                             </div>
                             
                             {/* Contributors Section */}
@@ -1247,31 +1246,28 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                         <div className="flex items-center gap-3">
                             {/* Back button */}
                             {currentStepIndex > 0 && (
-                                <button
+                                <Button
                                     onClick={handlePrevStep}
-                                    className="px-6 py-3 rounded-xl font-medium bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
                                 >
                                     {t('common.back')}
-                                </button>
+                                </Button>
                             )}
                             
                             {/* Next/Finish button */}
                             {currentStep !== 'about' ? (
-                                <button
+                                <Button
+                                    variant="primary"
                                     onClick={handleNextStep}
                                     disabled={currentStep === 'profile' && (!username.trim() || username.trim().length < 1)}
-                                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    style={{ backgroundColor: accentColor, color: accentTextColor }}
                                 >
                                     {t('common.continue')}
                                     <ChevronRight size={18} />
-                                </button>
+                                </Button>
                             ) : (
-                                <button
+                                <Button
+                                    variant="primary"
                                     onClick={handleComplete}
                                     disabled={isLoading}
-                                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all hover:opacity-90 disabled:opacity-50"
-                                    style={{ backgroundColor: accentColor, color: accentTextColor }}
                                 >
                                     {isLoading ? (
                                         <Loader2 size={18} className="animate-spin" />
@@ -1281,7 +1277,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                                             {t('onboarding.enterLauncher')}
                                         </>
                                     )}
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -1289,14 +1285,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
             </div>
             
             {/* Skip button - visible during setup phase */}
-            <button
+            <LinkButton
                 onClick={handleSkip}
                 disabled={isLoading}
-                className="absolute bottom-8 right-8 z-10 flex items-center gap-2 font-semibold text-sm text-white/60 hover:text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute bottom-8 right-8 z-10 font-semibold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150"
             >
                 <SkipForward size={16} />
                 {t('onboarding.skip')}
-            </button>
+            </LinkButton>
             
             {/* CSS animations */}
             <style>{`

@@ -13,6 +13,7 @@ import { ProfilesPage } from './pages/ProfilesPage';
 import { InstancesPage } from './pages/InstancesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LogsPage } from './pages/LogsPage';
+import { Button, LauncherActionButton } from '@/components/ui/Controls';
 // Controller detection removed - not using floating indicator
 
 // Lazy load heavy modals for better initial load performance
@@ -928,9 +929,25 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex gap-3 mb-4">
-              <button className="px-4 py-2 bg-slate-700 rounded" onClick={refreshWrapperStatusLocal} disabled={isWrapperWorking}>Check for updates</button>
-              <button className="px-4 py-2 bg-amber-500 rounded" onClick={doInstallWrapper} disabled={!wrapperStatus?.updateAvailable || isWrapperWorking}>Download & Install</button>
-              <button className="px-4 py-2 bg-emerald-500 rounded" onClick={doLaunchWrapper} disabled={!wrapperStatus?.installed || isWrapperWorking}>Launch</button>
+              <Button onClick={refreshWrapperStatusLocal} disabled={isWrapperWorking}>
+                Check for updates
+              </Button>
+              <LauncherActionButton
+                variant="update"
+                onClick={doInstallWrapper}
+                disabled={!wrapperStatus?.updateAvailable || isWrapperWorking}
+                className="h-10 px-4 rounded-xl text-sm"
+              >
+                Download & Install
+              </LauncherActionButton>
+              <LauncherActionButton
+                variant="play"
+                onClick={doLaunchWrapper}
+                disabled={!wrapperStatus?.installed || isWrapperWorking}
+                className="h-10 px-4 rounded-xl text-sm"
+              >
+                Launch
+              </LauncherActionButton>
             </div>
 
             <div className="mt-6">

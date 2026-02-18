@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, X, Copy, RefreshCw, Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ipc } from '@/lib/ipc';
+import { Button, IconButton } from '@/components/ui/Controls';
 
 import { ModalOverlay } from './ModalOverlay';
 
@@ -92,12 +93,9 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
               </span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
-          >
+          <IconButton variant="ghost" onClick={onClose} title={t('common.close')}>
             <X size={20} />
-          </button>
+          </IconButton>
         </div>
 
         {/* Content */}
@@ -130,35 +128,32 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose }) => {
         {/* Footer */}
         <div className="flex items-center justify-between p-5 border-t border-white/10 bg-black/30">
           <div className="flex gap-2">
-            <button
+            <IconButton
               onClick={copyError}
-              className="w-9 h-9 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center"
               title={copied ? t('common.copied') : t('error.copyError')}
+              className="w-9 h-9"
             >
               <Copy size={16} />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={reportIssue}
-              className="w-9 h-9 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-orange-400 transition-colors flex items-center justify-center"
               title={t('error.reportIssue')}
+              className="w-9 h-9 hover:text-orange-400"
             >
               <Bug size={16} />
-            </button>
-            <button
+            </IconButton>
+            <IconButton
               onClick={() => window.location.reload()}
-              className="w-9 h-9 rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center"
               title={t('common.reload')}
+              className="w-9 h-9"
             >
               <RefreshCw size={16} />
-            </button>
+            </IconButton>
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors font-medium text-sm"
-          >
+          <Button variant="danger" onClick={onClose}>
             {t('common.dismiss')}
-          </button>
+          </Button>
         </div>
       </motion.div>
     </ModalOverlay>

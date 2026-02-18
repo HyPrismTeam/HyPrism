@@ -5,6 +5,7 @@ import { RefreshCw, ExternalLink, Calendar, User, Newspaper, Github } from 'luci
 import { useAccentColor } from '../contexts/AccentColorContext';
 import { ipc } from '@/lib/ipc';
 import { PageContainer } from '@/components/ui/PageContainer';
+import { Button, LinkButton } from '@/components/ui/Controls';
 
 type NewsFilter = 'all' | 'hytale' | 'hyprism';
 
@@ -137,10 +138,9 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews }) => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-400 mb-4">{error}</p>
-            <button onClick={() => fetchNews(limit, true)}
-              className="px-6 py-2 bg-white/10 hover:bg-white/15 rounded-xl transition-colors">
+            <Button onClick={() => fetchNews(limit, true)}>
               {t('news.tryAgain')}
-            </button>
+            </Button>
           </div>
         </div>
       ) : filteredNews.length === 0 ? (
@@ -240,13 +240,13 @@ export const NewsPage: React.FC<NewsPageProps> = memo(({ getNews }) => {
 
           {/* Load more link */}
           <div className="text-center py-4 mt-2">
-            <button
+            <LinkButton
               onClick={() => openLink("https://hytale.com/news")}
-              className="font-semibold hover:underline cursor-pointer text-xs"
+              className="font-semibold text-xs"
               style={{ color: accentColor }}
             >
               {t('news.readMore')} →
-            </button>
+            </LinkButton>
           </div>
         </div>
       )}

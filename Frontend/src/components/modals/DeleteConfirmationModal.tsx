@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ModalOverlay } from './ModalOverlay';
+import { Button, ModalFooterActions } from '@/components/ui/Controls';
 
 interface DeleteConfirmationModalProps {
   onConfirm: () => void;
@@ -55,23 +56,15 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-5 border-t border-white/10 bg-black/30">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-gray-300 hover:bg-white/10 transition-colors font-medium"
-          >
+        <ModalFooterActions>
+          <Button onClick={onCancel} className="flex-1">
             {t('common.cancel')}
-          </button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onConfirm}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
-          >
+          </Button>
+          <Button variant="danger" onClick={onConfirm} className="flex-1 bg-red-500 text-white font-bold hover:bg-red-600">
             <Trash2 size={16} />
             {t('common.delete')}
-          </motion.button>
-        </div>
+          </Button>
+        </ModalFooterActions>
       </motion.div>
     </ModalOverlay>
   );

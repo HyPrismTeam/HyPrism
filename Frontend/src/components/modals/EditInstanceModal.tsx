@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { X, Image, Loader2, ChevronDown, Check, GitBranch, AlertTriangle, Edit3 } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { Button, IconButton } from '@/components/ui/Controls';
 
 import { ipc, invoke, VersionInfo } from '@/lib/ipc';
 import { GameBranch } from '@/constants/enums';
@@ -30,7 +31,7 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
   initialVersion = 0,
 }) => {
   const { t } = useTranslation();
-  const { accentColor, accentTextColor } = useAccentColor();
+  const { accentColor } = useAccentColor();
 
   // Form state
   const [customName, setCustomName] = useState<string>(initialName);
@@ -215,12 +216,9 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
                 <p className="text-xs text-white/40">{t('instances.editInstanceHint')}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-            >
+            <IconButton variant="ghost" onClick={onClose}>
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Content */}
@@ -393,21 +391,17 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
 
           {/* Footer */}
           <div className="flex items-center justify-end gap-3 p-4 border-t border-white/[0.06]">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-            >
+            <Button onClick={onClose}>
               {t('common.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: accentColor, color: accentTextColor }}
             >
               {isSaving && <Loader2 size={14} className="animate-spin" />}
               {t('common.save')}
-            </button>
+            </Button>
           </div>
         </motion.div>
       </motion.div>

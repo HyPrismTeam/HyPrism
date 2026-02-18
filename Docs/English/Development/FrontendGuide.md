@@ -52,25 +52,29 @@ This file intentionally centralizes the “feel” of the app so we don’t end 
 **What to use**
 - `Button` — default button for most actions
 - `IconButton` — square icon-only actions (refresh/copy/export/etc.)
+- `LinkButton` — link-style inline button for text actions (no custom `className` buttons)
+- `LauncherActionButton` — gradient primary actions (Play/Stop/Download/Update/Select) with the launcher font/weight
 - `SegmentedControl` — tab-like pill switchers with sliding indicator (same behavior as Instances tabs)
 - `AccentSegmentedControl` — `SegmentedControl` wrapper that auto-applies the current accent styling (use for Logs filters and Instances tabs)
 - `Switch` — accent-reactive toggle primitive
 - `ScrollArea` — consistent overflow + optional `thin-scrollbar` styling
 - `ImageLightbox` — centered screenshot viewer with `1/3 < >` navigation
+- `DropdownTriggerButton` — standard dropdown trigger button (label + chevron + open state)
 - `MenuActionButton` — full-width menu-row actions for hover menus (e.g., Worlds overlay)
 - `MenuItemButton` — full-width menu-row actions for context menus / popover menus (replaces ad-hoc `button className="..."` in menus)
+- `ModalFooterActions` — standard modal footer action row (spacing + border + background)
+
+**IconButton sizing**
+- Use `IconButton size="sm" | "md" | "lg"` instead of hardcoding `h-/w-` classes.
+
+**IconButton variants**
+- Use `variant="overlay"` for screenshot/lightbox navigation buttons (no glass hover).
 
 **Rule of thumb**
 - If you are about to write a new `className="...rounded...hover..."` button: stop and use `Button`/`IconButton` from `@/components/ui/Controls` instead.
 
 **Editing controls**
 - If you need to tweak a specific control, edit the role-based module in `components/ui/controls/` and keep `Controls.tsx` as a thin re-export.
-
-## Splitting monolithic pages
-
-If a page grows too large, extract cohesive UI chunks into a folder next to the page and move shared types there.
-
-- Example: `InstancesPage` uses `Frontend/src/pages/instances/` for extracted components and shared types.
 
 ## Creating a Component
 
@@ -184,7 +188,7 @@ Add new contexts in `Frontend/src/contexts/` for other domain state.
 
 ## Icons
 
-All icons come from **Lucide React** — no custom SVG files:
+All icons come from **Lucide React**
 
 ```tsx
 import { Settings, Download, Play } from 'lucide-react';

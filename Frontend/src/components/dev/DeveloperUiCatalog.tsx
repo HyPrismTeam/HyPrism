@@ -61,16 +61,16 @@ export function DeveloperUiCatalog() {
         <div className="glass-panel-static-solid rounded-2xl p-4">
           <div className="text-xs font-semibold text-white/60">Launcher button samples</div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <LauncherActionButton variant="play" className="h-10 px-5 rounded-xl text-sm">
+            <LauncherActionButton variant="play" className="h-10 px-5 text-sm">
               <Play className="w-4 h-4" /> Play
             </LauncherActionButton>
-            <LauncherActionButton variant="download" className="h-10 px-5 rounded-xl text-sm">
+            <LauncherActionButton variant="download" className="h-10 px-5 text-sm">
               <Download className="w-4 h-4" /> Download
             </LauncherActionButton>
-            <LauncherActionButton variant="update" className="h-10 px-5 rounded-xl text-sm">
+            <LauncherActionButton variant="update" className="h-10 px-5 text-sm">
               <RefreshCw className="w-4 h-4" /> Update
             </LauncherActionButton>
-            <LauncherActionButton variant="stop" className="h-10 px-5 rounded-xl text-sm">
+            <LauncherActionButton variant="stop" className="h-10 px-5 text-sm">
               <X className="w-4 h-4" /> Stop
             </LauncherActionButton>
 
@@ -113,9 +113,7 @@ export function DeveloperUiCatalog() {
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button size="sm">Default</Button>
-            <Button size="sm" variant="danger">
-              Danger
-            </Button>
+            <Button size="sm" variant="danger">Delete</Button>
             <IconButton title="IconButton">
               <Bug className="w-4 h-4" />
             </IconButton>

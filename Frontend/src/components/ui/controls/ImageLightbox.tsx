@@ -39,8 +39,8 @@ export function ImageLightbox({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="relative w-full max-w-5xl">
-        <div className="absolute -top-3 -right-3">
-          <IconButton title="Close" onClick={onClose}>
+        <div className="absolute -top-3 -right-3 z-20">
+          <IconButton variant="overlay" size="sm" title="Close" onClick={onClose}>
             <X className="w-4 h-4" />
           </IconButton>
         </div>
@@ -56,6 +56,8 @@ export function ImageLightbox({
 
             <div className="absolute inset-x-0 bottom-0 p-4 flex items-center justify-center gap-3">
               <IconButton
+                variant="overlay"
+                size="sm"
                 title="Previous"
                 onClick={() => onIndexChange(Math.max(0, current - 1))}
                 disabled={current <= 0}
@@ -68,6 +70,8 @@ export function ImageLightbox({
               </div>
 
               <IconButton
+                variant="overlay"
+                size="sm"
                 title="Next"
                 onClick={() => onIndexChange(Math.min(total - 1, current + 1))}
                 disabled={current >= total - 1}

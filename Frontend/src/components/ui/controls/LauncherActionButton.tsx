@@ -20,7 +20,7 @@ export function LauncherActionButton({
   const { accentColor, accentTextColor } = useAccentColor();
 
   const base =
-    'inline-flex items-center justify-center gap-2 font-black tracking-tight transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:active:scale-100';
+    'inline-flex items-center justify-center gap-2 rounded-2xl font-black tracking-tight transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100';
 
   const variantClass = (() => {
     switch (variant) {
