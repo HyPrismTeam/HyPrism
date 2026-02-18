@@ -49,7 +49,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Debug: show flathub dir and manifest
+      - name: "Debug: show flathub dir and manifest"
         run: |
           echo "Listing Properties/linux/flathub"
           ls -lah Properties/linux/flathub || true
