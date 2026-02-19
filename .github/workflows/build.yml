@@ -111,14 +111,10 @@ jobs:
 
       - name: Prepare Flatpak remotes
         run: |
+          sudo flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak remote-add --system --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
-
-      - name: Diagnose Flatpak environment
-        run: |
-          flatpak --version
-          flatpak remotes --system || true
-          flatpak list --system --runtime | grep -E 'freedesktop|electronjs|24\.08|Electron2' || true
 
       - name: Diagnose Flatpak environment
         run: |
@@ -126,8 +122,8 @@ jobs:
           flatpak --version
           echo "=== system remotes ==="
           flatpak remotes --system || true
-          echo "=== system runtimes (24.08 / Electron2) ==="
-          flatpak list --system --runtime | grep -E 'freedesktop|electronjs|24\.08|Electron2' || true
+          echo "=== system runtimes (25.08 / Electron2) ==="
+          flatpak list --system --runtime | grep -E 'freedesktop|electronjs|25\.08|Electron2' || true
 
       - name: Build Linux ${{ matrix.arch }}
         continue-on-error: true
