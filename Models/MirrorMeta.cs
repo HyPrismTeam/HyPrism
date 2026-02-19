@@ -118,6 +118,13 @@ public class MirrorPatternConfig
     public Dictionary<string, string>? OsMapping { get; set; }
 
     /// <summary>
+    /// Maps internal arch names to URL arch names. Only include overrides.
+    /// e.g. { "x64": "amd64" } to convert x64 to amd64 in URLs.
+    /// </summary>
+    [JsonPropertyName("archMapping")]
+    public Dictionary<string, string>? ArchMapping { get; set; }
+
+    /// <summary>
     /// Maps internal branch names to URL branch names. Only include overrides.
     /// </summary>
     [JsonPropertyName("branchMapping")]

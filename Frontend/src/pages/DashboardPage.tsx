@@ -26,7 +26,6 @@ interface DashboardPageProps {
   } | null;
   avatarRefreshTrigger: number;
   onOpenProfileEditor: () => void;
-  onLauncherUpdate: () => void;
   // Game state
   isDownloading: boolean;
   downloadState: 'downloading' | 'extracting' | 'launching';
@@ -339,17 +338,45 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
               <span className="text-lg font-bold text-white">{props.username}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-white/30">HyPrism {props.launcherVersion}</span>
+              {props.updateAvailable && props.launcherUpdateInfo?.releaseUrl ? (
+                <LinkButton 
+                  onClick={() => ipc.browser.open(props.launcherUpdateInfo!.releaseUrl!)}
+                  className="text-xs font-medium hover:underline cursor-pointer"
+                  style={{ color: accentColor }}
+                  title={t('main.clickToOpenRelease', 'Click to view release on GitHub')}
+                >
+                  HyPrism {props.launcherVersion}
+                </LinkButton>
+              ) : (
+                <span className="text-xs text-white/30">HyPrism {props.launcherVersion}</span>
+              )}
               {props.updateAvailable && (
-                <LinkButton onClick={props.onLauncherUpdate}
-                  className="text-[10px] font-medium" style={{ color: accentColor }}>
+                <LinkButton 
+                  onClick={() => {
+                    if (props.launcherUpdateInfo?.releaseUrl) {
+                      ipc.browser.open(props.launcherUpdateInfo.releaseUrl);
+                    }
+                  }}
+                  className="text-[10px] font-medium" 
+                  style={{ color: accentColor }}
+                  title={t('main.clickToOpenRelease', 'Click to view release on GitHub')}
+                >
                   <Download size={10} className="inline mr-1" />{t('main.updateAvailable')}
                 </LinkButton>
               )}
             </div>
 
             {props.updateAvailable && props.launcherUpdateInfo?.latestVersion && (
-              <div className="mt-0.5 flex items-center gap-1 text-[10px] animate-rgb" style={{ color: accentColor }}>
+              <LinkButton 
+                onClick={() => {
+                  if (props.launcherUpdateInfo?.releaseUrl) {
+                    ipc.browser.open(props.launcherUpdateInfo.releaseUrl);
+                  }
+                }}
+                className="mt-0.5 flex items-center gap-1 text-[10px] animate-rgb cursor-pointer hover:underline" 
+                style={{ color: accentColor }}
+                title={t('main.clickToOpenRelease', 'Click to view release on GitHub')}
+              >
                 <span className="font-medium">
                   {props.launcherUpdateInfo.currentVersion || props.launcherVersion}
                 </span>
@@ -357,7 +384,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                 <span className="font-medium">
                   {props.launcherUpdateInfo.latestVersion}
                 </span>
-              </div>
+              </LinkButton>
             )}
           </div>
         </motion.div>

@@ -37,6 +37,8 @@ export interface MirrorSpeedCardProps {
   testingLabel: string;
   /** Label for unavailable result */
   unavailableLabel: string;
+  /** Whether the mirror is disabled */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -50,13 +52,14 @@ export function MirrorSpeedCard({
   testLabel,
   testingLabel,
   unavailableLabel,
+  disabled = false,
   className = '',
 }: MirrorSpeedCardProps) {
   const { accentColor } = useAccentColor();
 
   return (
     <div
-      className={`p-3 rounded-xl border cursor-default transition-colors ${className}`.trim()}
+      className={`p-3 rounded-xl border cursor-default transition-colors ${disabled ? 'opacity-50' : ''} ${className}`.trim()}
       style={{
         backgroundColor: '#151515',
         borderColor: 'rgba(255,255,255,0.08)',

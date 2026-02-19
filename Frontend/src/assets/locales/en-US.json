@@ -104,6 +104,7 @@
     "sourceMirror": "Downloaded from community mirror",
     "editProfile": "Edit Profile",
     "updateAvailable": "Update Available",
+    "clickToOpenRelease": "Click to view release on GitHub",
     "joinDiscord": "Join Discord",
     "gitHubRepository": "GitHub Repository",
     "educational": "For educational purposes only. Like it?",
@@ -238,7 +239,9 @@
       "authOfficialHint": "Hytale servers",
       "authCustom": "Custom",
       "authCustomHint": "Enter your own auth server address",
-      "currentServer": "Current server"
+      "currentServer": "Current server",
+      "officialProfileNote": "Official accounts can only use official Hytale authentication.",
+      "unofficialProfileNote": "Unofficial accounts cannot use official Hytale authentication."
     },
     "graphicsSettings": {
       "title": "Graphics Settings",

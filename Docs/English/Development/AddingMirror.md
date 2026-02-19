@@ -140,11 +140,11 @@ new() {
 
 Existing default priorities:
 
-| Mirror | Priority |
-|--------|----------|
-| EstroGen | 100 |
-| CobyLobby | 101 |
-| ShipOfYarn | 102 |
+| Mirror Type | Priority |
+|-------------|----------|
+| HTML Autoindex style | 100 |
+| JSON API style | 101 |
+| JSON Index style | 102 |
 
 Use the next available integer (e.g., `103`). Lower = higher priority. Official Hytale is always `0`.
 

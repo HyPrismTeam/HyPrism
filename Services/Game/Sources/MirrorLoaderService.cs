@@ -104,6 +104,101 @@ public static class MirrorLoaderService
     }
 
     /// <summary>
+    /// Gets the path to the Mirrors directory.
+    /// </summary>
+    public static string GetMirrorsDirectory(string appDir)
+        => Path.Combine(appDir, MirrorsDirName);
+
+    /// <summary>
+    /// Gets a list of all mirror metadata (without creating sources).
+    /// </summary>
+    public static List<MirrorMeta> GetAllMirrorMetas(string appDir)
+    {
+        var mirrorsDir = GetMirrorsDirectory(appDir);
+        var metas = new List<MirrorMeta>();
+
+        if (!Directory.Exists(mirrorsDir))
+            return metas;
+
+        var files = Directory.GetFiles(mirrorsDir, $"*{MirrorFileExtension}");
+        foreach (var file in files)
+        {
+            try
+            {
+                var json = File.ReadAllText(file);
+                var meta = JsonSerializer.Deserialize<MirrorMeta>(json, JsonOptions);
+                if (meta != null && !string.IsNullOrWhiteSpace(meta.Id))
+                {
+                    metas.Add(meta);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("MirrorLoader", $"Failed to read mirror meta from {Path.GetFileName(file)}: {ex.Message}");
+            }
+        }
+
+        return metas.OrderBy(m => m.Priority).ToList();
+    }
+
+    /// <summary>
+    /// Saves a mirror metadata to a .mirror.json file.
+    /// </summary>
+    public static void SaveMirror(string appDir, MirrorMeta meta)
+    {
+        if (meta == null || string.IsNullOrWhiteSpace(meta.Id))
+            throw new ArgumentException("Mirror must have a valid ID");
+
+        var mirrorsDir = GetMirrorsDirectory(appDir);
+        Directory.CreateDirectory(mirrorsDir);
+
+        var fileName = $"{meta.Id}{MirrorFileExtension}";
+        var filePath = Path.Combine(mirrorsDir, fileName);
+
+        var json = JsonSerializer.Serialize(meta, JsonOptions);
+        File.WriteAllText(filePath, json);
+
+        Logger.Info("MirrorLoader", $"Saved mirror: {fileName}");
+    }
+
+    /// <summary>
+    /// Deletes a mirror by ID.
+    /// </summary>
+    public static bool DeleteMirror(string appDir, string mirrorId)
+    {
+        if (string.IsNullOrWhiteSpace(mirrorId))
+            return false;
+
+        var mirrorsDir = GetMirrorsDirectory(appDir);
+        var fileName = $"{mirrorId}{MirrorFileExtension}";
+        var filePath = Path.Combine(mirrorsDir, fileName);
+
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+            Logger.Info("MirrorLoader", $"Deleted mirror: {fileName}");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a mirror with the given ID exists.
+    /// </summary>
+    public static bool MirrorExists(string appDir, string mirrorId)
+    {
+        if (string.IsNullOrWhiteSpace(mirrorId))
+            return false;
+
+        var mirrorsDir = GetMirrorsDirectory(appDir);
+        var fileName = $"{mirrorId}{MirrorFileExtension}";
+        var filePath = Path.Combine(mirrorsDir, fileName);
+
+        return File.Exists(filePath);
+    }
+
+    /// <summary>
     /// Generates default mirror JSON files for the built-in community mirrors.
     /// </summary>
     private static void GenerateDefaults(string mirrorsDir)
@@ -132,118 +227,13 @@ public static class MirrorLoaderService
 
     /// <summary>
     /// Returns the built-in mirror definitions that were previously hardcoded.
+    /// NOTE: As of this version, no default mirrors are shipped. Users must add mirrors manually
+    /// through Settings > Downloads or by placing .mirror.json files in the Mirrors folder.
     /// </summary>
     private static List<MirrorMeta> GetDefaultMirrors()
     {
-        return new List<MirrorMeta>
-        {
-            // EstroGen mirror — html-autoindex based
-            new() {
-                SchemaVersion = 1,
-                Id = "estrogen",
-                Name = "EstroGen",
-                Description = "Community mirror hosted by EstroGen (licdn.estrogen.cat)",
-                Priority = 100,
-                Enabled = true,
-                SourceType = "pattern",
-                Pattern = new MirrorPatternConfig
-                {
-                    FullBuildUrl = "{base}/{os}/{arch}/{branch}/0/{version}.pwr",
-                    DiffPatchUrl = "{base}/{os}/{arch}/{branch}/{from}/{to}.pwr",
-                    SignatureUrl = "{base}/{os}/{arch}/{branch}/0/{version}.pwr.sig",
-                    BaseUrl = "https://licdn.estrogen.cat/hytale/patches",
-                    VersionDiscovery = new VersionDiscoveryConfig
-                    {
-                        Method = "html-autoindex",
-                        Url = "{base}/{os}/{arch}/{branch}/0/",
-                        HtmlPattern = @"<a\s+href=""(\d+)\.pwr"">\d+\.pwr</a>\s+\S+\s+\S+\s+(\d+)",
-                        MinFileSizeBytes = 1_048_576
-                    },
-                    DiffBasedBranches = new List<string>()
-                },
-                SpeedTest = new MirrorSpeedTestConfig
-                {
-                    PingUrl = "https://licdn.estrogen.cat/hytale/patches"
-                },
-                Cache = new MirrorCacheConfig
-                {
-                    IndexTtlMinutes = 30,
-                    SpeedTestTtlMinutes = 60
-                }
-            },
-
-            // CobyLobby mirror — JSON API based
-            new() {
-                SchemaVersion = 1,
-                Id = "cobylobby",
-                Name = "CobyLobby",
-                Description = "Community mirror hosted by CobyLobby (cobylobbyht.store)",
-                Priority = 101,
-                Enabled = true,
-                SourceType = "pattern",
-                Pattern = new MirrorPatternConfig
-                {
-                    FullBuildUrl = "{base}/launcher/patches/{os}/{arch}/{branch}/0/{version}.pwr",
-                    DiffPatchUrl = "{base}/launcher/patches/{os}/{arch}/{branch}/{from}/{to}.pwr",
-                    BaseUrl = "https://cobylobbyht.store",
-                    VersionDiscovery = new VersionDiscoveryConfig
-                    {
-                        Method = "json-api",
-                        Url = "{base}/launcher/patches/{branch}/versions?os_name={os}&arch={arch}",
-                        JsonPath = "items[].version"
-                    },
-                    BranchMapping = new Dictionary<string, string>
-                    {
-                        ["pre-release"] = "prerelease"
-                    },
-                    DiffBasedBranches = new List<string>()
-                },
-                SpeedTest = new MirrorSpeedTestConfig
-                {
-                    PingUrl = "https://cobylobbyht.store/health"
-                },
-                Cache = new MirrorCacheConfig
-                {
-                    IndexTtlMinutes = 30,
-                    SpeedTestTtlMinutes = 60
-                }
-            },
-
-            // ShipOfYarn mirror — JSON index based
-            new() {
-                SchemaVersion = 1,
-                Id = "shipofyarn",
-                Name = "ShipOfYarn",
-                Description = "Community mirror hosted by ShipOfYarn (thecute.cloud)",
-                Priority = 102,
-                Enabled = true,
-                SourceType = "json-index",
-                JsonIndex = new MirrorJsonIndexConfig
-                {
-                    ApiUrl = "https://thecute.cloud/ShipOfYarn/api.php",
-                    RootPath = "hytale",
-                    Structure = "grouped",
-                    PlatformMapping = new Dictionary<string, string>
-                    {
-                        ["darwin"] = "mac"
-                    },
-                    FileNamePattern = new FileNamePatternConfig
-                    {
-                        Full = "v{version}-{os}-{arch}.pwr",
-                        Diff = "v{from}~{to}-{os}-{arch}.pwr"
-                    },
-                    DiffBasedBranches = new List<string> { "pre-release" }
-                },
-                SpeedTest = new MirrorSpeedTestConfig
-                {
-                    PingUrl = "https://thecute.cloud/ShipOfYarn/api.php"
-                },
-                Cache = new MirrorCacheConfig
-                {
-                    IndexTtlMinutes = 30,
-                    SpeedTestTtlMinutes = 60
-                }
-            }
-        };
+        // No preset mirrors - users must add them manually via Settings > Downloads
+        // or by placing .mirror.json files in the Mirrors folder
+        return new List<MirrorMeta>();
     }
 }

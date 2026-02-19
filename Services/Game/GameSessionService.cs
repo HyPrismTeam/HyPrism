@@ -102,18 +102,9 @@ public class GameSessionService : IGameSessionService
 
             #pragma warning disable CS0618 // Backward compatibility: VersionType and SelectedVersion kept for migration
             string branch = UtilityService.NormalizeVersionType(_config.VersionType);
-            _progressService.ReportDownloadProgress("preparing", 1, "launch.detail.checking_versions", null, 0, 0);
-            var versions = await _versionService.GetVersionListAsync(branch, cts.Token);
-            cts.Token.ThrowIfCancellationRequested();
-
-            if (versions.Count == 0)
-                return new DownloadProgress { Error = "No versions available for this branch" };
-
             bool isLatestInstance = _config.SelectedVersion == 0;
-            int targetVersion = _config.SelectedVersion > 0 ? _config.SelectedVersion : versions[0];
+            int targetVersion = _config.SelectedVersion;
             #pragma warning restore CS0618
-            if (!versions.Contains(targetVersion))
-                targetVersion = versions[0];
 
             string versionPath;
 
@@ -125,7 +116,7 @@ public class GameSessionService : IGameSessionService
             {
                 branch = UtilityService.NormalizeVersionType(selectedInstance.Branch);
                 isLatestInstance = selectedInstance.Version == 0;
-                targetVersion = isLatestInstance ? versions[0] : selectedInstance.Version;
+                targetVersion = selectedInstance.Version;
 
                 var selectedPath = _instanceService.GetInstancePathById(selectedInstance.Id);
                 if (!string.IsNullOrWhiteSpace(selectedPath))
@@ -151,6 +142,26 @@ public class GameSessionService : IGameSessionService
             Directory.CreateDirectory(versionPath);
 
             bool gameIsInstalled = _instanceService.IsClientPresent(versionPath);
+
+            // OPTIMIZATION: If game is already installed and this is NOT a "latest" instance,
+            // skip version fetching entirely — no network calls needed, just launch.
+            if (gameIsInstalled && !isLatestInstance && targetVersion > 0)
+            {
+                Logger.Success("Download", $"Fast path: Game already installed at v{targetVersion}, skipping version check");
+                return await HandleInstalledGameFastAsync(versionPath, branch, cts.Token);
+            }
+
+            // For "latest" instances or fresh installs, we need to fetch version list
+            _progressService.ReportDownloadProgress("preparing", 1, "launch.detail.checking_versions", null, 0, 0);
+            var versions = await _versionService.GetVersionListAsync(branch, cts.Token);
+            cts.Token.ThrowIfCancellationRequested();
+
+            if (versions.Count == 0)
+                return new DownloadProgress { Error = "No versions available for this branch" };
+
+            // Resolve targetVersion from versions list
+            if (targetVersion <= 0 || !versions.Contains(targetVersion))
+                targetVersion = versions[0];
 
             Logger.Info("Download", $"=== INSTALL CHECK ===", false);
             Logger.Info("Download", $"Version path: {versionPath}", false);
@@ -241,6 +252,31 @@ public class GameSessionService : IGameSessionService
             _downloadCts?.Cancel();
             _downloadCts?.Dispose();
             _downloadCts = null;
+        }
+    }
+
+    /// <summary>
+    /// Fast path for launching an already-installed game with a specific version (not "latest").
+    /// Skips version list fetching entirely — no network calls needed.
+    /// </summary>
+    private async Task<DownloadProgress> HandleInstalledGameFastAsync(
+        string versionPath, string branch, CancellationToken ct)
+    {
+        Logger.Success("Download", "Fast path: Game is already installed, skipping version check");
+
+        await EnsureRuntimeDependenciesAsync(ct);
+
+        _progressService.ReportDownloadProgress("complete", 100, "launch.detail.launching_game", null, 0, 0);
+        try
+        {
+            await _gameLauncher.LaunchGameAsync(versionPath, branch, ct);
+            return new DownloadProgress { Success = true, Progress = 100 };
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Game", $"Launch failed: {ex.Message}");
+            _progressService.ReportError("launch", "Failed to launch game", ex.ToString());
+            return new DownloadProgress { Error = $"Failed to launch game: {ex.Message}" };
         }
     }
 
@@ -797,6 +833,14 @@ public class GameSessionService : IGameSessionService
                     catch (Exception mirrorEx)
                     {
                         Logger.Error("Download", $"Mirror download also failed: {mirrorEx.Message}");
+                        
+                        // If mirror returned 404, invalidate this version from cache
+                        // to prevent showing unavailable versions to users
+                        if (IsHttpNotFound(mirrorEx))
+                        {
+                            Logger.Warning("Download", $"Version v{version} not found on mirror, invalidating cache entry");
+                            _versionService.InvalidateVersionFromCache(branch, version);
+                        }
                     }
                 }
                 else if (_versionService.IsDiffBasedBranch(branch))
@@ -831,6 +875,19 @@ public class GameSessionService : IGameSessionService
         var message = ex.Message ?? string.Empty;
         return message.Contains("HTTP 403", StringComparison.OrdinalIgnoreCase)
             || message.Contains("403 Forbidden", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsHttpNotFound(Exception ex)
+    {
+        if (ex is HttpRequestException hre && hre.StatusCode == HttpStatusCode.NotFound)
+        {
+            return true;
+        }
+
+        var message = ex.Message ?? string.Empty;
+        return message.Contains("HTTP 404", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("404 NotFound", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("not found", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task EnsureRuntimeDependenciesAsync(CancellationToken ct)

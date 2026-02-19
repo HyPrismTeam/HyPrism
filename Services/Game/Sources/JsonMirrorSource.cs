@@ -221,7 +221,7 @@ public class JsonMirrorSource : IVersionSource
 
             try
             {
-                // Ping test
+                // Ping test - try HEAD first, fall back to GET if HEAD not supported
                 var pingStart = DateTime.UtcNow;
                 using var pingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 pingCts.CancelAfter(TimeSpan.FromSeconds(_meta.SpeedTest.PingTimeoutSeconds));
@@ -230,14 +230,41 @@ public class JsonMirrorSource : IVersionSource
                 using var pingResp = await _httpClient.SendAsync(pingReq, pingCts.Token);
 
                 result.PingMs = (long)(DateTime.UtcNow - pingStart).TotalMilliseconds;
-                result.IsAvailable = pingResp.IsSuccessStatusCode;
+                
+                // Check if HEAD succeeded, or if server returns codes that indicate "API exists but HEAD not supported"
+                var headStatusCode = (int)pingResp.StatusCode;
+                var headSucceeded = pingResp.IsSuccessStatusCode || 
+                    headStatusCode == 405 || // Method Not Allowed - API exists, HEAD not supported  
+                    headStatusCode == 400 || // Bad Request - API exists, needs different method
+                    headStatusCode == 422;   // Unprocessable Entity - API exists, needs body/params
+                
+                if (!headSucceeded)
+                {
+                    // Try GET as fallback
+                    var getStart = DateTime.UtcNow;
+                    using var getCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    getCts.CancelAfter(TimeSpan.FromSeconds(_meta.SpeedTest.PingTimeoutSeconds));
+                    
+                    using var getReq = new HttpRequestMessage(HttpMethod.Get, pingUrl);
+                    using var getResp = await _httpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, getCts.Token);
+                    
+                    result.PingMs = (long)(DateTime.UtcNow - getStart).TotalMilliseconds;
+                    result.IsAvailable = getResp.IsSuccessStatusCode;
+                }
+                else
+                {
+                    result.IsAvailable = true;
+                }
 
                 if (!result.IsAvailable)
                 {
+                    Logger.Warning($"Mirror:{SourceId}", $"Speed test ping failed, server not available");
                     _speedTestResult = result;
                     return result;
                 }
 
+                Logger.Debug($"Mirror:{SourceId}", $"Ping successful: {result.PingMs}ms, proceeding to speed test");
+                
                 // Speed test: download real file data
                 var os = UtilityService.GetOS();
                 var arch = UtilityService.GetArch();
@@ -417,7 +444,13 @@ public class JsonMirrorSource : IVersionSource
         }
 
         var json = await response.Content.ReadAsStringAsync(cts.Token);
-        return ParseVersionsFromJson(json, discovery.JsonPath);
+        
+        // Apply placeholders to jsonPath (for paths like "{os}-{arch}.{branch}.newest")
+        var resolvedJsonPath = discovery.JsonPath != null 
+            ? ApplyPlaceholders(discovery.JsonPath, os, arch, branch, 0, 0, 0)
+            : null;
+        
+        return ParseVersionsFromJson(json, resolvedJsonPath);
     }
 
     private async Task<List<int>> DiscoverVersionsHtmlAsync(
@@ -445,6 +478,11 @@ public class JsonMirrorSource : IVersionSource
 
     /// <summary>
     /// Parses version numbers from a JSON response using the configured jsonPath.
+    /// Supports:
+    /// - "items[].version" - array of objects with a version field
+    /// - "versions" - simple property name pointing to an array
+    /// - "platform.branch.newest" - dot-notation nested path to a single value
+    /// - "$root" or null - root is an array
     /// </summary>
     private List<int> ParseVersionsFromJson(string json, string? jsonPath)
     {
@@ -480,20 +518,68 @@ public class JsonMirrorSource : IVersionSource
             }
 
             // "$root" or null — root is an array
-            JsonElement versionsArray;
             if (jsonPath == null || jsonPath == "$root")
             {
                 if (root.ValueKind == JsonValueKind.Array)
-                    versionsArray = root;
-                else
-                    return versions;
+                {
+                    foreach (var el in root.EnumerateArray())
+                    {
+                        if (el.TryGetInt32(out int v)) versions.Add(v);
+                        else if (el.ValueKind == JsonValueKind.String && int.TryParse(el.GetString(), out v)) versions.Add(v);
+                    }
+                }
+                return versions.Distinct().OrderByDescending(v => v).ToList();
             }
-            else
+
+            // Dot-notation nested path: "linux-amd64.release.newest" -> navigate to single value
+            if (jsonPath.Contains('.'))
             {
-                // Simple property name like "versions" or "targets"
-                if (!root.TryGetProperty(jsonPath, out versionsArray) || versionsArray.ValueKind != JsonValueKind.Array)
-                    return versions;
+                var pathParts = jsonPath.Split('.');
+                JsonElement current = root;
+                
+                foreach (var part in pathParts)
+                {
+                    if (current.ValueKind != JsonValueKind.Object)
+                    {
+                        Logger.Debug($"Mirror:{SourceId}", $"JsonPath '{jsonPath}': expected object at '{part}', got {current.ValueKind}");
+                        return versions;
+                    }
+                    
+                    if (!current.TryGetProperty(part, out current))
+                    {
+                        Logger.Debug($"Mirror:{SourceId}", $"JsonPath '{jsonPath}': property '{part}' not found");
+                        return versions;
+                    }
+                }
+                
+                // Final element should be a number (single version) or array of numbers
+                if (current.ValueKind == JsonValueKind.Number)
+                {
+                    if (current.TryGetInt32(out int v))
+                    {
+                        versions.Add(v);
+                        Logger.Debug($"Mirror:{SourceId}", $"JsonPath '{jsonPath}': found version {v}");
+                    }
+                }
+                else if (current.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in current.EnumerateArray())
+                    {
+                        if (el.TryGetInt32(out int v)) versions.Add(v);
+                        else if (el.ValueKind == JsonValueKind.String && int.TryParse(el.GetString(), out v)) versions.Add(v);
+                    }
+                }
+                else if (current.ValueKind == JsonValueKind.String && int.TryParse(current.GetString(), out int sv))
+                {
+                    versions.Add(sv);
+                }
+                
+                return versions.Distinct().OrderByDescending(v => v).ToList();
             }
+
+            // Simple property name like "versions" or "targets"
+            if (!root.TryGetProperty(jsonPath, out var versionsArray) || versionsArray.ValueKind != JsonValueKind.Array)
+                return versions;
 
             foreach (var el in versionsArray.EnumerateArray())
             {
@@ -548,12 +634,13 @@ public class JsonMirrorSource : IVersionSource
     {
         var config = _meta.Pattern;
         var mappedOs = config?.OsMapping != null && config.OsMapping.TryGetValue(os, out var mo) ? mo : os;
+        var mappedArch = config?.ArchMapping != null && config.ArchMapping.TryGetValue(arch, out var ma) ? ma : arch;
         var mappedBranch = config?.BranchMapping != null && config.BranchMapping.TryGetValue(branch, out var mb) ? mb : branch;
 
         return template
             .Replace("{base}", config?.BaseUrl ?? "")
             .Replace("{os}", mappedOs)
-            .Replace("{arch}", arch)
+            .Replace("{arch}", mappedArch)
             .Replace("{branch}", mappedBranch)
             .Replace("{version}", version.ToString())
             .Replace("{from}", from.ToString())

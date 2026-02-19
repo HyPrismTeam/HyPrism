@@ -404,7 +404,7 @@ public class HytaleVersionSource : IVersionSource
             {
                 MirrorId = SourceId,
                 MirrorUrl = "https://cdn.hytale.com",
-                MirrorName = "Hytale Official",
+                MirrorName = "Hytale",
                 TestedAt = DateTime.UtcNow
             };
 

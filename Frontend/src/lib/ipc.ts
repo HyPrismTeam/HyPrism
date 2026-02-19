@@ -156,6 +156,16 @@ export interface SettingsSnapshot {
   [key: string]: unknown;
 }
 
+export interface MirrorInfo {
+  id: string;
+  name: string;
+  description?: string;
+  priority: number;
+  enabled: boolean;
+  sourceType: string;
+  hostname: string;
+}
+
 export interface MirrorSpeedTestResult {
   mirrorId: string;
   mirrorUrl: string;
@@ -398,6 +408,10 @@ const _settings = {
   update: (data?: unknown) => invoke<{ success: boolean }>('hyprism:settings:update', data),
   testMirrorSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testMirrorSpeed', data),
   testOfficialSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testOfficialSpeed', data),
+  getMirrors: (data?: unknown) => invoke<MirrorInfo[]>('hyprism:settings:getMirrors', data),
+  addMirror: (data?: unknown) => invoke<{ success: boolean; error?: string; mirror?: MirrorInfo; }>('hyprism:settings:addMirror', data),
+  deleteMirror: (data?: unknown) => invoke<{ success: boolean; }>('hyprism:settings:deleteMirror', data),
+  toggleMirror: (data?: unknown) => invoke<{ success: boolean; }>('hyprism:settings:toggleMirror', data),
   launcherPath: (data?: unknown) => invoke<string>('hyprism:settings:launcherPath', data),
   defaultInstanceDir: (data?: unknown) => invoke<string>('hyprism:settings:defaultInstanceDir', data),
   setInstanceDir: (data?: unknown) => invoke<{ success: boolean, path: string, noop?: boolean, reason?: string, error?: string }>('hyprism:settings:setInstanceDir', data, 300000),

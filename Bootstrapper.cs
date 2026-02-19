@@ -85,6 +85,7 @@ public static class Bootstrapper
                 new VersionService(
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<IConfigService>(),
+                    sp.GetRequiredService<HttpClient>(),
                     sp.GetRequiredService<HytaleVersionSource>(),
                     MirrorLoaderService.LoadAll(
                         sp.GetRequiredService<AppPathConfiguration>().AppDir,

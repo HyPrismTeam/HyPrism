@@ -139,6 +139,15 @@ public interface IVersionService
     Task ForceRefreshCacheAsync(string branch, CancellationToken ct = default);
 
     /// <summary>
+    /// Removes a specific version from the cache for a given mirror/source.
+    /// Call this when a download fails with 404 to prevent showing unavailable versions.
+    /// </summary>
+    /// <param name="branch">Branch name (e.g., "release", "pre-release").</param>
+    /// <param name="version">Version number to invalidate.</param>
+    /// <param name="sourceId">Source ID (mirror ID or "official"). If null, removes from all sources.</param>
+    void InvalidateVersionFromCache(string branch, int version, string? sourceId = null);
+
+    /// <summary>
     /// Returns true if the specified branch uses diff-based patching on mirrors.
     /// Pre-release branch uses diffs, release uses full copies.
     /// </summary>
@@ -201,4 +210,10 @@ public interface IVersionService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The selected version source, or null if no mirrors available.</returns>
     Task<IVersionSource?> SelectBestMirrorAsync(CancellationToken ct = default);
+    
+    /// <summary>
+    /// Reloads mirror sources from disk.
+    /// Call this after adding, deleting, or modifying mirror configurations.
+    /// </summary>
+    void ReloadMirrorSources();
 }

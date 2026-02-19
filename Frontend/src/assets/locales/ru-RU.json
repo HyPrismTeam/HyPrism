@@ -104,6 +104,7 @@
     "sourceMirror": "Загружается с зеркала сообщества",
     "editProfile": "Редактировать профиль",
     "updateAvailable": "Доступно обновление",
+    "clickToOpenRelease": "Нажмите, чтобы открыть релиз на GitHub",
     "joinDiscord": "Discord",
     "gitHubRepository": "GitHub репозиторий",
     "educational": "Только для образовательных целей. Нравится?",
@@ -238,7 +239,9 @@
       "authOfficialHint": "Серверы Hytale ",
       "authCustom": "Кастомный",
       "authCustomHint": "Введите адрес своего сервера авторизации",
-      "currentServer": "Текущий сервер"
+      "currentServer": "Текущий сервер",
+      "officialProfileNote": "Официальные аккаунты могут использовать только официальную авторизацию Hytale.",
+      "unofficialProfileNote": "Неофициальные аккаунты не могут использовать официальную авторизацию Hytale."
     },
     "graphicsSettings": {
       "title": "Настройки графики",

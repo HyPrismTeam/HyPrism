@@ -15,7 +15,7 @@
 
 ## Installation
 
-Downloads are available in [Releases](https://github.com/yyyumeniku/HyPrism/releases).
+Downloads are available in [Releases](https://github.com/yyyumeniku/HyPrism/releases)
 
 > We are also here! https://gitlab.com/yyyumeniku/HyPrism
 
@@ -65,12 +65,12 @@ HyPrism is licensed under the **GNU General Public License v3.0 (GPL-3.0)**
 
 ### Game Files & Distribution
 
-**HyPrism** acts solely as a client-side tool to facilitate the downloading and launching process. It does not host, modify, or distribute original game files directly. The software supports two methods of data retrieval:
+**HyPrism** acts solely as a client-side tool to facilitate the downloading and launching process. It does not host, modify, or distribute original game files directly
 
-1.  **Official Authentication:** HyPrism implements the standard Hytale authentication protocol. Users with a valid license can download unmodified game images directly from official servers, identical to the official launcher process
-2.  **Third-Party Mirrors:** The software is also capable of retrieving game files via third-party mirrors (e.g., repositories provided by [MobCat](https://github.com/MobCat))
+1. **Official Authentication (Default):** By default, HyPrism implements the standard Hytale authentication protocol. Users with a valid license can download unmodified game images directly from official servers, identical to the official launcher process
+2. **Custom Third-Party Mirrors (User-Configured):** HyPrism does not include, provide, or pre-configure any third-party download mirrors. The software merely provides a technical capability for users to manually add custom mirror URLs at their own discretion
 
-The developers of HyPrism constitute no control over the content hosted on external mirrors. The choice of download source and compliance with the applicable license agreements rests with the user
+The developers of HyPrism constitute no control over the content hosted on any user-added external mirrors. The responsibility for choosing a download source and ensuring compliance with the [Hytale EULA](https://hytale.com/eula) and applicable copyright laws rests entirely with the end-user
 
 ### Third-Party Components
 

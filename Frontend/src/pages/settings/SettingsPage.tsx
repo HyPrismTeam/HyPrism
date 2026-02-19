@@ -223,17 +223,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   launchAfterDownload={settings.launchAfterDownload}
                   setLaunchAfterDownload={settings.setLaunchAfterDownload}
                   officialSpeedTest={mirrorTests.officialResult}
-                  mirrorSpeedTest={mirrorTests.estrogenResult}
-                  cobyLobbySpeedTest={mirrorTests.cobyLobbyResult}
-                  shipOfYarnSpeedTest={mirrorTests.shipOfYarnResult}
                   isOfficialTesting={mirrorTests.isOfficialTesting}
-                  isMirrorTesting={mirrorTests.isEstrogenTesting}
-                  isCobyLobbyTesting={mirrorTests.isCobyLobbyTesting}
-                  isShipOfYarnTesting={mirrorTests.isShipOfYarnTesting}
                   handleTestOfficialSpeed={mirrorTests.testOfficial}
-                  handleTestMirrorSpeed={mirrorTests.testEstrogen}
-                  handleTestCobyLobbySpeed={mirrorTests.testCobyLobby}
-                  handleTestShipOfYarnSpeed={mirrorTests.testShipOfYarn}
+                  mirrors={mirrorTests.mirrors}
+                  mirrorStates={mirrorTests.mirrorStates}
+                  isLoading={mirrorTests.isLoading}
+                  testMirror={mirrorTests.testMirror}
+                  addMirror={mirrorTests.addMirror}
+                  deleteMirror={mirrorTests.deleteMirror}
+                  toggleMirror={mirrorTests.toggleMirror}
+                  refreshMirrors={mirrorTests.refresh}
+                  isAdding={mirrorTests.isAdding}
+                  addError={mirrorTests.addError}
+                  setAddError={mirrorTests.setAddError}
                 />
               )}
 
@@ -286,6 +288,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   customAuthDomain={settings.customAuthDomain}
                   setCustomAuthDomain={settings.setCustomAuthDomain}
                   onAuthSettingsChange={onAuthSettingsChange}
+                  isActiveProfileOfficial={settings.isActiveProfileOfficial}
                 />
               )}
 

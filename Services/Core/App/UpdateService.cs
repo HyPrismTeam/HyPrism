@@ -22,8 +22,7 @@ namespace HyPrism.Services.Core.App;
 /// </remarks>
 public class UpdateService : IUpdateService
 {
-    private const string GitHubApiUrl = "https://api.github.com/repos/yyyumeniku/TEST/releases";
-    private const string ReleasesPageUrl = "https://github.com/yyyumeniku/TEST/releases/latest";
+    private const string GitHubApiUrl = "https://api.github.com/repos/HyPrismTeam/HyPrism/releases";
     
     private static readonly Lazy<string> _launcherVersion = new(() =>
     {
@@ -229,14 +228,17 @@ public class UpdateService : IUpdateService
 
                 if (isChannelSwitch)
                 {
-                    // Channel switch: always offer the newest release in the selected channel,
-                    // even if it is the same version or a downgrade.
-                    bestVersion = version;
-                    bestRelease = release;
-                    break;
+                    // Channel switch: find the newest release in the selected channel by version number
+                    // (not by release date, as hotfixes for older versions may be released later)
+                    if (bestVersion == null || IsNewerVersion(version, bestVersion))
+                    {
+                        bestVersion = version;
+                        bestRelease = release;
+                    }
+                    continue;
                 }
 
-                // Normal update flow: only newer versions
+                // Normal update flow: only newer versions than current
                 if (IsNewerVersion(version, currentVersion))
                 {
                     if (bestVersion == null || IsNewerVersion(version, bestVersion))
@@ -249,6 +251,14 @@ public class UpdateService : IUpdateService
 
             if (bestRelease.HasValue && !string.IsNullOrWhiteSpace(bestVersion))
             {
+                // Final sanity check: for normal updates, ensure bestVersion is actually newer than current
+                // (This guards against edge cases where GitHub API ordering might confuse the logic)
+                if (!isChannelSwitch && !IsNewerVersion(bestVersion, currentVersion))
+                {
+                    Logger.Info("Update", $"Launcher is up to date: {currentVersion} (channel: {launcherBranch})");
+                    return;
+                }
+                
                 var release = bestRelease.Value;
                 var reason = isChannelSwitch ? $"channel switch {installedBranch} -> {launcherBranch}" : "version update";
                 Logger.Info("Update", $"Update available: {currentVersion} -> {bestVersion} ({reason})");

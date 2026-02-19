@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { ipc } from '@/lib/ipc';
+import { useState, useCallback, useEffect } from 'react';
+import { ipc, MirrorInfo } from '@/lib/ipc';
 
 export interface MirrorSpeedResult {
   mirrorId: string;
@@ -16,34 +16,43 @@ interface MirrorState {
   isTesting: boolean;
 }
 
-const MIRRORS = ['estrogen', 'cobylobby', 'shipofyarn', 'official'] as const;
-type MirrorId = typeof MIRRORS[number];
-
 /**
- * Hook to manage mirror speed tests for all 4 mirrors.
- * Replaces 4x useState pairs and 4 handler functions.
+ * Hook to manage dynamic mirror list and speed tests.
+ * Loads mirrors from backend and supports add/remove/toggle operations.
  */
 export function useMirrorSpeedTests() {
-  const [mirrorStates, setMirrorStates] = useState<Record<MirrorId, MirrorState>>({
-    estrogen: { result: null, isTesting: false },
-    cobylobby: { result: null, isTesting: false },
-    shipofyarn: { result: null, isTesting: false },
-    official: { result: null, isTesting: false },
-  });
+  const [mirrors, setMirrors] = useState<MirrorInfo[]>([]);
+  const [mirrorStates, setMirrorStates] = useState<Record<string, MirrorState>>({});
+  const [officialState, setOfficialState] = useState<MirrorState>({ result: null, isTesting: false });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
-  const setTesting = useCallback((mirrorId: MirrorId, isTesting: boolean) => {
-    setMirrorStates(prev => ({
-      ...prev,
-      [mirrorId]: { ...prev[mirrorId], isTesting },
-    }));
+  // Load mirrors from backend
+  const loadMirrors = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const loadedMirrors = await ipc.settings.getMirrors();
+      setMirrors(loadedMirrors);
+      
+      // Initialize states for new mirrors
+      setMirrorStates(prev => {
+        const newStates: Record<string, MirrorState> = {};
+        for (const mirror of loadedMirrors) {
+          newStates[mirror.id] = prev[mirror.id] || { result: null, isTesting: false };
+        }
+        return newStates;
+      });
+    } catch (err) {
+      console.error('Failed to load mirrors:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const setResult = useCallback((mirrorId: MirrorId, result: MirrorSpeedResult) => {
-    setMirrorStates(prev => ({
-      ...prev,
-      [mirrorId]: { result, isTesting: false },
-    }));
-  }, []);
+  useEffect(() => {
+    loadMirrors();
+  }, [loadMirrors]);
 
   const createErrorResult = (mirrorId: string, mirrorName: string): MirrorSpeedResult => ({
     mirrorId,
@@ -55,47 +64,111 @@ export function useMirrorSpeedTests() {
     testedAt: new Date().toISOString(),
   });
 
-  const testMirror = useCallback(async (mirrorId: MirrorId, forceRefresh = false) => {
-    setTesting(mirrorId, true);
+  const testMirror = useCallback(async (mirrorId: string, forceRefresh = false) => {
+    setMirrorStates(prev => ({
+      ...prev,
+      [mirrorId]: { ...prev[mirrorId], isTesting: true },
+    }));
+
     try {
-      const result = mirrorId === 'official'
-        ? await ipc.settings.testOfficialSpeed({ forceRefresh })
-        : await ipc.settings.testMirrorSpeed({ mirrorId, forceRefresh });
-      setResult(mirrorId, result);
+      const result = await ipc.settings.testMirrorSpeed({ mirrorId, forceRefresh });
+      setMirrorStates(prev => ({
+        ...prev,
+        [mirrorId]: { result, isTesting: false },
+      }));
     } catch (err) {
       console.error(`${mirrorId} speed test failed:`, err);
-      const mirrorNames: Record<MirrorId, string> = {
-        estrogen: 'estrogen',
-        cobylobby: 'CobyLobby',
-        shipofyarn: 'ShipOfYarn',
-        official: 'Hytale Official',
-      };
-      setResult(mirrorId, createErrorResult(mirrorId, mirrorNames[mirrorId]));
+      const mirror = mirrors.find(m => m.id === mirrorId);
+      setMirrorStates(prev => ({
+        ...prev,
+        [mirrorId]: { result: createErrorResult(mirrorId, mirror?.name || mirrorId), isTesting: false },
+      }));
     }
-  }, [setTesting, setResult]);
+  }, [mirrors]);
 
-  const testEstrogen = useCallback((forceRefresh?: boolean) => testMirror('estrogen', forceRefresh), [testMirror]);
-  const testCobyLobby = useCallback((forceRefresh?: boolean) => testMirror('cobylobby', forceRefresh), [testMirror]);
-  const testShipOfYarn = useCallback((forceRefresh?: boolean) => testMirror('shipofyarn', forceRefresh), [testMirror]);
-  const testOfficial = useCallback((forceRefresh?: boolean) => testMirror('official', forceRefresh), [testMirror]);
+  const testOfficial = useCallback(async (forceRefresh = false) => {
+    setOfficialState(prev => ({ ...prev, isTesting: true }));
+    try {
+      const result = await ipc.settings.testOfficialSpeed({ forceRefresh });
+      setOfficialState({ result, isTesting: false });
+    } catch (err) {
+      console.error('Official speed test failed:', err);
+      setOfficialState({ result: createErrorResult('official', 'Hytale'), isTesting: false });
+    }
+  }, []);
+
+  const addMirror = useCallback(async (url: string): Promise<boolean> => {
+    setIsAdding(true);
+    setAddError(null);
+    try {
+      const result = await ipc.settings.addMirror({ url });
+      if (result.success) {
+        await loadMirrors();
+        return true;
+      } else {
+        setAddError(result.error || 'Failed to add mirror');
+        return false;
+      }
+    } catch (err) {
+      console.error('Failed to add mirror:', err);
+      setAddError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    } finally {
+      setIsAdding(false);
+    }
+  }, [loadMirrors]);
+
+  const deleteMirror = useCallback(async (mirrorId: string): Promise<boolean> => {
+    try {
+      const result = await ipc.settings.deleteMirror({ mirrorId });
+      if (result.success) {
+        await loadMirrors();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to delete mirror:', err);
+      return false;
+    }
+  }, [loadMirrors]);
+
+  const toggleMirror = useCallback(async (mirrorId: string, enabled: boolean): Promise<boolean> => {
+    try {
+      const result = await ipc.settings.toggleMirror({ mirrorId, enabled });
+      if (result.success) {
+        await loadMirrors();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to toggle mirror:', err);
+      return false;
+    }
+  }, [loadMirrors]);
 
   return {
-    // Results
-    estrogenResult: mirrorStates.estrogen.result,
-    cobyLobbyResult: mirrorStates.cobylobby.result,
-    shipOfYarnResult: mirrorStates.shipofyarn.result,
-    officialResult: mirrorStates.official.result,
-    // Testing flags
-    isEstrogenTesting: mirrorStates.estrogen.isTesting,
-    isCobyLobbyTesting: mirrorStates.cobylobby.isTesting,
-    isShipOfYarnTesting: mirrorStates.shipofyarn.isTesting,
-    isOfficialTesting: mirrorStates.official.isTesting,
-    // Test functions
-    testEstrogen,
-    testCobyLobby,
-    testShipOfYarn,
+    // Dynamic mirror list
+    mirrors,
+    mirrorStates,
+    isLoading,
+    
+    // Official CDN
+    officialResult: officialState.result,
+    isOfficialTesting: officialState.isTesting,
     testOfficial,
-    // Generic test
+    
+    // Test functions
     testMirror,
+    
+    // Mirror management
+    addMirror,
+    deleteMirror,
+    toggleMirror,
+    isAdding,
+    addError,
+    setAddError,
+    
+    // Refresh
+    refresh: loadMirrors,
   };
 }

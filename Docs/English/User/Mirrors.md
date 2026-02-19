@@ -1,6 +1,6 @@
 # Mirrors Guide
 
-HyPrism uses a **data-driven mirror system** for downloading game files. Instead of hardcoding download URLs, the launcher reads mirror definitions from `.mirror.json` files in the `Mirrors/` directory. This guide explains how the system works, how to configure existing mirrors, and how to add your own.
+HyPrism uses a **data-driven mirror system** for downloading game files. Instead of hardcoding download URLs, the launcher reads mirror definitions from `.mirror.json` files in the `Mirrors/` directory. This guide explains how the system works, how to add mirrors, and how to configure them.
 
 ---
 
@@ -8,9 +8,11 @@ HyPrism uses a **data-driven mirror system** for downloading game files. Instead
 
 - [Overview](#overview)
 - [How mirrors work](#how-mirrors-work)
+- [Adding mirrors](#adding-mirrors)
+  - [Method 1: Add via Settings UI (Recommended)](#method-1-add-via-settings-ui-recommended)
+  - [Method 2: Manual JSON file](#method-2-manual-json-file)
 - [Data directory location](#data-directory-location)
 - [Mirrors directory structure](#mirrors-directory-structure)
-- [Quick start: adding a custom mirror](#quick-start-adding-a-custom-mirror)
 - [Mirror schema reference](#mirror-schema-reference)
   - [Common fields](#common-fields)
   - [Source type: pattern](#source-type-pattern)
@@ -23,10 +25,10 @@ HyPrism uses a **data-driven mirror system** for downloading game files. Instead
   - [html-autoindex](#method-html-autoindex)
   - [static-list](#method-static-list)
 - [Understanding diffBasedBranches](#understanding-diffbasedbranches)
-- [Built-in mirror examples (annotated)](#built-in-mirror-examples-annotated)
-  - [EstroGen (pattern + html-autoindex)](#estrogen-pattern--html-autoindex)
-  - [CobyLobby (pattern + json-api)](#cobylobby-pattern--json-api)
-  - [ShipOfYarn (json-index)](#shipofyarn-json-index)
+- [Mirror examples (annotated)](#mirror-examples-annotated)
+  - [HTML Autoindex style (pattern + html-autoindex)](#html-autoindex-style-pattern--html-autoindex)
+  - [JSON API style (pattern + json-api)](#json-api-style-pattern--json-api)
+  - [JSON Index style (json-index)](#json-index-style-json-index)
 - [Tutorials](#tutorials)
   - [Tutorial 1: pattern mirror with a JSON API](#tutorial-1-pattern-mirror-with-a-json-api)
   - [Tutorial 2: pattern mirror with HTML directory listing](#tutorial-2-pattern-mirror-with-html-directory-listing)
@@ -40,23 +42,46 @@ HyPrism uses a **data-driven mirror system** for downloading game files. Instead
 
 ## Overview
 
-HyPrism always tries the **official Hytale servers first**. If the official download is unavailable or slow, the launcher automatically tests available mirrors and uses the best reachable one based on priority and speed.
+HyPrism always tries the **official Hytale servers first** (if you have an official account). If the official download is unavailable or slow, the launcher automatically tests available mirrors and uses the best reachable one based on priority and speed.
 
 Mirrors are community-hosted servers that replicate Hytale game files. They are useful when:
 
+- You don't have an official Hytale account
 - Official servers are down or unreachable in your region
 - You want faster download speeds from a geographically closer server
 - You want to self-host files for your community
 
+> **Note:** No mirrors are pre-configured by default. You must add mirrors manually through Settings or by placing `.mirror.json` files in the Mirrors folder.
+
 ## How mirrors work
 
-1. On **first launch**, if the `Mirrors/` directory doesn't exist or is empty, the launcher generates default `.mirror.json` files for the built-in community mirrors (EstroGen, CobyLobby, ShipOfYarn).
-2. On **every startup**, the launcher reads all `*.mirror.json` files from the `Mirrors/` directory and creates download sources from them.
-3. Mirrors with `"enabled": false` are skipped.
-4. Sources are **sorted by priority** (lower number = higher priority). The official Hytale source has priority `0`, mirrors typically start at `100`.
-5. When a download is needed, the launcher picks the best available source automatically.
+1. On startup, the launcher reads all `*.mirror.json` files from the `Mirrors/` directory and creates download sources from them.
+2. Mirrors with `"enabled": false` are skipped.
+3. Sources are **sorted by priority** (lower number = higher priority). The official Hytale source has priority `0`, mirrors typically start at `100`.
+4. When a download is needed, the launcher picks the best available source automatically.
 
-> **Important:** The launcher never overwrites or regenerates existing mirror files after the first launch. Any changes you make to `.mirror.json` files are preserved.
+## Adding mirrors
+
+### Method 1: Add via Settings UI (Recommended)
+
+1. Open **Settings → Downloads**.
+2. Click the **"Add Mirror"** button.
+3. Enter the mirror's base URL (e.g., `https://mirror.example.com/hytale/patches`).
+4. The launcher will **automatically detect** the mirror configuration (JSON API, HTML autoindex, or directory structure).
+5. If detection succeeds, the mirror is added immediately and ready to use.
+
+The auto-detection system tries multiple strategies:
+- **JSON Index API** - Single endpoint returning full file index
+- **JSON API** - Version list endpoint
+- **HTML Autoindex** - Apache/Nginx directory listing
+- **Directory Structure** - Pattern-based URL with OS/arch/branch subdirectories
+
+### Method 2: Manual JSON file
+
+1. Navigate to your data directory → `Mirrors/` folder.
+2. Create a new file, for example `my-mirror.mirror.json`.
+3. Paste a mirror template (see below) and fill in your server details.
+4. Restart the launcher.
 
 ## Data directory location
 
@@ -73,48 +98,12 @@ You can also open this directory from **Settings → Data → Open Launcher Fold
 ```
 <data-dir>/
 └── Mirrors/
-    ├── estrogen.mirror.json       ← built-in, auto-generated
-    ├── cobylobby.mirror.json      ← built-in, auto-generated
-    ├── shipofyarn.mirror.json     ← built-in, auto-generated
-    └── my-custom.mirror.json      ← your custom mirror (optional)
+    └── my-custom.mirror.json      ← your custom mirror
 ```
 
 File naming convention: `<mirror-id>.mirror.json`. The file name doesn't affect functionality — the launcher uses the `id` field inside the JSON — but keeping them matched makes management easier.
 
----
-
-## Quick start: adding a custom mirror
-
-1. Navigate to your data directory → `Mirrors/` folder.
-2. Create a new file, for example `my-mirror.mirror.json`.
-3. Paste a mirror template (see below) and fill in your server details.
-4. Restart the launcher.
-
-**Minimal pattern-based mirror:**
-
-```json
-{
-  "schemaVersion": 1,
-  "id": "my-mirror",
-  "name": "My Mirror",
-  "priority": 110,
-  "enabled": true,
-  "sourceType": "pattern",
-  "pattern": {
-    "fullBuildUrl": "{base}/{os}/{arch}/{branch}/0/{version}.pwr",
-    "baseUrl": "https://my-server.example.com/hytale",
-    "versionDiscovery": {
-      "method": "static-list",
-      "staticVersions": [1, 2, 3, 4, 5, 6, 7, 8]
-    }
-  }
-}
-```
-
-This is the simplest possible mirror definition. It tells the launcher:
-- Download full builds from `https://my-server.example.com/hytale/{os}/{arch}/{branch}/0/{version}.pwr`
-- Versions 1 through 8 are available
-- No diff patches, no speed test, default cache TTL
+> **Tip:** When you add a mirror via the Settings UI, the launcher automatically creates the `.mirror.json` file for you.
 
 ---
 
@@ -321,7 +310,7 @@ Fetches a JSON endpoint and extracts version numbers.
 | `"versions"` | Property contains array of numbers | `{"versions": [1, 2, 3]}` |
 | `"items[].version"` | Array of objects with a version field | `{"items": [{"version": 1}, {"version": 2}]}` |
 
-**Real-world example** — CobyLobby uses this method:
+**Example** — JSON API method:
 ```json
 {
   "method": "json-api",
@@ -330,7 +319,7 @@ Fetches a JSON endpoint and extracts version numbers.
 }
 ```
 
-The API at `https://cobylobbyht.store/launcher/patches/release/versions?os_name=linux&arch=x64` returns:
+A typical API at `https://example.com/launcher/patches/release/versions?os_name=linux&arch=x64` returns:
 ```json
 {
   "items": [
@@ -361,7 +350,7 @@ Parses an HTML directory listing (like nginx autoindex or Apache directory listi
 | `htmlPattern` | Regular expression applied to the HTML. Capture group 1 = version number. Capture group 2 (optional) = file size in bytes. |
 | `minFileSizeBytes` | If the regex captures a file size (group 2), files smaller than this are ignored. Useful to filter out incomplete uploads. Default: `0` (no filtering). |
 
-**Real-world example** — EstroGen uses nginx autoindex. The HTML at `https://licdn.estrogen.cat/hytale/patches/linux/x64/release/0/` looks like:
+**Example** — nginx autoindex. A typical HTML directory listing at `https://example.com/hytale/patches/linux/x64/release/0/` looks like:
 
 ```html
 <pre>
@@ -435,20 +424,20 @@ This means:
 
 ---
 
-## Built-in mirror examples (annotated)
+## Mirror examples (annotated)
 
-The launcher ships with three built-in mirrors. Here are their complete configurations with explanations.
+Below are example mirror configurations demonstrating different setups. These are illustrative templates — you can use them as a starting point when configuring your own mirrors.
 
-### EstroGen (pattern + html-autoindex)
+### HTML Autoindex style (pattern + html-autoindex)
 
-EstroGen hosts files on a web server with nginx autoindex enabled. The launcher parses the HTML directory listing to discover versions.
+This example shows a mirror that hosts files on a web server with nginx/Apache autoindex enabled. The launcher parses the HTML directory listing to discover versions.
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "estrogen",
-  "name": "EstroGen",
-  "description": "Community mirror hosted by EstroGen (licdn.estrogen.cat)",
+  "id": "my-html-autoindex-mirror",
+  "name": "My HTML Mirror",
+  "description": "Mirror using HTML directory listing for version discovery",
   "priority": 100,
   "enabled": true,
   "sourceType": "pattern",
@@ -456,7 +445,7 @@ EstroGen hosts files on a web server with nginx autoindex enabled. The launcher 
     "fullBuildUrl": "{base}/{os}/{arch}/{branch}/0/{version}.pwr",
     "diffPatchUrl": "{base}/{os}/{arch}/{branch}/{from}/{to}.pwr",
     "signatureUrl": "{base}/{os}/{arch}/{branch}/0/{version}.pwr.sig",
-    "baseUrl": "https://licdn.estrogen.cat/hytale/patches",
+    "baseUrl": "https://my-server.example.com/hytale/patches",
     "versionDiscovery": {
       "method": "html-autoindex",
       "url": "{base}/{os}/{arch}/{branch}/0/",
@@ -466,7 +455,7 @@ EstroGen hosts files on a web server with nginx autoindex enabled. The launcher 
     "diffBasedBranches": []
   },
   "speedTest": {
-    "pingUrl": "https://licdn.estrogen.cat/hytale/patches"
+    "pingUrl": "https://my-server.example.com/hytale/patches"
   },
   "cache": {
     "indexTtlMinutes": 30,
@@ -485,28 +474,28 @@ EstroGen hosts files on a web server with nginx autoindex enabled. The launcher 
 **Resolved URLs (Linux x64, release, version 8):**
 | Type | URL |
 |------|-----|
-| Full build | `https://licdn.estrogen.cat/hytale/patches/linux/x64/release/0/8.pwr` |
-| Diff 7→8 | `https://licdn.estrogen.cat/hytale/patches/linux/x64/release/7/8.pwr` |
-| Signature | `https://licdn.estrogen.cat/hytale/patches/linux/x64/release/0/8.pwr.sig` |
-| Version list | `https://licdn.estrogen.cat/hytale/patches/linux/x64/release/0/` |
+| Full build | `https://my-server.example.com/hytale/patches/linux/x64/release/0/8.pwr` |
+| Diff 7→8 | `https://my-server.example.com/hytale/patches/linux/x64/release/7/8.pwr` |
+| Signature | `https://my-server.example.com/hytale/patches/linux/x64/release/0/8.pwr.sig` |
+| Version list | `https://my-server.example.com/hytale/patches/linux/x64/release/0/` |
 
-### CobyLobby (pattern + json-api)
+### JSON API style (pattern + json-api)
 
-CobyLobby provides a JSON API for version discovery and uses `prerelease` (no hyphen) in URLs.
+This example shows a mirror that provides a JSON API for version discovery. Note the use of `branchMapping` for URL customization.
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "cobylobby",
-  "name": "CobyLobby",
-  "description": "Community mirror hosted by CobyLobby (cobylobbyht.store)",
+  "id": "my-json-api-mirror",
+  "name": "My JSON API Mirror",
+  "description": "Mirror with JSON API for version discovery",
   "priority": 101,
   "enabled": true,
   "sourceType": "pattern",
   "pattern": {
     "fullBuildUrl": "{base}/launcher/patches/{os}/{arch}/{branch}/0/{version}.pwr",
     "diffPatchUrl": "{base}/launcher/patches/{os}/{arch}/{branch}/{from}/{to}.pwr",
-    "baseUrl": "https://cobylobbyht.store",
+    "baseUrl": "https://my-server.example.com",
     "versionDiscovery": {
       "method": "json-api",
       "url": "{base}/launcher/patches/{branch}/versions?os_name={os}&arch={arch}",
@@ -518,7 +507,7 @@ CobyLobby provides a JSON API for version discovery and uses `prerelease` (no hy
     "diffBasedBranches": []
   },
   "speedTest": {
-    "pingUrl": "https://cobylobbyht.store/health"
+    "pingUrl": "https://my-server.example.com/health"
   },
   "cache": {
     "indexTtlMinutes": 30,
@@ -536,27 +525,27 @@ CobyLobby provides a JSON API for version discovery and uses `prerelease` (no hy
 **Resolved URLs (Linux x64, pre-release branch, version 22):**
 | Type | URL |
 |------|-----|
-| Full build | `https://cobylobbyht.store/launcher/patches/linux/x64/prerelease/0/22.pwr` |
-| Diff 21→22 | `https://cobylobbyht.store/launcher/patches/linux/x64/prerelease/21/22.pwr` |
-| Version list | `https://cobylobbyht.store/launcher/patches/prerelease/versions?os_name=linux&arch=x64` |
+| Full build | `https://my-server.example.com/launcher/patches/linux/x64/prerelease/0/22.pwr` |
+| Diff 21→22 | `https://my-server.example.com/launcher/patches/linux/x64/prerelease/21/22.pwr` |
+| Version list | `https://my-server.example.com/launcher/patches/prerelease/versions?os_name=linux&arch=x64` |
 
 > Note how `{branch}` resolved to `prerelease` (not `pre-release`) because of the `branchMapping`.
 
-### ShipOfYarn (json-index)
+### JSON Index style (json-index)
 
-ShipOfYarn provides a single API that returns a full file index with direct download URLs.
+This example shows a mirror that provides a single API returning a full file index with direct download URLs. This is the simplest setup for mirror operators since the launcher just needs one endpoint.
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "shipofyarn",
-  "name": "ShipOfYarn",
-  "description": "Community mirror hosted by ShipOfYarn (thecute.cloud)",
+  "id": "my-json-index-mirror",
+  "name": "My JSON Index Mirror",
+  "description": "Mirror using JSON index API for file discovery",
   "priority": 102,
   "enabled": true,
   "sourceType": "json-index",
   "jsonIndex": {
-    "apiUrl": "https://thecute.cloud/ShipOfYarn/api.php",
+    "apiUrl": "https://my-server.example.com/api/files",
     "rootPath": "hytale",
     "structure": "grouped",
     "platformMapping": {
@@ -569,7 +558,7 @@ ShipOfYarn provides a single API that returns a full file index with direct down
     "diffBasedBranches": ["pre-release"]
   },
   "speedTest": {
-    "pingUrl": "https://thecute.cloud/ShipOfYarn/api.php"
+    "pingUrl": "https://my-server.example.com/api/files"
   },
   "cache": {
     "indexTtlMinutes": 30,
@@ -591,24 +580,24 @@ ShipOfYarn provides a single API that returns a full file index with direct down
   "hytale": {
     "release.linux.x64": {
       "base": {
-        "v1-linux-x64.pwr": "https://thecute.cloud/.../v1-linux-x64.pwr",
-        "v2-linux-x64.pwr": "https://thecute.cloud/.../v2-linux-x64.pwr",
+        "v1-linux-x64.pwr": "https://my-server.example.com/.../v1-linux-x64.pwr",
+        "v2-linux-x64.pwr": "https://my-server.example.com/.../v2-linux-x64.pwr",
         ...
-        "v8-linux-x64.pwr": "https://thecute.cloud/.../v8-linux-x64.pwr"
+        "v8-linux-x64.pwr": "https://my-server.example.com/.../v8-linux-x64.pwr"
       },
       "patch": {
-        "v1~2-linux-x64.pwr": "https://thecute.cloud/.../v1~2-linux-x64.pwr",
-        "v2~3-linux-x64.pwr": "https://thecute.cloud/.../v2~3-linux-x64.pwr",
+        "v1~2-linux-x64.pwr": "https://my-server.example.com/.../v1~2-linux-x64.pwr",
+        "v2~3-linux-x64.pwr": "https://my-server.example.com/.../v2~3-linux-x64.pwr",
         ...
-        "v7~8-linux-x64.pwr": "https://thecute.cloud/.../v7~8-linux-x64.pwr"
+        "v7~8-linux-x64.pwr": "https://my-server.example.com/.../v7~8-linux-x64.pwr"
       }
     },
     "pre-release.linux.x64": {
       "patch": {
-        "v0~1-linux-x64.pwr": "https://thecute.cloud/.../v0~1-linux-x64.pwr",
-        "v1~2-linux-x64.pwr": "https://thecute.cloud/.../v1~2-linux-x64.pwr",
+        "v0~1-linux-x64.pwr": "https://my-server.example.com/.../v0~1-linux-x64.pwr",
+        "v1~2-linux-x64.pwr": "https://my-server.example.com/.../v1~2-linux-x64.pwr",
         ...
-        "v21~22-linux-x64.pwr": "https://thecute.cloud/.../v21~22-linux-x64.pwr"
+        "v21~22-linux-x64.pwr": "https://my-server.example.com/.../v21~22-linux-x64.pwr"
       }
     }
   }

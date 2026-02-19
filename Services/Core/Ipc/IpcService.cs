@@ -20,6 +20,7 @@ using HyPrism.Services.Game;
 using HyPrism.Services.Game.Instance;
 using HyPrism.Services.Game.Launch;
 using HyPrism.Services.Game.Mod;
+using HyPrism.Services.Game.Sources;
 using HyPrism.Services.Game.Version;
 using HyPrism.Services.User;
 
@@ -46,6 +47,7 @@ namespace HyPrism.Services.Core.Ipc;
 /// @type HytaleAuthStatus { loggedIn: boolean; username?: string; uuid?: string; error?: string; errorType?: string; }
 /// @type ProfileSnapshot { nick: string; uuid: string; avatarPath?: string; }
 /// @type SettingsSnapshot { language: string; musicEnabled: boolean; launcherBranch: string; versionType: string; selectedVersion: number; closeAfterLaunch: boolean; launchAfterDownload: boolean; showDiscordAnnouncements: boolean; disableNews: boolean; backgroundMode: string; availableBackgrounds: string[]; accentColor: string; hasCompletedOnboarding: boolean; onlineMode: boolean; authDomain: string; javaArguments?: string; useCustomJava?: boolean; customJavaPath?: string; systemMemoryMb?: number; dataDirectory: string; instanceDirectory: string; gpuPreference?: string; gameEnvironmentVariables?: Record<string, string>; useDualAuth?: boolean; showAlphaMods: boolean; launcherVersion: string; launchOnStartup?: boolean; minimizeToTray?: boolean; animations?: boolean; transparency?: boolean; resolution?: string; ramMb?: number; sound?: boolean; closeOnLaunch?: boolean; developerMode?: boolean; verboseLogging?: boolean; preRelease?: boolean; [key: string]: unknown; }
+/// @type MirrorInfo { id: string; name: string; description?: string; priority: number; enabled: boolean; sourceType: string; hostname: string; }
 /// @type MirrorSpeedTestResult { mirrorId: string; mirrorUrl: string; mirrorName: string; pingMs: number; speedMBps: number; isAvailable: boolean; testedAt: string; }
 /// @type ModScreenshot { id: number; title: string; thumbnailUrl: string; url: string; }
 /// @type ModInfo { id: string; name: string; slug: string; summary: string; author: string; downloadCount: number; iconUrl: string; thumbnailUrl: string; categories: string[]; dateUpdated: string; latestFileId: string; screenshots: ModScreenshot[]; }
@@ -1595,10 +1597,10 @@ public class IpcService
             {
                 Logger.Error("IPC", $"Mirror speed test failed: {ex.Message}");
                 Reply("hyprism:settings:testMirrorSpeed:reply", new { 
-                    mirrorId = "estrogen",
-                    mirrorName = "EstroGen",
+                    mirrorId = "unknown",
+                    mirrorName = "Unknown",
                     mirrorUrl = "",
-                    pingMs = -1L,
+                    pingMs = 0L,
                     speedMBps = 0.0,
                     isAvailable = false,
                     testedAt = DateTime.UtcNow
@@ -1625,7 +1627,7 @@ public class IpcService
                 Logger.Error("IPC", $"Official speed test failed: {ex.Message}");
                 Reply("hyprism:settings:testOfficialSpeed:reply", new { 
                     mirrorId = "official",
-                    mirrorName = "Hytale Official",
+                    mirrorName = "Hytale",
                     mirrorUrl = "https://cdn.hytale.com",
                     pingMs = -1L,
                     speedMBps = 0.0,
@@ -1634,6 +1636,190 @@ public class IpcService
                 });
             }
         });
+
+        // @ipc invoke hyprism:settings:getMirrors -> MirrorInfo[]
+        Electron.IpcMain.On("hyprism:settings:getMirrors", async (_) =>
+        {
+            await Task.CompletedTask;
+            try
+            {
+                var appPath = _services.GetRequiredService<AppPathConfiguration>();
+                var mirrors = MirrorLoaderService.GetAllMirrorMetas(appPath.AppDir);
+                var result = mirrors.Select(m => new {
+                    id = m.Id,
+                    name = m.Name,
+                    description = m.Description,
+                    priority = m.Priority,
+                    enabled = m.Enabled,
+                    sourceType = m.SourceType,
+                    hostname = GetMirrorHostname(m)
+                }).ToList();
+                Reply("hyprism:settings:getMirrors:reply", result);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Get mirrors failed: {ex.Message}");
+                Reply("hyprism:settings:getMirrors:reply", Array.Empty<object>());
+            }
+        });
+
+        // @ipc invoke hyprism:settings:addMirror -> { success: boolean; error?: string; mirror?: MirrorInfo; }
+        Electron.IpcMain.On("hyprism:settings:addMirror", async (args) =>
+        {
+            try
+            {
+                var appPath = _services.GetRequiredService<AppPathConfiguration>();
+                var json = ArgsToJson(args);
+                var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                var url = request?.GetValueOrDefault("url").GetString() ?? "";
+                
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    Reply("hyprism:settings:addMirror:reply", new { success = false, error = "URL is required" });
+                    return;
+                }
+                
+                var httpClient = _services.GetRequiredService<HttpClient>();
+                var discoveryService = new MirrorDiscoveryService(httpClient);
+                var result = await discoveryService.DiscoverMirrorAsync(url);
+                
+                if (!result.Success || result.Mirror == null)
+                {
+                    Reply("hyprism:settings:addMirror:reply", new { success = false, error = result.Error ?? "Discovery failed" });
+                    return;
+                }
+                
+                // Check if mirror with same ID already exists
+                if (MirrorLoaderService.MirrorExists(appPath.AppDir, result.Mirror.Id))
+                {
+                    // Generate unique ID
+                    var baseId = result.Mirror.Id;
+                    var counter = 2;
+                    while (MirrorLoaderService.MirrorExists(appPath.AppDir, $"{baseId}-{counter}"))
+                    {
+                        counter++;
+                    }
+                    result.Mirror.Id = $"{baseId}-{counter}";
+                }
+                
+                MirrorLoaderService.SaveMirror(appPath.AppDir, result.Mirror);
+                
+                // Reload mirror sources in VersionService
+                var versionService = _services.GetRequiredService<IVersionService>();
+                versionService.ReloadMirrorSources();
+                
+                Reply("hyprism:settings:addMirror:reply", new { 
+                    success = true, 
+                    mirror = new {
+                        id = result.Mirror.Id,
+                        name = result.Mirror.Name,
+                        description = result.Mirror.Description,
+                        priority = result.Mirror.Priority,
+                        enabled = result.Mirror.Enabled,
+                        sourceType = result.Mirror.SourceType,
+                        hostname = GetMirrorHostname(result.Mirror),
+                        detectedType = result.DetectedType
+                    }
+                });
+                
+                Logger.Success("IPC", $"Added mirror: {result.Mirror.Name} ({result.Mirror.Id})");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Add mirror failed: {ex.Message}");
+                Reply("hyprism:settings:addMirror:reply", new { success = false, error = ex.Message });
+            }
+        });
+
+        // @ipc invoke hyprism:settings:deleteMirror -> { success: boolean; }
+        Electron.IpcMain.On("hyprism:settings:deleteMirror", async (args) =>
+        {
+            await Task.CompletedTask;
+            try
+            {
+                var appPath = _services.GetRequiredService<AppPathConfiguration>();
+                var json = ArgsToJson(args);
+                var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                var mirrorId = request?.GetValueOrDefault("mirrorId").GetString() ?? "";
+                
+                if (string.IsNullOrWhiteSpace(mirrorId))
+                {
+                    Reply("hyprism:settings:deleteMirror:reply", new { success = false, error = "Mirror ID is required" });
+                    return;
+                }
+                
+                var deleted = MirrorLoaderService.DeleteMirror(appPath.AppDir, mirrorId);
+                
+                if (deleted)
+                {
+                    // Reload mirror sources in VersionService
+                    var versionService = _services.GetRequiredService<IVersionService>();
+                    versionService.ReloadMirrorSources();
+                    Logger.Info("IPC", $"Deleted mirror: {mirrorId}");
+                }
+                
+                Reply("hyprism:settings:deleteMirror:reply", new { success = deleted });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Delete mirror failed: {ex.Message}");
+                Reply("hyprism:settings:deleteMirror:reply", new { success = false, error = ex.Message });
+            }
+        });
+
+        // @ipc invoke hyprism:settings:toggleMirror -> { success: boolean; }
+        Electron.IpcMain.On("hyprism:settings:toggleMirror", async (args) =>
+        {
+            await Task.CompletedTask;
+            try
+            {
+                var appPath = _services.GetRequiredService<AppPathConfiguration>();
+                var json = ArgsToJson(args);
+                var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                var mirrorId = request?.GetValueOrDefault("mirrorId").GetString() ?? "";
+                var enabled = request?.GetValueOrDefault("enabled").GetBoolean() ?? true;
+                
+                var mirrors = MirrorLoaderService.GetAllMirrorMetas(appPath.AppDir);
+                var mirror = mirrors.FirstOrDefault(m => m.Id == mirrorId);
+                
+                if (mirror == null)
+                {
+                    Reply("hyprism:settings:toggleMirror:reply", new { success = false, error = "Mirror not found" });
+                    return;
+                }
+                
+                mirror.Enabled = enabled;
+                MirrorLoaderService.SaveMirror(appPath.AppDir, mirror);
+                
+                // Reload mirror sources in VersionService
+                var versionService = _services.GetRequiredService<IVersionService>();
+                versionService.ReloadMirrorSources();
+                
+                Reply("hyprism:settings:toggleMirror:reply", new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Toggle mirror failed: {ex.Message}");
+                Reply("hyprism:settings:toggleMirror:reply", new { success = false, error = ex.Message });
+            }
+        });
+    }
+
+    private static string GetMirrorHostname(MirrorMeta mirror)
+    {
+        try
+        {
+            if (mirror.SourceType == "json-index" && !string.IsNullOrEmpty(mirror.JsonIndex?.ApiUrl))
+            {
+                return new Uri(mirror.JsonIndex.ApiUrl).Host;
+            }
+            if (mirror.SourceType == "pattern" && !string.IsNullOrEmpty(mirror.Pattern?.BaseUrl))
+            {
+                return new Uri(mirror.Pattern.BaseUrl).Host;
+            }
+        }
+        catch { }
+        return "";
     }
 
     private static void ApplySetting(ISettingsService s, string key, JsonElement val)

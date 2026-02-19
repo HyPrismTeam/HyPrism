@@ -268,6 +268,7 @@ export function useSettings(options: UseSettingsOptions) {
 
   // General settings
   const [hasOfficialAccount, setHasOfficialAccount] = useState(false);
+  const [isActiveProfileOfficial, setIsActiveProfileOfficial] = useState(false);
   const [closeAfterLaunch, setCloseAfterLaunch] = useState(false);
   const [showAlphaMods, setShowAlphaMods] = useState(false);
   const [devModeEnabled, setDevModeEnabled] = useState(false);
@@ -455,6 +456,13 @@ export function useSettings(options: UseSettingsOptions) {
           const profiles = await ipc.profile.list();
           const hasOfficial = profiles.some(p => p.isOfficial === true);
           setHasOfficialAccount(hasOfficial);
+          
+          // Check if active profile is official
+          const activeProfile = await ipc.profile.get();
+          const activeUuid = activeProfile.uuid;
+          const matchedProfile = (profiles as any[])?.find((p: any) => p.uuid === activeUuid || p.UUID === activeUuid);
+          const isOfficial = matchedProfile?.isOfficial === true || matchedProfile?.IsOfficial === true;
+          setIsActiveProfileOfficial(isOfficial);
         } catch { /* ignore */ }
 
         const savedDevMode = localStorage.getItem('hyprism_dev_mode');
@@ -848,6 +856,7 @@ export function useSettings(options: UseSettingsOptions) {
     branchDropdownRef,
     selectedLauncherBranch,
     hasOfficialAccount,
+    isActiveProfileOfficial,
     closeAfterLaunch,
     showAlphaMods,
     devModeEnabled,

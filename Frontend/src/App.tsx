@@ -4,7 +4,6 @@ import { AnimatePresence } from 'framer-motion';
 import { ipc, on, send, NewsItem, InstanceInfo } from '@/lib/ipc';
 import { BackgroundImage } from './components/layout/BackgroundImage';
 import { MusicPlayer } from './components/layout/MusicPlayer';
-import { UpdateOverlay } from './components/layout/UpdateOverlay';
 import { DockMenu } from './components/layout/DockMenu';
 import type { PageType } from './components/layout/DockMenu';
 import { DashboardPage } from './pages/DashboardPage';
@@ -62,7 +61,6 @@ const stub = <T,>(name: string, fallback: T) => async (..._args: any[]): Promise
   console.warn(`[IPC] ${name}: no IPC channel yet`);
   return fallback;
 };
-const Update = async (): Promise<boolean> => ipc.update.install();
 const GetRecentLogs = stub<string[]>('GetRecentLogs', []);
 
 // Real IPC call to check if game is running
@@ -161,12 +159,8 @@ const App: React.FC = () => {
     setDownloadingVersion(undefined);
   }, []);
 
-  // Update state
+  // Update state - only track if update is available
   const [updateAsset, setUpdateAsset] = useState<any>(null);
-  const [isUpdatingLauncher, setIsUpdatingLauncher] = useState<boolean>(false);
-  const [updateStats, setUpdateStats] = useState({ d: 0, t: 0 });
-  const [launcherUpdateStatus, setLauncherUpdateStatus] = useState<string>('');
-  const [launcherUpdateFailed, setLauncherUpdateFailed] = useState<boolean>(false);
 
   // Modal state
   const [showDelete, setShowDelete] = useState<boolean>(false);
@@ -647,31 +641,8 @@ const App: React.FC = () => {
 
     const unsubUpdate = EventsOn('update:available', (asset: any) => {
       setUpdateAsset(asset);
-      // Don't auto-update - let user click the update button
+      // Don't auto-update - user clicks version to open GitHub release
       console.log('Update available:', asset);
-    });
-
-    const unsubUpdateProgress = EventsOn('update:progress', (data: any) => {
-      const pct = typeof data?.progress === 'number' ? data.progress : 0;
-      const downloadedBytes = typeof data?.downloadedBytes === 'number' ? data.downloadedBytes : 0;
-      const totalBytes = typeof data?.totalBytes === 'number' ? data.totalBytes : 0;
-      const message = typeof data?.message === 'string' ? data.message : '';
-      const stage = typeof data?.stage === 'string' ? data.stage : '';
-
-      setProgress(pct);
-      setUpdateStats({ d: downloadedBytes, t: totalBytes });
-      setLauncherUpdateStatus(message);
-
-      if (stage === 'error') {
-        setLauncherUpdateFailed(true);
-
-        const hasDownloadedFile = !!data?.hasDownloadedFile;
-        if (hasDownloadedFile) {
-          setLauncherUpdateStatus('DONT WORRY! the launcher is downloaded in the download folders, u can do a manual install!');
-        } else if (!message?.trim()) {
-          setLauncherUpdateStatus('Failed updating');
-        }
-      }
     });
 
     const unsubError = EventsOn('error', (err: any) => {
@@ -689,32 +660,9 @@ const App: React.FC = () => {
       unsubProgress();
       unsubGameState();
       unsubUpdate();
-      unsubUpdateProgress();
       unsubError();
     };
   }, []);
-
-  const handleUpdate = async () => {
-    setIsUpdatingLauncher(true);
-    setProgress(0);
-    setUpdateStats({ d: 0, t: 0 });
-    setLauncherUpdateStatus('');
-    setLauncherUpdateFailed(false);
-
-    try {
-      const ok = await Update();
-      // On success the app will restart; keep overlay visible until exit.
-      if (ok) return;
-      setLauncherUpdateFailed(true);
-      setLauncherUpdateStatus((prev) => prev?.trim() ? prev : 'Failed updating');
-    } catch (err) {
-      console.error('Update failed:', err);
-      setLauncherUpdateFailed(true);
-      setLauncherUpdateStatus((prev) => prev?.trim() ? prev : 'Failed updating');
-    } finally {
-      // No-op: handled above so successful update doesn't flash-hide the overlay.
-    }
-  };
 
   const handlePlay = async () => {
     // Prevent launching if game is already running or download is in progress
@@ -1010,23 +958,6 @@ const App: React.FC = () => {
       {/* Music Player - invisible, controlled by DockMenu */}
       <MusicPlayer muted={isMuted} forceMuted={isGameRunning} />
 
-      {isUpdatingLauncher && (
-        <UpdateOverlay
-          progress={progress}
-          downloaded={updateStats.d}
-          total={updateStats.t}
-          status={launcherUpdateStatus}
-          failed={launcherUpdateFailed}
-          onClose={launcherUpdateFailed ? () => {
-            setIsUpdatingLauncher(false);
-            setLauncherUpdateFailed(false);
-            setLauncherUpdateStatus('');
-            setProgress(0);
-            setUpdateStats({ d: 0, t: 0 });
-          } : undefined}
-        />
-      )}
-
       {/* Page Content with Transitions */}
       <main className="relative z-10 h-full">
         {currentPage === 'logs' ? (
@@ -1043,7 +974,6 @@ const App: React.FC = () => {
               launcherUpdateInfo={updateAsset}
               avatarRefreshTrigger={avatarRefreshTrigger}
               onOpenProfileEditor={() => setCurrentPage('profiles')}
-              onLauncherUpdate={handleUpdate}
               isDownloading={isDownloading}
               downloadState={downloadState}
               canCancel={isDownloading && !isGameRunning}

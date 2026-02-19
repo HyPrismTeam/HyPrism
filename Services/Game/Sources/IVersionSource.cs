@@ -10,11 +10,11 @@ public class MirrorSpeedTestResult
     public string MirrorId { get; set; } = "";
     public string MirrorUrl { get; set; } = "";
     public string MirrorName { get; set; } = "";
-    public long PingMs { get; set; } = -1;
+    public long PingMs { get; set; } = 0;
     /// <summary>
     /// Download speed in MB/s (megabytes per second).
     /// </summary>
-    public double SpeedMBps { get; set; } = -1;
+    public double SpeedMBps { get; set; } = 0;
     public bool IsAvailable { get; set; }
     public DateTime TestedAt { get; set; } = DateTime.UtcNow;
 }
