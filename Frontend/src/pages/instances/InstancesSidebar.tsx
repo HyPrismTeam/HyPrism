@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box,
   ChevronRight,
@@ -197,41 +198,47 @@ export function InstancesSidebar({
                       {isSelected ? <ChevronRight size={14} style={{ color: accentColor }} /> : null}
                     </button>
 
-                    {inlineMenuInstanceId === inst.id ? (
-                      <div
-                        ref={inlineMenuRef}
-                        className="absolute left-2 right-2 top-full mt-1 bg-[#1c1c1e] border border-white/[0.08] rounded-xl shadow-xl overflow-hidden z-40"
-                      >
-                        <MenuItemButton onClick={() => onEdit(inst)}>
-                          <Edit2 size={14} />
-                          {tCommonEdit}
-                        </MenuItemButton>
-                        <MenuItemButton onClick={() => onOpenFolder(inst)}>
-                          <FolderOpen size={14} />
-                          {tCommonOpenFolder}
-                        </MenuItemButton>
-                        <MenuItemButton onClick={() => onOpenModsFolder(inst)}>
-                          <Package size={14} />
-                          {tOpenModsFolder}
-                        </MenuItemButton>
-                        <MenuItemButton
-                          onClick={() => onExport(inst)}
-                          disabled={exportDisabled}
+                    <AnimatePresence>
+                      {inlineMenuInstanceId === inst.id && (
+                        <motion.div
+                          ref={inlineMenuRef}
+                          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                          className="absolute left-2 right-2 top-full mt-1 bg-[#1c1c1e] border border-white/[0.08] rounded-xl shadow-xl overflow-hidden z-40"
                         >
-                          {exportingInstanceId === inst.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Upload size={14} />
-                          )}
-                          {tCommonExport}
-                        </MenuItemButton>
-                        <div className="border-t border-white/10 my-1" />
-                        <MenuItemButton variant="danger" onClick={() => onDelete(inst)}>
-                          <Trash2 size={14} />
-                          {tCommonDelete}
-                        </MenuItemButton>
-                      </div>
-                    ) : null}
+                          <MenuItemButton onClick={() => onEdit(inst)}>
+                            <Edit2 size={14} />
+                            {tCommonEdit}
+                          </MenuItemButton>
+                          <MenuItemButton onClick={() => onOpenFolder(inst)}>
+                            <FolderOpen size={14} />
+                            {tCommonOpenFolder}
+                          </MenuItemButton>
+                          <MenuItemButton onClick={() => onOpenModsFolder(inst)}>
+                            <Package size={14} />
+                            {tOpenModsFolder}
+                          </MenuItemButton>
+                          <MenuItemButton
+                            onClick={() => onExport(inst)}
+                            disabled={exportDisabled}
+                          >
+                            {exportingInstanceId === inst.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Upload size={14} />
+                            )}
+                            {tCommonExport}
+                          </MenuItemButton>
+                          <div className="border-t border-white/10 my-1" />
+                          <MenuItemButton variant="danger" onClick={() => onDelete(inst)}>
+                            <Trash2 size={14} />
+                            {tCommonDelete}
+                          </MenuItemButton>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })

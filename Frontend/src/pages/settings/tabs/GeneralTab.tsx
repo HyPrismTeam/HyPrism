@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronDown, Power, FlaskConical, Server } from 'lucide-react';
 import { SettingsToggleCard } from '@/components/ui/Controls';
 import { LANGUAGE_CONFIG } from '@/constants/languages';
@@ -76,27 +77,35 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             <ChevronDown size={16} className={`text-white/40 transition-transform ${isLanguageOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {isLanguageOpen && (
-            <div className={`absolute top-full left-0 right-0 mt-2 z-10 max-h-60 overflow-y-auto ${gc} rounded-xl shadow-xl shadow-black/50`}>
-              {Object.values(LANGUAGE_CONFIG).map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleLanguageSelect(lang.code)}
-                  className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${i18n.language === lang.code
-                    ? 'text-white'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                  style={i18n.language === lang.code ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
-                >
-                  {i18n.language === lang.code && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
-                  <div className={`flex flex-col items-start ${i18n.language === lang.code ? '' : 'ml-[22px]'}`}>
-                    <span className="font-medium">{lang.nativeName}</span>
-                    <span className="text-xs opacity-50">{lang.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <AnimatePresence>
+            {isLanguageOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                className={`absolute top-full left-0 right-0 mt-2 z-10 max-h-60 overflow-y-auto ${gc} rounded-xl shadow-xl shadow-black/50`}
+              >
+                {Object.values(LANGUAGE_CONFIG).map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleLanguageSelect(lang.code)}
+                    className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${i18n.language === lang.code
+                      ? 'text-white'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                    style={i18n.language === lang.code ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                  >
+                    {i18n.language === lang.code && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
+                    <div className={`flex flex-col items-start ${i18n.language === lang.code ? '' : 'ml-[22px]'}`}>
+                      <span className="font-medium">{lang.nativeName}</span>
+                      <span className="text-xs opacity-50">{lang.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -125,38 +134,46 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             <ChevronDown size={16} className={`text-white/40 transition-transform ${isBranchOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {isBranchOpen && (
-            <div className={`absolute top-full left-0 right-0 mt-2 z-10 ${gc} rounded-xl shadow-xl shadow-black/50 overflow-hidden`}>
-              <button
-                onClick={() => handleLauncherBranchChange('release')}
-                className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${selectedLauncherBranch === 'release'
-                  ? 'text-white'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
-                style={selectedLauncherBranch === 'release' ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+          <AnimatePresence>
+            {isBranchOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                className={`absolute top-full left-0 right-0 mt-2 z-10 ${gc} rounded-xl shadow-xl shadow-black/50 overflow-hidden`}
               >
-                {selectedLauncherBranch === 'release' && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
-                <div className={`flex flex-col items-start ${selectedLauncherBranch === 'release' ? '' : 'ml-[22px]'}`}>
-                  <span className="font-medium">{t('settings.generalSettings.updateChannelStable')}</span>
-                  <span className="text-xs opacity-50">{t('settings.generalSettings.updateChannelStableHint')}</span>
-                </div>
-              </button>
-              <button
-                onClick={() => handleLauncherBranchChange('beta')}
-                className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${selectedLauncherBranch === 'beta'
-                  ? 'text-white'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
-                style={selectedLauncherBranch === 'beta' ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
-              >
-                {selectedLauncherBranch === 'beta' && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
-                <div className={`flex flex-col items-start ${selectedLauncherBranch === 'beta' ? '' : 'ml-[22px]'}`}>
-                  <span className="font-medium">{t('settings.generalSettings.updateChannelBeta')}</span>
-                  <span className="text-xs opacity-50">{t('settings.generalSettings.updateChannelBetaHint')}</span>
-                </div>
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => handleLauncherBranchChange('release')}
+                  className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${selectedLauncherBranch === 'release'
+                    ? 'text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                  style={selectedLauncherBranch === 'release' ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                >
+                  {selectedLauncherBranch === 'release' && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
+                  <div className={`flex flex-col items-start ${selectedLauncherBranch === 'release' ? '' : 'ml-[22px]'}`}>
+                    <span className="font-medium">{t('settings.generalSettings.updateChannelStable')}</span>
+                    <span className="text-xs opacity-50">{t('settings.generalSettings.updateChannelStableHint')}</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleLauncherBranchChange('beta')}
+                  className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${selectedLauncherBranch === 'beta'
+                    ? 'text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                  style={selectedLauncherBranch === 'beta' ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                >
+                  {selectedLauncherBranch === 'beta' && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
+                  <div className={`flex flex-col items-start ${selectedLauncherBranch === 'beta' ? '' : 'ml-[22px]'}`}>
+                    <span className="font-medium">{t('settings.generalSettings.updateChannelBeta')}</span>
+                    <span className="text-xs opacity-50">{t('settings.generalSettings.updateChannelBetaHint')}</span>
+                  </div>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <p className="mt-2 text-xs text-white/40">
           {selectedLauncherBranch === 'beta'

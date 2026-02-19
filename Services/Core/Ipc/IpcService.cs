@@ -2093,11 +2093,95 @@ public class IpcService
                     // Delete the actual mod file if it exists
                     if (!string.IsNullOrEmpty(modToRemove.FileName))
                     {
-                        var modFilePath = Path.Combine(instancePath, "UserData", "Mods", modToRemove.FileName);
+                        var modsDir = Path.Combine(instancePath, "UserData", "Mods");
+                        var modFilePath = Path.Combine(modsDir, modToRemove.FileName);
+                        var deleted = false;
+                        
+                        // Try original file path first
                         if (File.Exists(modFilePath))
                         {
-                            try { File.Delete(modFilePath); }
+                            try 
+                            { 
+                                File.Delete(modFilePath); 
+                                deleted = true;
+                                Logger.Info("IPC", $"Deleted mod file: {modToRemove.FileName}");
+                            }
                             catch (Exception ex) { Logger.Warning("IPC", $"Failed to delete mod file: {ex.Message}"); }
+                        }
+                        
+                        // Also try .disabled version (for disabled mods)
+                        if (!deleted)
+                        {
+                            // Try common disabled file patterns
+                            var disabledPaths = new[]
+                            {
+                                Path.Combine(modsDir, modToRemove.FileName + ".disabled"),
+                                // If FileName already contains original extension stored separately
+                            };
+                            
+                            foreach (var disabledPath in disabledPaths)
+                            {
+                                if (File.Exists(disabledPath))
+                                {
+                                    try 
+                                    { 
+                                        File.Delete(disabledPath); 
+                                        deleted = true;
+                                        Logger.Info("IPC", $"Deleted disabled mod file: {Path.GetFileName(disabledPath)}");
+                                        break;
+                                    }
+                                    catch (Exception ex) { Logger.Warning("IPC", $"Failed to delete disabled mod file: {ex.Message}"); }
+                                }
+                            }
+                        }
+                        
+                        // If still not found, search for any file matching the mod's stem
+                        if (!deleted && Directory.Exists(modsDir))
+                        {
+                            var stem = Path.GetFileNameWithoutExtension(modToRemove.FileName);
+                            // Handle double extension like .jar.disabled
+                            if (stem.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) || 
+                                stem.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                            {
+                                stem = Path.GetFileNameWithoutExtension(stem);
+                            }
+                            
+                            try
+                            {
+                                var candidates = Directory.GetFiles(modsDir)
+                                    .Where(f => Path.GetFileName(f).StartsWith(stem, StringComparison.OrdinalIgnoreCase))
+                                    .ToList();
+                                
+                                foreach (var candidate in candidates)
+                                {
+                                    var candidateName = Path.GetFileName(candidate).ToLowerInvariant();
+                                    // Match files like stem.jar, stem.jar.disabled, stem.zip, stem.zip.disabled
+                                    if (candidateName == $"{stem.ToLowerInvariant()}.jar" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.jar.disabled" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.zip" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.zip.disabled" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.disabled")
+                                    {
+                                        try
+                                        {
+                                            File.Delete(candidate);
+                                            Logger.Info("IPC", $"Deleted mod file by stem match: {Path.GetFileName(candidate)}");
+                                            deleted = true;
+                                            break;
+                                        }
+                                        catch (Exception ex) { Logger.Warning("IPC", $"Failed to delete mod file {Path.GetFileName(candidate)}: {ex.Message}"); }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Warning("IPC", $"Failed to search for mod files: {ex.Message}");
+                            }
+                        }
+                        
+                        if (!deleted)
+                        {
+                            Logger.Warning("IPC", $"Could not find mod file to delete: {modToRemove.FileName}");
                         }
                     }
                     

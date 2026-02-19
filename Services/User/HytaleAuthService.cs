@@ -66,6 +66,9 @@ public class HytaleAuthService : IHytaleAuthService
     /// <returns>The authenticated session, or null on failure/cancellation.</returns>
     public async Task<HytaleAuthSession?> LoginAsync(CancellationToken cancellationToken = default)
     {
+        // Stop any previous listener to avoid port conflicts
+        StopListener();
+        
         try
         {
             // Step 1: Generate PKCE
@@ -80,7 +83,7 @@ public class HytaleAuthService : IHytaleAuthService
             listener.Start();
             _callbackListener = listener;
             
-            _authCodeTcs = new TaskCompletionSource<string>();
+            _authCodeTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             // Step 3: Build auth URL
             var state = GenerateState(port);
@@ -162,6 +165,11 @@ public class HytaleAuthService : IHytaleAuthService
         {
             Logger.Error("HytaleAuth", $"Login failed: {ex.Message}");
             return null;
+        }
+        finally
+        {
+            // Ensure listener is always stopped
+            StopListener();
         }
     }
 
@@ -296,12 +304,12 @@ public class HytaleAuthService : IHytaleAuthService
                 string responseHtml;
                 if (!string.IsNullOrEmpty(code))
                 {
-                    responseHtml = "<html><body><h1>Authorization successful!</h1><p>You can close this window and return to HyPrism.</p></body></html>";
+                    responseHtml = @"<html><head><script>window.close();</script></head><body><h1>Authorization successful!</h1><p>You can close this window and return to HyPrism.</p></body></html>";
                     _authCodeTcs?.TrySetResult(code);
                 }
                 else if (!string.IsNullOrEmpty(error))
                 {
-                    responseHtml = $"<html><body><h1>Authorization failed</h1><p>{error}</p></body></html>";
+                    responseHtml = $@"<html><head><script>setTimeout(function(){{window.close();}},3000);</script></head><body><h1>Authorization failed</h1><p>{error}</p><p>This window will close automatically...</p></body></html>";
                     _authCodeTcs?.TrySetException(new Exception($"OAuth error: {error}"));
                 }
                 else

@@ -1,6 +1,7 @@
 export * from './Button';
 export * from './LinkButton';
 export * from './DropdownTriggerButton';
+export * from './DropdownMenu';
 export * from './IconButton';
 export * from './ModalFooterActions';
 export * from './ScrollArea';

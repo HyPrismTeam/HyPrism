@@ -86,8 +86,15 @@ export const ContentTab: React.FC<ContentTabProps> = ({
   const [, setIsImportingDroppedMods] = React.useState(false);
 
   const handleDropImport = useCallback(async (files: FileList | File[]) => {
+    // Filter to only .jar files before processing
+    const jarFiles = Array.from(files).filter((file) => {
+      const name = file.name?.toLowerCase() || '';
+      return name.endsWith('.jar') || name.endsWith('.jar.disabled');
+    });
+    if (jarFiles.length === 0) return;
+    
     setIsImportingDroppedMods(true);
-    await onDropImportMods(files);
+    await onDropImportMods(jarFiles);
     setIsImportingDroppedMods(false);
   }, [onDropImportMods]);
 
@@ -140,6 +147,22 @@ export const ContentTab: React.FC<ContentTabProps> = ({
       onDrop={(e) => {
         if (!isInstalled) return;
         if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+        
+        // Check if any files are .jar before accepting the drop
+        const files = Array.from(e.dataTransfer.files);
+        const hasJarFiles = files.some((file) => {
+          const name = file.name?.toLowerCase() || '';
+          return name.endsWith('.jar') || name.endsWith('.jar.disabled');
+        });
+        
+        if (!hasJarFiles) {
+          e.preventDefault();
+          e.stopPropagation();
+          modDropDepthRef.current = 0;
+          setIsModDropActive(false);
+          return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         modDropDepthRef.current = 0;
