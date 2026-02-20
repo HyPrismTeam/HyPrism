@@ -390,7 +390,7 @@ const App: React.FC = () => {
     try {
       const settings = await ipc.settings.get();
       const domain = settings.authDomain?.trim() ?? '';
-      const isOfficial = domain === 'sessionserver.hytale.com' || domain === 'official'
+      const isOfficial = domain === 'sessions.hytale.com' || domain === 'official'
         || domain.includes('hytale.com');
       setIsOfficialServerMode(isOfficial && settings.onlineMode);
 

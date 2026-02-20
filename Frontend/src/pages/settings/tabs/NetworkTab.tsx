@@ -41,8 +41,8 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
         // Official profile: force official auth server
         if (authMode !== 'official') {
           setAuthModeState('official');
-          setAuthDomain('sessionserver.hytale.com');
-          await ipc.settings.update({ authDomain: 'sessionserver.hytale.com' });
+          setAuthDomain('sessions.hytale.com');
+          await ipc.settings.update({ authDomain: 'sessions.hytale.com' });
           onAuthSettingsChange?.();
           hasAutoSwitched.current = true;
         }
@@ -160,7 +160,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = ({
                       {t('common.save')}
                     </Button>
                   </div>
-                  {authDomain && authDomain !== 'sessions.sanasol.ws' && authDomain !== 'sessionserver.hytale.com' && (
+                  {authDomain && authDomain !== 'sessions.sanasol.ws' && authDomain !== 'sessions.hytale.com' && (
                     <p className="text-xs text-white/30 mt-2">
                       {t('settings.networkSettings.currentServer')}: <span className="text-white/50">{authDomain}</span>
                     </p>

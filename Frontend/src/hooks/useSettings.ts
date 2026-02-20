@@ -438,7 +438,7 @@ export function useSettings(options: UseSettingsOptions) {
         const domain = await GetAuthDomain();
         if (domain) {
           setAuthDomain(domain);
-          if (domain === 'sessionserver.hytale.com' || domain === 'official') {
+          if (domain === 'sessions.hytale.com' || domain === 'official') {
             setAuthModeState('official');
           } else if (domain === 'sessions.sanasol.ws' || domain === '' || !domain) {
             setAuthModeState('default');

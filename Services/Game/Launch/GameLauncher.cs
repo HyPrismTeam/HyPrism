@@ -493,6 +493,8 @@ public class GameLauncher : IGameLauncher
                         Logger.Error("Game", "Full re-authentication failed — cannot launch in authenticated mode");
                         throw new Exception("Official Hytale session expired and re-login failed. Please try logging in again from the profile settings.");
                     }
+                    // Save session to the active profile after successful re-authentication
+                    _hytaleAuthService.SaveCurrentSession();
                 }
 
                 identityToken = session.IdentityToken;

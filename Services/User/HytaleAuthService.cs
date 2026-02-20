@@ -156,7 +156,8 @@ public class HytaleAuthService : IHytaleAuthService
             };
             
             CurrentSession = session;
-            SaveSession();
+            // Note: We don't save session here - caller should save to the appropriate profile
+            // using SaveSessionToProfile() after profile creation, or SaveCurrentSession() for existing profiles
             
             Logger.Success("HytaleAuth", $"Logged in as {session.Username} ({session.UUID})");
             return session;
@@ -804,6 +805,47 @@ public class HytaleAuthService : IHytaleAuthService
         {
             Logger.Warning("HytaleAuth", $"Failed to load session: {ex.Message}");
             CurrentSession = null;
+        }
+    }
+
+    /// <summary>
+    /// Saves current session to the active profile's folder.
+    /// Use this after LoginAsync() when re-authenticating within an existing official profile.
+    /// </summary>
+    public void SaveCurrentSession()
+    {
+        SaveSession();
+    }
+
+    /// <summary>
+    /// Saves the current session to a specific profile's folder.
+    /// Used when creating a new official profile to enable Hytale source access.
+    /// </summary>
+    /// <param name="profile">The profile to save the session to.</param>
+    /// <returns>True if the session was saved successfully.</returns>
+    public bool SaveSessionToProfile(Profile profile)
+    {
+        if (CurrentSession == null)
+        {
+            Logger.Warning("HytaleAuth", "Cannot save session: no current session");
+            return false;
+        }
+
+        try
+        {
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile, createIfMissing: true);
+            var sessionPath = Path.Combine(profileDir, "hytale_session.json");
+
+            var json = JsonSerializer.Serialize(CurrentSession, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(sessionPath, json);
+            
+            Logger.Success("HytaleAuth", $"Saved Hytale session to profile '{profile.Name}'");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("HytaleAuth", $"Failed to save session to profile: {ex.Message}");
+            return false;
         }
     }
 

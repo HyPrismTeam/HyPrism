@@ -1367,7 +1367,16 @@ public class IpcService
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
                 var index = doc.RootElement.GetProperty("index").GetInt32();
-                Reply("hyprism:profile:switch:reply", new { success = profileMgmt.SwitchProfile(index) });
+                var success = profileMgmt.SwitchProfile(index);
+                
+                // Reload Hytale session for the new profile
+                if (success)
+                {
+                    var authService = _services.GetRequiredService<IHytaleAuthService>();
+                    authService.ReloadSessionForCurrentProfile();
+                }
+                
+                Reply("hyprism:profile:switch:reply", new { success });
             }
             catch (Exception ex)
             {
@@ -1405,6 +1414,13 @@ public class IpcService
                 {
                     profile.IsOfficial = isOfficial;
                     _services.GetRequiredService<ConfigService>().SaveConfig();
+                    
+                    // Save Hytale session to the new profile if it's official
+                    if (isOfficial)
+                    {
+                        var authService = _services.GetRequiredService<IHytaleAuthService>();
+                        authService.SaveSessionToProfile(profile);
+                    }
                 }
                 Reply("hyprism:profile:create:reply", profile != null ? (object)profile : new { error = "Failed to create profile" });
             }
@@ -1695,8 +1711,12 @@ public class IpcService
                 var appPath = _services.GetRequiredService<AppPathConfiguration>();
                 var json = ArgsToJson(args);
                 var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-                var url = request?.GetValueOrDefault("url").GetString() ?? "";
-                var headersString = request?.GetValueOrDefault("headers").GetString() ?? "";
+                var url = request?.TryGetValue("url", out var urlEl) == true && urlEl.ValueKind == JsonValueKind.String
+                    ? urlEl.GetString() ?? ""
+                    : "";
+                var headersString = request?.TryGetValue("headers", out var headersEl) == true && headersEl.ValueKind == JsonValueKind.String
+                    ? headersEl.GetString() ?? ""
+                    : "";
                 
                 if (string.IsNullOrWhiteSpace(url))
                 {
@@ -1704,9 +1724,14 @@ public class IpcService
                     return;
                 }
                 
+                // Parse custom headers before discovery so they're used during requests
+                var parsedHeaders = !string.IsNullOrWhiteSpace(headersString) 
+                    ? ParseHeadersString(headersString) 
+                    : null;
+                
                 var httpClient = _services.GetRequiredService<HttpClient>();
                 var discoveryService = new MirrorDiscoveryService(httpClient);
-                var result = await discoveryService.DiscoverMirrorAsync(url);
+                var result = await discoveryService.DiscoverMirrorAsync(url, parsedHeaders);
                 
                 if (!result.Success || result.Mirror == null)
                 {
@@ -1714,14 +1739,10 @@ public class IpcService
                     return;
                 }
                 
-                // Parse and apply custom headers if provided
-                if (!string.IsNullOrWhiteSpace(headersString))
+                // Apply custom headers to mirror config for future use
+                if (parsedHeaders != null && parsedHeaders.Count > 0)
                 {
-                    var parsedHeaders = ParseHeadersString(headersString);
-                    if (parsedHeaders.Count > 0)
-                    {
-                        result.Mirror.Headers = parsedHeaders;
-                    }
+                    result.Mirror.Headers = parsedHeaders;
                 }
                 
                 // Check if mirror with same ID already exists
