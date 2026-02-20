@@ -335,7 +335,7 @@ export const ContentTab: React.FC<ContentTabProps> = ({
                             handleOpenModPage(e, mod);
                           }}
                           className="text-white font-medium truncate text-left"
-                          title="Open CurseForge page"
+                          title={t('modManager.openCurseforge')}
                         >
                           {displayName}
                         </LinkButton>

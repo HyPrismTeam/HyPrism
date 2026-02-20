@@ -309,6 +309,7 @@
       "unofficial": "Неафіцыйны лаўнчар Hytale",
       "maintainerRole": "Мэйнтэйнер і распрацоўшчык",
       "authRole": "Стваральнік і мэйнтэйнер Auth Server",
+      "codevRole": "Сураспрацоўшчык, Стваральнік многіх функцый",
       "contributorRole": "Удзельнік",
       "others": "І іншыя",
       "contributorsDescription": "Выдатныя людзі, якія дапамаглі ў стварэнні гэтага лаўнчара",
@@ -587,7 +588,9 @@
     "copyError": "Скапіяваць памылку",
     "reportIssue": "Паведаміць пра праблему",
     "ok": "ОК",
-    "dismiss": "Закрыць"
+    "dismiss": "Закрыць",
+    "somethingWrong": "Нешта пайшло не так",
+    "noLogEntries": "Няма запісаў у логах"
   },
   "update": {
     "downloading": "Загрузка...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "АБНАЎЛЕННЕ ЛАЎНЧАРА",
     "message": "Пачакайце, пакуль мы спампоўваем і ўсталёўваем апошнюю версію HyPrism.",
-    "autoRestart": "Лаўнчар перазапусціцца аўтаматычна пасля завяршэння абнаўлення."
+    "autoRestart": "Лаўнчар перазапусціцца аўтаматычна пасля завяршэння абнаўлення.",
+    "failed": "Памылка абнаўлення",
+    "installing": "Усталёўка"
   },
   "modManager": {
     "title": "Менеджар модаў",
@@ -712,8 +717,7 @@
     "importedCount": "Імпартавана {{count}} модаў",
     "installedCount": "Усталявана {{count}} мод(аў)",
     "installFailed": "Не ўдалося ўсталяваць моды. Паспрабуйце яшчэ раз.",
-    "importFailed": "Не ўдалося імпартаваць моды",
-    "releaseType": {
+    "importFailed": "Не ўдалося імпартаваць моды",    "openCurseforge": "Адкрыць старонку CurseForge",    "releaseType": {
       "release": "Рэліз",
       "beta": "Бэта",
       "alpha": "Альфа",
@@ -832,5 +836,28 @@
     "unmute": "Уключыць гук",
     "mute": "Выключыць гук",
     "on": "Музыка"
+  },
+  "wrapper": {
+    "description": "Рэжым абгорткі — спампуйце і запусціце поўную версію HyPrism",
+    "installed": "Усталявана:",
+    "none": "няма",
+    "latest": "Апошняя:",
+    "updateAvailable": "Даступна абнаўленне",
+    "upToDate": "Актуальная версія",
+    "checkForUpdates": "Праверыць абнаўленні",
+    "downloadInstall": "Спампаваць і ўсталяваць",
+    "launch": "Запусціць",
+    "installFailed": "Памылка ўсталёўкі — праверце логі",
+    "launchFailed": "Не ѝдалося запусціць HyPrism",
+    "loadingNews": "Загрузка навін…"
+  },
+  "accessibility": {
+    "previous": "Папярэдні",
+    "next": "Наступны",
+    "segmentedControl": "Сегментны кантроль"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

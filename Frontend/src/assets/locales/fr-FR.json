@@ -309,6 +309,7 @@
       "unofficial": "Lanceur Hytale Non Officiel",
       "maintainerRole": "Mainteneur et Développeur",
       "authRole": "Créateur et Mainteneur du Serveur d'Auth",
+      "codevRole": "Co-Développeur, Créateur de nombreuses fonctionnalités",
       "contributorRole": "Contributeur",
       "others": "Et d'autres",
       "contributorsDescription": "Des personnes formidables qui ont aidé à la création de ce lanceur",
@@ -587,7 +588,9 @@
     "copyError": "Copier l'Erreur",
     "reportIssue": "Signaler un Problème",
     "ok": "OK",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "somethingWrong": "Une erreur s'est produite",
+    "noLogEntries": "Aucune entrée de journal"
   },
   "update": {
     "downloading": "Téléchargement...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "MISE À JOUR DU LANCEUR",
     "message": "Patiente pendant que nous téléchargeons et installons la dernière version de HyPrism.",
-    "autoRestart": "Le lanceur redémarrera automatiquement une fois la mise à jour terminée."
+    "autoRestart": "Le lanceur redémarrera automatiquement une fois la mise à jour terminée.",
+    "failed": "Échec de la mise à jour",
+    "installing": "Installation"
   },
   "modManager": {
     "title": "Gestionnaire de Mods",
@@ -713,6 +718,7 @@
     "installedCount": "{{count}} mod(s) installé(s)",
     "installFailed": "Échec de l'installation des mods. Réessaie.",
     "importFailed": "Échec de l'importation des mods",
+    "openCurseforge": "Ouvrir la page CurseForge",
     "releaseType": {
       "release": "Stable",
       "beta": "Bêta",
@@ -832,5 +838,28 @@
     "unmute": "Activer le son",
     "mute": "Couper le son",
     "on": "Musique"
+  },
+  "wrapper": {
+    "description": "Mode wrapper — télécharger et lancer la version complète de HyPrism",
+    "installed": "Installé :",
+    "none": "aucun",
+    "latest": "Dernière :",
+    "updateAvailable": "Mise à jour disponible",
+    "upToDate": "À jour",
+    "checkForUpdates": "Vérifier les mises à jour",
+    "downloadInstall": "Télécharger & Installer",
+    "launch": "Lancer",
+    "installFailed": "Échec de l'installation - vérifie les logs",
+    "launchFailed": "Échec du lancement de HyPrism",
+    "loadingNews": "Chargement des actualités…"
+  },
+  "accessibility": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "segmentedControl": "Contrôle segmenté"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

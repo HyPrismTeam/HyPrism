@@ -332,6 +332,7 @@
       "unofficial": "Unofficial Hytale Launcher",
       "maintainerRole": "Maintainer & Developer",
       "authRole": "Creator and Maintainer of the Auth Server",
+      "codevRole": "CoDev, Creator of ton features",
       "contributorRole": "Contributor",
       "others": "And others",
       "contributorsDescription": "Awesome people that helped in the creation of this launcher",
@@ -610,7 +611,9 @@
     "copyError": "Copy Error",
     "reportIssue": "Report Issue",
     "ok": "OK",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "somethingWrong": "Something went wrong",
+    "noLogEntries": "No log entries available"
   },
   "update": {
     "downloading": "Downloading...",
@@ -622,7 +625,9 @@
   "updateOverlay": {
     "title": "UPDATING LAUNCHER",
     "message": "Please wait while we download and install the latest version of HyPrism.",
-    "autoRestart": "The launcher will restart automatically when the update is complete."
+    "autoRestart": "The launcher will restart automatically when the update is complete.",
+    "failed": "Failed updating",
+    "installing": "Installing"
   },
   "modManager": {
     "title": "Mod Manager",
@@ -736,6 +741,7 @@
     "installedCount": "Installed {{count}} mod(s)",
     "installFailed": "Failed to install mods. Please try again.",
     "importFailed": "Failed to import mods",
+    "openCurseforge": "Open CurseForge page",
     "releaseType": {
       "release": "Release",
       "beta": "Beta",
@@ -855,5 +861,28 @@
     "unmute": "Unmute",
     "mute": "Mute",
     "on": "Music"
+  },
+  "wrapper": {
+    "description": "Wrapper mode — download and launch the full version of HyPrism",
+    "installed": "Installed:",
+    "none": "none",
+    "latest": "Latest:",
+    "updateAvailable": "Update available",
+    "upToDate": "Up to date",
+    "checkForUpdates": "Check for updates",
+    "downloadInstall": "Download & Install",
+    "launch": "Launch",
+    "installFailed": "Install failed - check logs",
+    "launchFailed": "Failed to launch HyPrism",
+    "loadingNews": "Loading news…"
+  },
+  "accessibility": {
+    "previous": "Previous",
+    "next": "Next",
+    "segmentedControl": "Segmented control"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

@@ -35,7 +35,7 @@ export const AboutStep: React.FC<AboutStepProps> = ({ onboarding }) => {
         <IconButton
           variant="ghost"
           onClick={onboarding.openGitHub}
-          title="GitHub"
+          title={onboarding.t('social.github')}
           size="lg"
         >
           <Github size={28} className="text-white" />
@@ -43,7 +43,7 @@ export const AboutStep: React.FC<AboutStepProps> = ({ onboarding }) => {
         <IconButton
           variant="ghost"
           onClick={onboarding.openDiscord}
-          title="Discord"
+          title={onboarding.t('social.discord')}
           size="lg"
         >
           <DiscordIcon size={28} color="white" />

@@ -309,6 +309,7 @@
       "unofficial": "비공식 Hytale 런처",
       "maintainerRole": "관리자 & 개발자",
       "authRole": "인증 서버 제작자 & 관리자",
+      "codevRole": "공동 개발자, 다양한 기능 제작자",
       "contributorRole": "기여자",
       "others": "그 외",
       "contributorsDescription": "이 런처 제작에 도움을 준 훌륭한 분들",
@@ -587,7 +588,9 @@
     "copyError": "오류 복사",
     "reportIssue": "문제 보고",
     "ok": "확인",
-    "dismiss": "닫기"
+    "dismiss": "닫기",
+    "somethingWrong": "문제가 발생했습니다",
+    "noLogEntries": "로그 항목이 없습니다"
   },
   "update": {
     "downloading": "다운로드 중...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "런처 업데이트 중",
     "message": "HyPrism의 최신 버전을 다운로드하고 설치하는 동안 기다려 주세요.",
-    "autoRestart": "업데이트가 완료되면 런처가 자동으로 다시 시작됩니다."
+    "autoRestart": "업데이트가 완료되면 런처가 자동으로 다시 시작됩니다.",
+    "failed": "업데이트 실패",
+    "installing": "설치 중"
   },
   "modManager": {
     "title": "모드 관리자",
@@ -713,6 +718,7 @@
     "installedCount": "{{count}}개 모드가 설치되었습니다",
     "installFailed": "모드 설치 실패. 다시 시도하세요.",
     "importFailed": "모드 가져오기 실패",
+    "openCurseforge": "CurseForge 페이지 열기",
     "releaseType": {
       "release": "릴리스",
       "beta": "베타",
@@ -832,5 +838,28 @@
     "unmute": "음소거 해제",
     "mute": "음소거",
     "on": "음악"
+  },
+  "wrapper": {
+    "description": "래퍼 모드 — HyPrism 정식 버전을 다운로드하고 실행하세요",
+    "installed": "설치됨:",
+    "none": "없음",
+    "latest": "최신:",
+    "updateAvailable": "업데이트 사용 가능",
+    "upToDate": "최신 상태",
+    "checkForUpdates": "업데이트 확인",
+    "downloadInstall": "다운로드 및 설치",
+    "launch": "실행",
+    "installFailed": "설치 실패 - 로그를 확인하세요",
+    "launchFailed": "HyPrism 실행 실패",
+    "loadingNews": "뉴스 로드 중…"
+  },
+  "accessibility": {
+    "previous": "이전",
+    "next": "다음",
+    "segmentedControl": "세그먼트 컨트롤"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

@@ -297,6 +297,7 @@
       "unofficial": "Неофіційний лаунчер Hytale",
       "maintainerRole": "Мейнтейнер та Розробник",
       "authRole": "Творець та Мейнтейнер Auth сервера",
+      "codevRole": "Співрозробник, Творець численних функцій",
       "contributorRole": "Учасник",
       "others": "Та інші",
       "contributorsDescription": "Чудові люди, які допомогли у створенні цього лаунчера",
@@ -587,7 +588,9 @@
     "copyError": "Копіювати",
     "reportIssue": "Повідомити про проблему",
     "ok": "ОК",
-    "dismiss": "Закрити"
+    "dismiss": "Закрити",
+    "somethingWrong": "Щось пішло не так",
+    "noLogEntries": "Записів в логах немає"
   },
   "update": {
     "downloading": "Завантаження...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "Оновлення...",
     "message": "Встановлюється оновлення. Будь ласка, зачекайте...",
-    "autoRestart": "Лаунчер перезапуститься автоматично."
+    "autoRestart": "Лаунчер перезапуститься автоматично.",
+    "failed": "Помилка оновлення",
+    "installing": "Встановлення"
   },
   "modManager": {
     "title": "Менеджер модів",
@@ -713,6 +718,7 @@
     "installedCount": "Встановлено {{count}} мод(ів)",
     "installFailed": "Не вдалося встановити моди. Спробуйте ще раз.",
     "importFailed": "Не вдалося імпортувати моди",
+    "openCurseforge": "Відкрити сторінку CurseForge",
     "releaseType": {
       "release": "Реліз",
       "beta": "Бета",
@@ -832,5 +838,28 @@
     "unmute": "Увімкнути звук",
     "mute": "Вимкнути звук",
     "on": "Музика"
+  },
+  "wrapper": {
+    "description": "Режим обгортки — завантажте та запустіть повну версію HyPrism",
+    "installed": "Встановлено:",
+    "none": "немає",
+    "latest": "Остання:",
+    "updateAvailable": "Доступне оновлення",
+    "upToDate": "Актуальна версія",
+    "checkForUpdates": "Перевірити оновлення",
+    "downloadInstall": "Завантажити та встановити",
+    "launch": "Запустити",
+    "installFailed": "Помилка встановлення — перевірте логи",
+    "launchFailed": "Не вдалося запустити HyPrism",
+    "loadingNews": "Завантаження новин…"
+  },
+  "accessibility": {
+    "previous": "Попередній",
+    "next": "Наступний",
+    "segmentedControl": "Сегментний контрол"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

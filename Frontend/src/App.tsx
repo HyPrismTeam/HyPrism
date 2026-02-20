@@ -859,7 +859,7 @@ const App: React.FC = () => {
       try {
         const ok = await WrapperInstallLatest();
         if (!ok) {
-          window.alert('Install failed - check logs');
+          window.alert(t('wrapper.installFailed'));
         }
       } catch (e) {
         console.error('Install failed', e);
@@ -872,7 +872,7 @@ const App: React.FC = () => {
       setIsWrapperWorking(true);
       try {
         const ok = await WrapperLaunch();
-        if (!ok) window.alert('Failed to launch HyPrism');
+        if (!ok) window.alert(t('wrapper.launchFailed'));
       } catch (e) {
         console.error('Launch failed', e);
       }
@@ -885,17 +885,17 @@ const App: React.FC = () => {
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="bg-black/70 p-6 rounded-lg w-[720px] max-w-full">
             <h1 className="text-2xl font-bold mb-2">HyPrism</h1>
-            <p className="mb-4">Wrapper mode — scarica e avvia la versione completa di HyPrism</p>
+            <p className="mb-4">{t('wrapper.description')}</p>
 
             <div className="mb-4">
-              <div>Installed: {wrapperStatus?.installed ? wrapperStatus.installedVersion : 'none'}</div>
-              <div>Latest: {wrapperStatus?.latestVersion || '—'}</div>
-              <div className="mt-2">{wrapperStatus?.updateAvailable ? <span className="text-yellow-400">Update available</span> : <span className="text-green-400">Up to date</span>}</div>
+              <div>{t('wrapper.installed')} {wrapperStatus?.installed ? wrapperStatus.installedVersion : t('wrapper.none')}</div>
+              <div>{t('wrapper.latest')} {wrapperStatus?.latestVersion || '—'}</div>
+              <div className="mt-2">{wrapperStatus?.updateAvailable ? <span className="text-yellow-400">{t('wrapper.updateAvailable')}</span> : <span className="text-green-400">{t('wrapper.upToDate')}</span>}</div>
             </div>
 
             <div className="flex gap-3 mb-4">
               <Button onClick={refreshWrapperStatusLocal} disabled={isWrapperWorking}>
-                Check for updates
+                {t('wrapper.checkForUpdates')}
               </Button>
               <LauncherActionButton
                 variant="update"
@@ -903,7 +903,7 @@ const App: React.FC = () => {
                 disabled={!wrapperStatus?.updateAvailable || isWrapperWorking}
                 className="h-10 px-4 rounded-xl text-sm"
               >
-                Download & Install
+                {t('wrapper.downloadInstall')}
               </LauncherActionButton>
               <LauncherActionButton
                 variant="play"
@@ -911,12 +911,12 @@ const App: React.FC = () => {
                 disabled={!wrapperStatus?.installed || isWrapperWorking}
                 className="h-10 px-4 rounded-xl text-sm"
               >
-                Launch
+                {t('wrapper.launch')}
               </LauncherActionButton>
             </div>
 
             <div className="mt-6">
-              <Suspense fallback={<div>Loading news…</div>}>
+              <Suspense fallback={<div>{t('wrapper.loadingNews')}</div>}>
                 <NewsPreview getNews={async (count) => { const n = await GetNews(count); return n; }} isPaused={false} />
               </Suspense>
             </div>
@@ -1113,7 +1113,7 @@ const App: React.FC = () => {
               message: launchTimeoutError.message,
               technical: launchTimeoutError.logs.length > 0 
                 ? launchTimeoutError.logs.join('\n')
-                : 'No log entries available',
+                : t('error.noLogEntries'),
               timestamp: new Date().toISOString(),
               launcherVersion: launcherVersion
             }}

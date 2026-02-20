@@ -332,6 +332,7 @@
       "unofficial": "Неофициальный лаунчер Hytale",
       "maintainerRole": "Разработчик и Сопровождающий",
       "authRole": "Создатель сервера авторизации",
+      "codevRole": "Соразработчик, Создатель кучи фич",
       "contributorRole": "Участник",
       "others": "И другие",
       "contributorsDescription": "Потрясающие люди, которые помогли в создании этого лаунчера",
@@ -610,7 +611,9 @@
     "copyError": "Скопировать ошибку",
     "reportIssue": "Сообщить о проблеме",
     "ok": "ОК",
-    "dismiss": "Закрыть"
+    "dismiss": "Закрыть",
+    "somethingWrong": "Что-то пошло не так",
+    "noLogEntries": "Нет записей в логах"
   },
   "update": {
     "downloading": "Загрузка...",
@@ -622,7 +625,9 @@
   "updateOverlay": {
     "title": "ОБНОВЛЕНИЕ ЛАУНЧЕРА",
     "message": "Подождите, мы загружаем и устанавливаем последнюю версию HyPrism.",
-    "autoRestart": "Лаунчер перезапустится автоматически после завершения обновления."
+    "autoRestart": "Лаунчер перезапустится автоматически после завершения обновления.",
+    "failed": "Ошибка обновления",
+    "installing": "Установка"
   },
   "modManager": {
     "title": "Менеджер модов",
@@ -713,6 +718,7 @@
     "installedCount": "Установлено {{count}} мод(ов)",
     "installFailed": "Не удалось установить моды. Попробуйте ещё раз.",
     "importFailed": "Не удалось импортировать моды",
+    "openCurseforge": "Открыть страницу CurseForge",
     "releaseType": {
       "release": "Релиз",
       "beta": "Бета",
@@ -855,5 +861,28 @@
     "unmute": "Вкл. звук",
     "mute": "Выкл. звук",
     "on": "Музыка"
+  },
+  "wrapper": {
+    "description": "Режим обёртки — скачайте и запустите полную версию HyPrism",
+    "installed": "Установлено:",
+    "none": "нет",
+    "latest": "Последняя:",
+    "updateAvailable": "Доступно обновление",
+    "upToDate": "Актуальная версия",
+    "checkForUpdates": "Проверить обновления",
+    "downloadInstall": "Скачать и установить",
+    "launch": "Запустить",
+    "installFailed": "Ошибка установки — проверьте логи",
+    "launchFailed": "Не удалось запустить HyPrism",
+    "loadingNews": "Загрузка новостей…"
+  },
+  "accessibility": {
+    "previous": "Предыдущий",
+    "next": "Следующий",
+    "segmentedControl": "Сегментный контрол"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

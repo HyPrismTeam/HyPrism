@@ -310,6 +310,7 @@
       "unofficial": "Launcher non ufficiale per Hytale",
       "maintainerRole": "Maintainer e Sviluppatori",
       "authRole": "Creatore e Maintainer del Server di Autenticazione",
+      "codevRole": "Co-Sviluppatore, Creatore di molte funzionalità",
       "contributorRole": "Contributore",
       "others": "E altri",
       "contributorsDescription": "Persone straordinarie che hanno contribuito alla creazione di questo launcher",
@@ -588,7 +589,9 @@
     "copyError": "Copia errore",
     "reportIssue": "Segnala problema",
     "ok": "OK",
-    "dismiss": "Chiudi"
+    "dismiss": "Chiudi",
+    "somethingWrong": "Qualcosa è andato storto",
+    "noLogEntries": "Nessuna voce di log"
   },
   "update": {
     "downloading": "Scaricamento...",
@@ -600,7 +603,9 @@
   "updateOverlay": {
     "title": "AGGIORNAMENTO DEL LAUNCHER",
     "message": "Attendere mentre scarichiamo e installiamo l'ultima versione di HyPrism.",
-    "autoRestart": "Il launcher si riavvierà automaticamente al termine dell'aggiornamento."
+    "autoRestart": "Il launcher si riavvierà automaticamente al termine dell'aggiornamento.",
+    "failed": "Aggiornamento fallito",
+    "installing": "Installazione"
   },
   "modManager": {
     "title": "Gestore Mod",
@@ -714,6 +719,7 @@
     "installedCount": "Installate {{count}} mod",
     "installFailed": "Installazione mod fallita. Per favore riprova.",
     "importFailed": "Importazione mod fallita",
+    "openCurseforge": "Apri pagina CurseForge",
     "releaseType": {
       "release": "Release",
       "beta": "Beta",
@@ -833,5 +839,28 @@
     "unmute": "Attiva audio",
     "mute": "Disattiva audio",
     "on": "Musica attiva"
+  },
+  "wrapper": {
+    "description": "Modalità wrapper — scarica e avvia la versione completa di HyPrism",
+    "installed": "Installato:",
+    "none": "nessuno",
+    "latest": "Ultima:",
+    "updateAvailable": "Aggiornamento disponibile",
+    "upToDate": "Aggiornato",
+    "checkForUpdates": "Verifica aggiornamenti",
+    "downloadInstall": "Scarica e Installa",
+    "launch": "Avvia",
+    "installFailed": "Installazione fallita - controlla i log",
+    "launchFailed": "Avvio di HyPrism fallito",
+    "loadingNews": "Caricamento notizie…"
+  },
+  "accessibility": {
+    "previous": "Precedente",
+    "next": "Successivo",
+    "segmentedControl": "Controllo segmentato"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

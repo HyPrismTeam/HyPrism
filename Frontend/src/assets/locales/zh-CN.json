@@ -309,6 +309,7 @@
       "unofficial": "非官方 Hytale 启动器",
       "maintainerRole": "维护者 & 开发者",
       "authRole": "认证服务器创建者 & 维护者",
+      "codevRole": "联合开发者，大量功能的创造者",
       "contributorRole": "贡献者",
       "others": "以及其他",
       "contributorsDescription": "协助创建此启动器的出色人员",
@@ -587,7 +588,9 @@
     "copyError": "复制错误",
     "reportIssue": "报告问题",
     "ok": "确定",
-    "dismiss": "关闭"
+    "dismiss": "关闭",
+    "somethingWrong": "出现了一些问题",
+    "noLogEntries": "无日志条目"
   },
   "update": {
     "downloading": "下载中...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "正在更新启动器",
     "message": "请稍候，正在下载并安装最新版本的 HyPrism。",
-    "autoRestart": "更新完成后启动器将自动重启。"
+    "autoRestart": "更新完成后启动器将自动重启。",
+    "failed": "更新失败",
+    "installing": "正在安装"
   },
   "modManager": {
     "title": "模组管理",
@@ -713,6 +718,7 @@
     "installedCount": "已安装 {{count}} 个模组",
     "installFailed": "安装模组失败。请重试。",
     "importFailed": "导入模组失败",
+    "openCurseforge": "打开 CurseForge 页面",
     "releaseType": {
       "release": "正式版",
       "beta": "测试版",
@@ -832,5 +838,28 @@
     "unmute": "取消静音",
     "mute": "静音",
     "on": "音乐"
+  },
+  "wrapper": {
+    "description": "包装模式 — 下载并启动完整版 HyPrism",
+    "installed": "已安装：",
+    "none": "无",
+    "latest": "最新版：",
+    "updateAvailable": "有可用更新",
+    "upToDate": "已是最新",
+    "checkForUpdates": "检查更新",
+    "downloadInstall": "下载并安装",
+    "launch": "启动",
+    "installFailed": "安装失败 - 请检查日志",
+    "launchFailed": "启动 HyPrism 失败",
+    "loadingNews": "加载新闻中…"
+  },
+  "accessibility": {
+    "previous": "上一个",
+    "next": "下一个",
+    "segmentedControl": "分段控件"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

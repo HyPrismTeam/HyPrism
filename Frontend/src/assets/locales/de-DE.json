@@ -309,6 +309,7 @@
       "unofficial": "Inoffizieller Hytale-Launcher",
       "maintainerRole": "Maintainer & Entwickler",
       "authRole": "Ersteller und Maintainer des Auth-Servers",
+      "codevRole": "Co-Entwickler, Ersteller vieler Funktionen",
       "contributorRole": "Mitwirkender",
       "others": "Und andere",
       "contributorsDescription": "Großartige Leute, die bei der Erstellung dieses Launchers geholfen haben",
@@ -587,7 +588,9 @@
     "copyError": "Fehler kopieren",
     "reportIssue": "Problem melden",
     "ok": "OK",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "somethingWrong": "Etwas ist schiefgelaufen",
+    "noLogEntries": "Keine Protokolleinträge"
   },
   "update": {
     "downloading": "Herunterladen...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "LAUNCHER WIRD AKTUALISIERT",
     "message": "Bitte warte, während wir die neueste Version von HyPrism herunterladen und installieren.",
-    "autoRestart": "Der Launcher wird automatisch neu gestartet, wenn das Update abgeschlossen ist."
+    "autoRestart": "Der Launcher wird automatisch neu gestartet, wenn das Update abgeschlossen ist.",
+    "failed": "Aktualisierung fehlgeschlagen",
+    "installing": "Wird installiert"
   },
   "modManager": {
     "title": "Mod-Manager",
@@ -713,6 +718,7 @@
     "installedCount": "{{count}} Mod(s) installiert",
     "installFailed": "Installation fehlgeschlagen. Bitte erneut versuchen.",
     "importFailed": "Import fehlgeschlagen",
+    "openCurseforge": "CurseForge-Seite öffnen",
     "releaseType": {
       "release": "Release",
       "beta": "Beta",
@@ -832,5 +838,28 @@
     "unmute": "Ton an",
     "mute": "Stummschalten",
     "on": "Musik"
+  },
+  "wrapper": {
+    "description": "Wrapper-Modus — Vollversion von HyPrism herunterladen und starten",
+    "installed": "Installiert:",
+    "none": "keine",
+    "latest": "Neueste:",
+    "updateAvailable": "Update verfügbar",
+    "upToDate": "Aktuell",
+    "checkForUpdates": "Nach Updates suchen",
+    "downloadInstall": "Herunterladen & Installieren",
+    "launch": "Starten",
+    "installFailed": "Installation fehlgeschlagen - Logs prüfen",
+    "launchFailed": "Start von HyPrism fehlgeschlagen",
+    "loadingNews": "Neuigkeiten werden geladen…"
+  },
+  "accessibility": {
+    "previous": "Zurück",
+    "next": "Weiter",
+    "segmentedControl": "Segmentierte Steuerung"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

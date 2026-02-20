@@ -273,6 +273,7 @@
       "unofficial": "非公式Hytaleランチャー",
       "maintainerRole": "メンテナ & 開発者",
       "authRole": "認証サーバーの作成者 & メンテナ",
+      "codevRole": "共同開発者、多くの機能の作成者",
       "contributorRole": "コントリビューター",
       "others": "その他",
       "contributorsDescription": "このランチャーの作成を支援した素晴らしい人々",
@@ -587,7 +588,9 @@
     "copyError": "エラーをコピー",
     "reportIssue": "問題を報告",
     "ok": "OK",
-    "dismiss": "閉じる"
+    "dismiss": "閉じる",
+    "somethingWrong": "問題が発生しました",
+    "noLogEntries": "ログエントリがありません"
   },
   "update": {
     "downloading": "ダウンロード中...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "ランチャーを更新中",
     "message": "HyPrismの最新バージョンをダウンロードしてインストールしています。お待ちください。",
-    "autoRestart": "更新が完了すると、ランチャーは自動的に再起動します。"
+    "autoRestart": "更新が完了すると、ランチャーは自動的に再起動します。",
+    "failed": "更新に失敗しました",
+    "installing": "インストール中"
   },
   "modManager": {
     "title": "Modマネージャー",
@@ -680,6 +685,7 @@
     "installedCount": "{{count}}個のModをインストールしました",
     "installFailed": "Modのインストールに失敗しました。もう一度お試しください。",
     "importFailed": "Modのインポートに失敗しました",
+    "openCurseforge": "CurseForgeページを開く",
     "releaseType": {
       "release": "リリース",
       "beta": "ベータ",
@@ -832,5 +838,28 @@
     "unmute": "ミュート解除",
     "mute": "ミュート",
     "on": "音楽"
+  },
+  "wrapper": {
+    "description": "ラッパーモード — HyPrismのフルバージョンをダウンロードして起動",
+    "installed": "インストール済み:",
+    "none": "なし",
+    "latest": "最新:",
+    "updateAvailable": "更新があります",
+    "upToDate": "最新です",
+    "checkForUpdates": "更新を確認",
+    "downloadInstall": "ダウンロードしてインストール",
+    "launch": "起動",
+    "installFailed": "インストールに失敗 - ログを確認してください",
+    "launchFailed": "HyPrismの起動に失敗しました",
+    "loadingNews": "ニュースを読み込み中…"
+  },
+  "accessibility": {
+    "previous": "前へ",
+    "next": "次へ",
+    "segmentedControl": "セグメントコントロール"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

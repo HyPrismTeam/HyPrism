@@ -68,14 +68,14 @@ export const AboutTab: React.FC<AboutTabProps> = ({
             <button
               onClick={openGitHub}
               className="opacity-80 hover:opacity-100 transition-opacity"
-              title="GitHub"
+              title={t('social.github')}
             >
               <Github size={28} className="text-white" />
             </button>
             <button
               onClick={openDiscord}
               className="opacity-80 hover:opacity-100 transition-opacity"
-              title="Discord"
+              title={t('social.discord')}
             >
               <DiscordIcon size={20} color="white" />
             </button>
@@ -149,7 +149,7 @@ export const AboutTab: React.FC<AboutTabProps> = ({
                   />
                   <div className="text-left">
                     <span className="text-white font-medium text-sm">Daniel Freak</span>
-                    <p className="text-xs text-white/40">CoDev, Creator of ton features</p>
+                    <p className="text-xs text-white/40">{t('settings.aboutSettings.codevRole')}</p>
                   </div>
                 </button>
               </div>

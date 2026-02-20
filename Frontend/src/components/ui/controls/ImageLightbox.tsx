@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { IconButton } from './IconButton';
 
 export function ImageLightbox({
@@ -19,6 +20,8 @@ export function ImageLightbox({
   onIndexChange: (next: number) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -65,7 +68,7 @@ export function ImageLightbox({
               <IconButton
                 variant="overlay"
                 size="sm"
-                title="Previous"
+                title={t('accessibility.previous')}
                 onClick={() => onIndexChange(Math.max(0, current - 1))}
                 disabled={current <= 0}
               >
@@ -79,7 +82,7 @@ export function ImageLightbox({
               <IconButton
                 variant="overlay"
                 size="sm"
-                title="Next"
+                title={t('accessibility.next')}
                 onClick={() => onIndexChange(Math.min(total - 1, current + 1))}
                 disabled={current >= total - 1}
               >

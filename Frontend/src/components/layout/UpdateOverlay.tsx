@@ -29,8 +29,8 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
         <button
           onClick={onClose}
           className="absolute top-6 right-6 p-2 rounded-xl hover:bg-white/10 active:scale-95 transition-all text-white/80"
-          aria-label="Close"
-          title="Close"
+          aria-label={t('common.close')}
+          title={t('common.close')}
         >
           <X size={20} />
         </button>
@@ -51,7 +51,7 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
       </motion.div>
 
       <h1 className="text-5xl font-black mb-4 tracking-tight text-white">
-        {failed ? 'Failed updating' : t('updateOverlay.title')}
+        {failed ? t('updateOverlay.failed') : t('updateOverlay.title')}
       </h1>
 
       {!failed && (
@@ -81,7 +81,7 @@ export const UpdateOverlay: React.FC<UpdateOverlayProps> = memo(({ progress, dow
 
         <div className="flex justify-between items-center mt-4 text-sm">
           <span className="text-gray-400">
-            {total > 0 ? `${formatBytes(downloaded)} / ${formatBytes(total)}` : (failed ? ' ' : 'Installing')}
+            {total > 0 ? `${formatBytes(downloaded)} / ${formatBytes(total)}` : (failed ? ' ' : t('updateOverlay.installing'))}
           </span>
           <span className="font-bold" style={{ color: accentColor }}>{Math.round(progress)}%</span>
         </div>

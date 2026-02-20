@@ -309,6 +309,7 @@
       "unofficial": "Resmi Olmayan Hytale Başlatıcısı",
       "maintainerRole": "Sürdürücü & Geliştirici",
       "authRole": "Kimlik Doğrulama Sunucusu Oluşturucusu ve Sürdürücüsü",
+      "codevRole": "Ortak Geliştirici, Çok Sayıda Özellik Yaratıcısı",
       "contributorRole": "Katılımcı",
       "others": "Ve diğerleri",
       "contributorsDescription": "Bu başlatıcının oluşturulmasına yardım eden harika insanlar",
@@ -587,7 +588,9 @@
     "copyError": "Hatayı Kopyala",
     "reportIssue": "Sorun Bildir",
     "ok": "Tamam",
-    "dismiss": "Kapat"
+    "dismiss": "Kapat",
+    "somethingWrong": "Bir şeyler ters gitti",
+    "noLogEntries": "Günlük girdisi yok"
   },
   "update": {
     "downloading": "İndiriliyor...",
@@ -599,7 +602,9 @@
   "updateOverlay": {
     "title": "BAŞLATICI GÜNCELLENİYOR",
     "message": "HyPrism'in en son sürümü indiriliyor ve kuruluyor, lütfen bekleyin.",
-    "autoRestart": "Güncelleme tamamlandığında başlatıcı otomatik olarak yeniden başlayacak."
+    "autoRestart": "Güncelleme tamamlandığında başlatıcı otomatik olarak yeniden başlayacak.",
+    "failed": "Güncelleme başarısız oldu",
+    "installing": "Kuruluyor"
   },
   "modManager": {
     "title": "Mod Yöneticisi",
@@ -713,6 +718,7 @@
     "installedCount": "{{count}} mod kuruldu",
     "installFailed": "Modlar kurulamadı. Lütfen tekrar deneyin.",
     "importFailed": "Modlar içe aktarılamadı",
+    "openCurseforge": "CurseForge sayfasını aç",
     "releaseType": {
       "release": "Kararlı",
       "beta": "Beta",
@@ -832,5 +838,28 @@
     "unmute": "Sesi Aç",
     "mute": "Sesi Kapat",
     "on": "Müzik"
+  },
+  "wrapper": {
+    "description": "Sarıcı modu — HyPrism'in tam sürümünü indirin ve başlatın",
+    "installed": "Kurulu:",
+    "none": "yok",
+    "latest": "En son:",
+    "updateAvailable": "Güncelleme mevcut",
+    "upToDate": "Güncel",
+    "checkForUpdates": "Güncellemeleri kontrol et",
+    "downloadInstall": "İndir ve Kur",
+    "launch": "Başlat",
+    "installFailed": "Kurulum başarısız - günlükleri kontrol edin",
+    "launchFailed": "HyPrism başlatılamadı",
+    "loadingNews": "Haberler yükleniyor…"
+  },
+  "accessibility": {
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "segmentedControl": "Bölümlü kontrol"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }
