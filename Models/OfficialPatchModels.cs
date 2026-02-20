@@ -110,6 +110,16 @@ public class VersionListResponse
     /// Whether versions from the official source are available.
     /// </summary>
     public bool OfficialSourceAvailable { get; set; }
+
+    /// <summary>
+    /// Whether there are any download sources available (official or mirrors).
+    /// </summary>
+    public bool HasDownloadSources { get; set; }
+
+    /// <summary>
+    /// Number of currently enabled mirror sources.
+    /// </summary>
+    public int EnabledMirrorCount { get; set; }
 }
 
 /// <summary>

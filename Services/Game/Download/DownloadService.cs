@@ -28,6 +28,17 @@ public class DownloadService : IDownloadService
         Action<int, long, long> progressCallback, 
         CancellationToken cancellationToken = default)
     {
+        await DownloadFileAsync(url, destinationPath, progressCallback, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task DownloadFileAsync(
+        string url, 
+        string destinationPath, 
+        Action<int, long, long> progressCallback, 
+        Dictionary<string, string>? headers,
+        CancellationToken cancellationToken = default)
+    {
         for (int attempt = 1; attempt <= MaxDownloadAttempts; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -38,7 +49,7 @@ public class DownloadService : IDownloadService
                 existingLength = new FileInfo(destinationPath).Length;
             }
 
-            long totalBytes = await GetFileSizeAsync(url, cancellationToken);
+            long totalBytes = await GetFileSizeAsync(url, headers, cancellationToken);
             bool canResume = existingLength > 0 && totalBytes > 0 && existingLength < totalBytes;
 
             if (canResume)
@@ -59,6 +70,7 @@ public class DownloadService : IDownloadService
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                ApplyHeaders(request, headers);
                 if (canResume)
                 {
                     request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
@@ -171,11 +183,20 @@ public class DownloadService : IDownloadService
     /// <summary>
     /// Check file size without downloading.
     /// </summary>
-    public async Task<long> GetFileSizeAsync(string url, CancellationToken cancellationToken = default)
+    public Task<long> GetFileSizeAsync(string url, CancellationToken cancellationToken = default)
+    {
+        return GetFileSizeAsync(url, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Check file size without downloading, with custom headers.
+    /// </summary>
+    public async Task<long> GetFileSizeAsync(string url, Dictionary<string, string>? headers, CancellationToken cancellationToken = default)
     {
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            ApplyHeaders(request, headers);
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
@@ -194,17 +215,40 @@ public class DownloadService : IDownloadService
     /// <summary>
     /// Check if file exists on server.
     /// </summary>
-    public async Task<bool> FileExistsAsync(string url, CancellationToken cancellationToken = default)
+    public Task<bool> FileExistsAsync(string url, CancellationToken cancellationToken = default)
+    {
+        return FileExistsAsync(url, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Check if file exists on server, with custom headers.
+    /// </summary>
+    public async Task<bool> FileExistsAsync(string url, Dictionary<string, string>? headers, CancellationToken cancellationToken = default)
     {
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            ApplyHeaders(request, headers);
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Applies custom headers to an HTTP request.
+    /// </summary>
+    private static void ApplyHeaders(HttpRequestMessage request, Dictionary<string, string>? headers)
+    {
+        if (headers == null || headers.Count == 0)
+            return;
+
+        foreach (var (name, value) in headers)
+        {
+            request.Headers.TryAddWithoutValidation(name, value);
         }
     }
 }

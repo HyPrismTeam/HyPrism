@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { X, Image, Loader2, ChevronDown, Check, GitBranch, AlertTriangle, Edit3 } from 'lucide-react';
+import { X, Image, Loader2, ChevronDown, Check, GitBranch, AlertTriangle, Edit3, AlertCircle } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { Button, IconButton } from '@/components/ui/Controls';
 
@@ -47,6 +47,7 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
   const [availableVersions, setAvailableVersions] = useState<VersionInfo[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [versionChanged, setVersionChanged] = useState(false);
+  const [hasDownloadSources, setHasDownloadSources] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const branchRef = useRef<HTMLDivElement>(null);
@@ -76,12 +77,16 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
         const response = await ipc.game.versionsWithSources({ branch: selectedBranch });
         if (requestId !== versionsRequestIdRef.current || !isOpen) return;
 
+        // Track whether download sources are available
+        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
+
         const versions = response.versions || [];
         setAvailableVersions(versions);
       } catch (err) {
         if (requestId !== versionsRequestIdRef.current || !isOpen) return;
         console.error('Failed to load versions:', err);
         setAvailableVersions([]);
+        setHasDownloadSources(false);
       } finally {
         if (requestId === versionsRequestIdRef.current && isOpen) {
           setIsLoadingVersions(false);
@@ -324,6 +329,22 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
               {/* Version Selector */}
               <div className="space-y-1">
                 <label className="text-xs text-white/50">{t('common.version')}</label>
+                {!hasDownloadSources && !isLoadingVersions ? (
+                  /* No sources warning - replaces version selector */
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-amber-400 font-medium">
+                          {t('instances.noDownloadSources', 'No download sources available')}
+                        </p>
+                        <p className="text-[10px] text-amber-400/70 mt-0.5">
+                          {t('instances.noDownloadSourcesHint', 'Add a mirror in Settings → Downloads or link your Hytale account to download game files.')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div ref={versionRef} className="relative">
                   <button
                     onClick={() => {
@@ -385,11 +406,12 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
                     )}
                   </AnimatePresence>
                 </div>
+                )}
               </div>
             </div>
 
             {/* Warning when version is changed */}
-            {versionChanged && (
+            {versionChanged && hasDownloadSources && (
               <div
                 className="p-3 rounded-xl border flex items-start gap-3"
                 style={{ backgroundColor: `${accentColor}12`, borderColor: `${accentColor}35` }}

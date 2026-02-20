@@ -143,11 +143,30 @@ public class UpdateService : IUpdateService
     private string GetInstalledLauncherBranchOrInit(string desiredBranch)
     {
         var installed = _config.InstalledLauncherBranch;
+        
+        // Validate that installed branch is a valid launcher branch (release/beta)
+        // NOT game branches like "pre-release" which is a different concept
         if (!string.IsNullOrWhiteSpace(installed))
-            return installed;
+        {
+            // Normalize: only "release" or "beta" are valid launcher branches
+            if (installed != "release" && installed != "beta")
+            {
+                Logger.Warning("Update", $"Invalid InstalledLauncherBranch '{installed}', resetting to match desired branch");
+                installed = null; // Force re-init below
+            }
+            else
+            {
+                return installed;
+            }
+        }
 
-        // First run (or old config): assume the currently running launcher matches the user's desired channel.
+        // First run (or old config or invalid value): assume the currently running launcher matches the user's desired channel.
         installed = string.IsNullOrWhiteSpace(desiredBranch) ? "release" : desiredBranch;
+        // Ensure it's a valid launcher branch
+        if (installed != "release" && installed != "beta")
+        {
+            installed = "release";
+        }
         _config.InstalledLauncherBranch = installed;
         try { _configService.SaveConfig(); } catch { /* ignore */ }
         return installed;
@@ -259,8 +278,21 @@ public class UpdateService : IUpdateService
                     return;
                 }
                 
+                // For channel switch: check if versions are the same (no real update needed)
+                if (isChannelSwitch && bestVersion == currentVersion)
+                {
+                    // Channel switch but same version - just update the branch tracking without showing update
+                    _config.InstalledLauncherBranch = launcherBranch;
+                    try { _configService.SaveConfig(); } catch { /* ignore */ }
+                    Logger.Info("Update", $"Channel switched {installedBranch} -> {launcherBranch}, same version {currentVersion}");
+                    return;
+                }
+                
                 var release = bestRelease.Value;
-                var reason = isChannelSwitch ? $"channel switch {installedBranch} -> {launcherBranch}" : "version update";
+                var isDowngrade = !IsNewerVersion(bestVersion, currentVersion);
+                var reason = isChannelSwitch 
+                    ? $"channel switch {installedBranch} -> {launcherBranch}" + (isDowngrade ? " (downgrade)" : "")
+                    : "version update";
                 Logger.Info("Update", $"Update available: {currentVersion} -> {bestVersion} ({reason})");
                 
                 // Pick the right asset for this platform
@@ -286,7 +318,9 @@ public class UpdateService : IUpdateService
                     downloadUrl = downloadUrl,
                     assetName = assetName,
                     releaseUrl = release.GetProperty("html_url").GetString() ?? "",
-                    isBeta = launcherBranch == "beta"
+                    isBeta = launcherBranch == "beta",
+                    isChannelSwitch = isChannelSwitch,
+                    isDowngrade = isDowngrade
                 };
                     
                 LauncherUpdateAvailable?.Invoke(updateInfo);

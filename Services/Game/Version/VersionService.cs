@@ -304,7 +304,9 @@ public class VersionService : IVersionService
         {
             HasOfficialAccount = HasOfficialAccount,
             OfficialSourceAvailable = snapshot?.Data.Hytale?.Branches.ContainsKey(normalizedBranch) == true 
-                && snapshot.Data.Hytale.Branches[normalizedBranch].Count > 0
+                && snapshot.Data.Hytale.Branches[normalizedBranch].Count > 0,
+            HasDownloadSources = HasDownloadSources(),
+            EnabledMirrorCount = EnabledMirrorCount
         };
 
         if (snapshot == null)
@@ -1240,6 +1242,54 @@ public class VersionService : IVersionService
         foreach (var source in _mirrorSources)
         {
             Logger.Debug("Version", $"Mirror {source.SourceId}: priority={source.Priority}");
+        }
+        
+        // If no download sources remain, clear the version cache
+        if (!HasDownloadSources())
+        {
+            Logger.Info("Version", "No download sources available after reload, clearing version cache");
+            ClearVersionCache();
+        }
+    }
+    
+    /// <inheritdoc/>
+    public bool HasDownloadSources()
+    {
+        return HasOfficialAccount || EnabledMirrorCount > 0;
+    }
+    
+    /// <inheritdoc/>
+    public int EnabledMirrorCount => _mirrorSources.Count;
+    
+    /// <inheritdoc/>
+    public void ClearVersionCache()
+    {
+        try
+        {
+            // Clear in-memory cache
+            _memoryCache = null;
+            
+            // Delete versions cache file
+            var versionsPath = GetCacheSnapshotPath();
+            if (File.Exists(versionsPath))
+            {
+                File.Delete(versionsPath);
+                Logger.Info("Version", "Deleted versions cache file");
+            }
+            
+            // Delete patches cache file
+            var patchesPath = GetPatchCacheSnapshotPath();
+            if (File.Exists(patchesPath))
+            {
+                File.Delete(patchesPath);
+                Logger.Info("Version", "Deleted patches cache file");
+            }
+            
+            Logger.Success("Version", "Version cache cleared");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Version", $"Failed to clear version cache: {ex.Message}");
         }
     }
 }

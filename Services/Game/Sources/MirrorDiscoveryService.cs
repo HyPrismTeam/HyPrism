@@ -113,14 +113,16 @@ public class MirrorDiscoveryService
     private async Task<DiscoveryResult> TryAllStrategiesAsync(Uri baseUri, CancellationToken ct)
     {
         // Try strategies in order of specificity
+        // HTML autoindex and static files checked FIRST as they look for actual .pwr files
+        // JSON APIs checked after as they may return false positives on error pages
         var strategies = new (string Name, Func<Uri, CancellationToken, Task<DiscoveryResult>> Strategy)[]
         {
             ("Pattern: Infos API", TryInfosApiPatternAsync),
+            ("HTML Autoindex", TryHtmlAutoindexDiscoveryAsync),
+            ("Pattern: Static Files", TryStaticFilesPatternAsync),
             ("JSON Index API", TryJsonIndexDiscoveryAsync),
             ("JSON Version API", TryJsonApiDiscoveryAsync),
-            ("HTML Autoindex", TryHtmlAutoindexDiscoveryAsync),
             ("Pattern: Launcher API", TryLauncherApiPatternAsync),
-            ("Pattern: Static Files", TryStaticFilesPatternAsync),
             ("Directory Pattern", TryKnownPatternDiscoveryAsync)
         };
 
@@ -166,6 +168,14 @@ public class MirrorDiscoveryService
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Debug("MirrorDiscovery", $"/infos returned {response.StatusCode}");
+                return new DiscoveryResult { Success = false };
+            }
+
+            // Check Content-Type - must be JSON
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+            if (!contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Debug("MirrorDiscovery", $"/infos returned non-JSON Content-Type: {contentType}");
                 return new DiscoveryResult { Success = false };
             }
 
@@ -358,12 +368,20 @@ public class MirrorDiscoveryService
                 using var response = await _httpClient.GetAsync(testUrl, linkedCts.Token);
                 var statusCode = (int)response.StatusCode;
                 
-                // 422 UnprocessableEntity = endpoint exists but params wrong
-                // 400 BadRequest = endpoint exists but request malformed
-                // 200 OK = endpoint works
-                // These all indicate a launcher API pattern!
+                // Check Content-Type - must be JSON, not HTML error pages
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+                var isJsonResponse = contentType.Contains("json", StringComparison.OrdinalIgnoreCase);
+                
+                // For 422/400 we need JSON response to confirm it's a real API
+                // For 200 OK we also need JSON to avoid HTML error pages
                 if (statusCode == 422 || statusCode == 400 || response.IsSuccessStatusCode)
                 {
+                    if (!isJsonResponse)
+                    {
+                        Logger.Debug("MirrorDiscovery", $"Endpoint returned {response.StatusCode} but Content-Type is not JSON: {contentType}");
+                        continue;
+                    }
+                    
                     Logger.Debug("MirrorDiscovery", $"Launcher API detected! Status: {response.StatusCode}");
                     
                     var mirrorId = GenerateMirrorId(baseUri);
@@ -584,6 +602,15 @@ public class MirrorDiscoveryService
                     continue;
                 }
 
+                // Check Content-Type - must be JSON, not HTML error pages
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+                if (!contentType.Contains("json", StringComparison.OrdinalIgnoreCase) &&
+                    !contentType.Contains("php", StringComparison.OrdinalIgnoreCase))  // Allow PHP for api.php
+                {
+                    Logger.Debug("MirrorDiscovery", $"Endpoint returned non-JSON Content-Type: {contentType}");
+                    continue;
+                }
+
                 var content = await response.Content.ReadAsStringAsync(linkedCts.Token);
                 if (string.IsNullOrWhiteSpace(content)) continue;
 
@@ -688,6 +715,14 @@ public class MirrorDiscoveryService
                 if (!response.IsSuccessStatusCode)
                 {
                     Logger.Debug("MirrorDiscovery", $"Endpoint returned {response.StatusCode}");
+                    continue;
+                }
+
+                // Check Content-Type - must be JSON, not HTML error pages
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+                if (!contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Debug("MirrorDiscovery", $"Endpoint returned non-JSON Content-Type: {contentType}");
                     continue;
                 }
 

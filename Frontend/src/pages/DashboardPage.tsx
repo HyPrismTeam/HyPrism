@@ -42,6 +42,8 @@ interface DashboardPageProps {
   hasInstances: boolean;
   isCheckingInstance: boolean;
   hasUpdateAvailable: boolean;
+  // Download sources
+  hasDownloadSources: boolean;
   // Actions
   onPlay: () => void;
   onStopGame: () => void;
@@ -265,6 +267,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     if (props.selectedInstance) {
       // Not installed - show download button
       if (!props.selectedInstance.isInstalled) {
+        // Disable download if no sources available
+        if (!props.hasDownloadSources) {
+          return (
+            <Button
+              disabled
+              className="h-full px-8 rounded-2xl font-black tracking-tight text-base bg-white/10 text-white/50 border border-transparent"
+              title={t('instances.noDownloadSources', 'No download sources available')}
+            >
+              <Download size={16} />
+              <span>{t('main.download')}</span>
+            </Button>
+          );
+        }
         return (
           <LauncherActionButton variant="download" onClick={props.onPlay} className="h-full px-8 text-base">
             <Download size={16} />
@@ -291,6 +306,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     }
 
     // No instances - download
+    // Disable download if no sources available
+    if (!props.hasDownloadSources) {
+      return (
+        <Button
+          disabled
+          className="h-full px-8 rounded-2xl font-black tracking-tight text-base bg-white/10 text-white/50 border border-transparent"
+          title={t('instances.noDownloadSources', 'No download sources available')}
+        >
+          <Download size={16} />
+          <span>{t('main.download')}</span>
+        </Button>
+      );
+    }
     return (
       <LauncherActionButton variant="download" onClick={props.onDownload} className="h-full px-8 text-base">
         <Download size={16} />

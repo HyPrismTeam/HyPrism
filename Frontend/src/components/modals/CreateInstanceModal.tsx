@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { X, ChevronDown, Check, Image, Box, Loader2, GitBranch, Lock } from 'lucide-react';
+import { X, ChevronDown, Check, Image, Box, Loader2, GitBranch, Lock, AlertCircle } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { Button, IconButton } from '@/components/ui/Controls';
 
@@ -36,6 +36,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   const [availableVersions, setAvailableVersions] = useState<VersionInfo[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [hasDownloadSources, setHasDownloadSources] = useState(true);
 
   const branchRef = useRef<HTMLDivElement>(null);
   const versionRef = useRef<HTMLDivElement>(null);
@@ -54,10 +55,13 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
           return;
         }
 
+        // Track whether download sources are available
+        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
+
         const versions = response.versions || [];
         // Add "Latest" entry at the beginning if not already present
         const hasLatest = versions.some(v => v.version === 0);
-        if (!hasLatest) {
+        if (!hasLatest && versions.length > 0) {
           const latestSource = response.officialSourceAvailable && response.hasOfficialAccount ? 'Official' : 'Mirror';
           versions.unshift({ version: 0, source: latestSource as 'Official' | 'Mirror', isLatest: true });
         }
@@ -70,6 +74,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
         }
         console.error('Failed to load versions:', err);
         setAvailableVersions([{ version: 0, source: 'Mirror', isLatest: true }]);
+        setHasDownloadSources(false);
       } finally {
         if (requestId === versionsRequestIdRef.current && isOpen) {
           setIsLoadingVersions(false);
@@ -342,6 +347,22 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
               {/* Version Selector */}
               <div className="space-y-1">
                 <label className="text-xs text-white/50">{t('common.version')}</label>
+                {!hasDownloadSources && !isLoadingVersions ? (
+                  /* No sources warning - replaces version selector */
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-amber-400 font-medium">
+                          {t('instances.noDownloadSources', 'No download sources available')}
+                        </p>
+                        <p className="text-[10px] text-amber-400/70 mt-0.5">
+                          {t('instances.noDownloadSourcesHint', 'Add a mirror in Settings → Downloads or link your Hytale account to download game files.')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div ref={versionRef} className="relative">
                   <button
                     onClick={() => {
@@ -405,6 +426,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
                     )}
                   </AnimatePresence>
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -417,7 +439,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
             <Button
               variant="primary"
               onClick={handleCreate}
-              disabled={isCreating || !customName.trim()}
+              disabled={isCreating || !customName.trim() || !hasDownloadSources}
             >
               {isCreating ? (
                 <>

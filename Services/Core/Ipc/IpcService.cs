@@ -585,7 +585,7 @@ public class IpcService
             catch (Exception ex)
             {
                 Logger.Error("IPC", $"Failed to get versions with sources: {ex.Message}");
-                Reply("hyprism:game:versionsWithSources:reply", new { versions = new List<object>(), hasOfficialAccount = false, officialSourceAvailable = false });
+                Reply("hyprism:game:versionsWithSources:reply", new { versions = new List<object>(), hasOfficialAccount = false, officialSourceAvailable = false, hasDownloadSources = false, enabledMirrorCount = 0 });
             }
         });
     }
@@ -1637,6 +1637,30 @@ public class IpcService
             }
         });
 
+        // @ipc invoke hyprism:settings:hasDownloadSources -> { hasDownloadSources: boolean; hasOfficialAccount: boolean; enabledMirrorCount: number; }
+        Electron.IpcMain.On("hyprism:settings:hasDownloadSources", async (_) =>
+        {
+            await Task.CompletedTask;
+            try
+            {
+                var versionService = _services.GetRequiredService<IVersionService>();
+                Reply("hyprism:settings:hasDownloadSources:reply", new {
+                    hasDownloadSources = versionService.HasDownloadSources(),
+                    hasOfficialAccount = versionService.HasOfficialAccount,
+                    enabledMirrorCount = versionService.EnabledMirrorCount
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"hasDownloadSources failed: {ex.Message}");
+                Reply("hyprism:settings:hasDownloadSources:reply", new {
+                    hasDownloadSources = false,
+                    hasOfficialAccount = false,
+                    enabledMirrorCount = 0
+                });
+            }
+        });
+
         // @ipc invoke hyprism:settings:getMirrors -> MirrorInfo[]
         Electron.IpcMain.On("hyprism:settings:getMirrors", async (_) =>
         {
@@ -1672,6 +1696,7 @@ public class IpcService
                 var json = ArgsToJson(args);
                 var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
                 var url = request?.GetValueOrDefault("url").GetString() ?? "";
+                var headersString = request?.GetValueOrDefault("headers").GetString() ?? "";
                 
                 if (string.IsNullOrWhiteSpace(url))
                 {
@@ -1687,6 +1712,16 @@ public class IpcService
                 {
                     Reply("hyprism:settings:addMirror:reply", new { success = false, error = result.Error ?? "Discovery failed" });
                     return;
+                }
+                
+                // Parse and apply custom headers if provided
+                if (!string.IsNullOrWhiteSpace(headersString))
+                {
+                    var parsedHeaders = ParseHeadersString(headersString);
+                    if (parsedHeaders.Count > 0)
+                    {
+                        result.Mirror.Headers = parsedHeaders;
+                    }
                 }
                 
                 // Check if mirror with same ID already exists
@@ -3072,6 +3107,38 @@ public class IpcService
         {
             Logger.Warning("IPC", $"Failed to enumerate directory {sourceDir}: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Parses a custom headers string in the format: header=value header="value with spaces"
+    /// Supports quoted values with spaces.
+    /// </summary>
+    private static Dictionary<string, string> ParseHeadersString(string headersString)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(headersString))
+            return headers;
+
+        // Regex to match: name=value or name="quoted value"
+        // Handles: Authorization="Bearer token" User-Agent="My Agent/1.0" X-Custom=simple
+        var regex = new System.Text.RegularExpressions.Regex(
+            @"([A-Za-z0-9_-]+)=(?:""([^""]*)""|(\S+))",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        var matches = regex.Matches(headersString);
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var name = match.Groups[1].Value;
+            // Group 2 is quoted value, Group 3 is unquoted value
+            var value = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value;
+            
+            if (!string.IsNullOrEmpty(name))
+            {
+                headers[name] = value;
+            }
+        }
+
+        return headers;
     }
 
     // #endregion

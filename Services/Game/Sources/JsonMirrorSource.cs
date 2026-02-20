@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
+using HyPrism.Services.Core.Integration;
 
 namespace HyPrism.Services.Game.Sources;
 
@@ -38,6 +39,66 @@ public class JsonMirrorSource : IVersionSource
     {
         _meta = meta ?? throw new ArgumentNullException(nameof(meta));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
+
+    /// <summary>
+    /// Creates an HttpRequestMessage with custom headers from the mirror config.
+    /// Expands {hytaleAgent} variable to the official Hytale launcher User-Agent.
+    /// </summary>
+    private async Task<HttpRequestMessage> CreateRequestWithHeadersAsync(
+        HttpMethod method, string url, CancellationToken ct = default)
+    {
+        var request = new HttpRequestMessage(method, url);
+        await ApplyCustomHeadersAsync(request, ct);
+        return request;
+    }
+
+    /// <summary>
+    /// Applies custom headers from the mirror config to an HttpRequestMessage.
+    /// Expands {hytaleAgent} variable to the official Hytale launcher User-Agent.
+    /// </summary>
+    private async Task ApplyCustomHeadersAsync(HttpRequestMessage request, CancellationToken ct = default)
+    {
+        if (_meta.Headers == null || _meta.Headers.Count == 0)
+            return;
+
+        string? hytaleAgent = null;
+
+        foreach (var (headerName, headerValue) in _meta.Headers)
+        {
+            var expandedValue = headerValue;
+
+            // Expand {hytaleAgent} variable
+            if (expandedValue.Contains("{hytaleAgent}", StringComparison.OrdinalIgnoreCase))
+            {
+                if (hytaleAgent == null)
+                {
+                    var launcherVersion = await HytaleLauncherHeaderHelper.GetLauncherVersionAsync(_httpClient, ct);
+                    hytaleAgent = $"hytale-launcher/{launcherVersion}";
+                }
+                expandedValue = expandedValue.Replace("{hytaleAgent}", hytaleAgent, StringComparison.OrdinalIgnoreCase);
+            }
+
+            request.Headers.TryAddWithoutValidation(headerName, expandedValue);
+        }
+    }
+
+    /// <summary>
+    /// Sends a GET request with custom headers applied.
+    /// </summary>
+    private async Task<HttpResponseMessage> GetWithHeadersAsync(string url, CancellationToken ct = default)
+    {
+        using var request = await CreateRequestWithHeadersAsync(HttpMethod.Get, url, ct);
+        return await _httpClient.SendAsync(request, ct);
+    }
+
+    /// <summary>
+    /// Sends a GET request with custom headers and ResponseHeadersRead option.
+    /// </summary>
+    private async Task<HttpResponseMessage> GetWithHeadersStreamAsync(string url, CancellationToken ct = default)
+    {
+        using var request = await CreateRequestWithHeadersAsync(HttpMethod.Get, url, ct);
+        return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
     }
 
     #region IVersionSource Implementation
@@ -226,7 +287,7 @@ public class JsonMirrorSource : IVersionSource
                 using var pingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 pingCts.CancelAfter(TimeSpan.FromSeconds(_meta.SpeedTest.PingTimeoutSeconds));
 
-                using var pingReq = new HttpRequestMessage(HttpMethod.Head, pingUrl);
+                using var pingReq = await CreateRequestWithHeadersAsync(HttpMethod.Head, pingUrl, pingCts.Token);
                 using var pingResp = await _httpClient.SendAsync(pingReq, pingCts.Token);
 
                 result.PingMs = (long)(DateTime.UtcNow - pingStart).TotalMilliseconds;
@@ -245,7 +306,7 @@ public class JsonMirrorSource : IVersionSource
                     using var getCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     getCts.CancelAfter(TimeSpan.FromSeconds(_meta.SpeedTest.PingTimeoutSeconds));
                     
-                    using var getReq = new HttpRequestMessage(HttpMethod.Get, pingUrl);
+                    using var getReq = await CreateRequestWithHeadersAsync(HttpMethod.Get, pingUrl, getCts.Token);
                     using var getResp = await _httpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, getCts.Token);
                     
                     result.PingMs = (long)(DateTime.UtcNow - getStart).TotalMilliseconds;
@@ -277,7 +338,7 @@ public class JsonMirrorSource : IVersionSource
                     using var speedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     speedCts.CancelAfter(TimeSpan.FromSeconds(30));
 
-                    using var req = new HttpRequestMessage(HttpMethod.Get, testUrl);
+                    using var req = await CreateRequestWithHeadersAsync(HttpMethod.Get, testUrl, speedCts.Token);
                     req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, testSize - 1);
 
                     using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, speedCts.Token);
@@ -436,7 +497,7 @@ public class JsonMirrorSource : IVersionSource
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-        var response = await _httpClient.GetAsync(url, cts.Token);
+        var response = await GetWithHeadersAsync(url, cts.Token);
         if (!response.IsSuccessStatusCode)
         {
             Logger.Warning($"Mirror:{SourceId}", $"API returned {response.StatusCode}");
@@ -465,7 +526,7 @@ public class JsonMirrorSource : IVersionSource
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-        var response = await _httpClient.GetAsync(url, cts.Token);
+        var response = await GetWithHeadersAsync(url, cts.Token);
         if (!response.IsSuccessStatusCode)
         {
             Logger.Warning($"Mirror:{SourceId}", $"HTML index returned {response.StatusCode}");
@@ -804,7 +865,7 @@ public class JsonMirrorSource : IVersionSource
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-            var response = await _httpClient.GetAsync(apiUrl, cts.Token);
+            var response = await GetWithHeadersAsync(apiUrl, cts.Token);
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Warning($"Mirror:{SourceId}", $"API returned {response.StatusCode}");

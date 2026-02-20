@@ -408,6 +408,7 @@ const _settings = {
   update: (data?: unknown) => invoke<{ success: boolean }>('hyprism:settings:update', data),
   testMirrorSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testMirrorSpeed', data),
   testOfficialSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testOfficialSpeed', data),
+  hasDownloadSources: (data?: unknown) => invoke<{ hasDownloadSources: boolean; hasOfficialAccount: boolean; enabledMirrorCount: number; }>('hyprism:settings:hasDownloadSources', data),
   getMirrors: (data?: unknown) => invoke<MirrorInfo[]>('hyprism:settings:getMirrors', data),
   addMirror: (data?: unknown) => invoke<{ success: boolean; error?: string; mirror?: MirrorInfo; }>('hyprism:settings:addMirror', data),
   deleteMirror: (data?: unknown) => invoke<{ success: boolean; }>('hyprism:settings:deleteMirror', data),

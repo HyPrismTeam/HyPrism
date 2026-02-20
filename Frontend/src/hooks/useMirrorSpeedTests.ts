@@ -97,11 +97,11 @@ export function useMirrorSpeedTests() {
     }
   }, []);
 
-  const addMirror = useCallback(async (url: string): Promise<boolean> => {
+  const addMirror = useCallback(async (url: string, headers?: string): Promise<boolean> => {
     setIsAdding(true);
     setAddError(null);
     try {
-      const result = await ipc.settings.addMirror({ url });
+      const result = await ipc.settings.addMirror({ url, headers });
       if (result.success) {
         await loadMirrors();
         return true;

@@ -26,7 +26,7 @@ interface DownloadsTabProps {
   isLoading: boolean;
   testMirror: (mirrorId: string, forceRefresh?: boolean) => void;
   // Mirror management
-  addMirror: (url: string) => Promise<boolean>;
+  addMirror: (url: string, headers?: string) => Promise<boolean>;
   deleteMirror: (mirrorId: string) => Promise<boolean>;
   toggleMirror: (mirrorId: string, enabled: boolean) => Promise<boolean>;
   refreshMirrors: () => void;
@@ -57,13 +57,15 @@ export const DownloadsTab: React.FC<DownloadsTabProps> = ({
   const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMirrorUrl, setNewMirrorUrl] = useState('');
+  const [newMirrorHeaders, setNewMirrorHeaders] = useState('');
 
   const handleAddMirror = async () => {
     if (!newMirrorUrl.trim()) return;
     
-    const success = await addMirror(newMirrorUrl.trim());
+    const success = await addMirror(newMirrorUrl.trim(), newMirrorHeaders.trim() || undefined);
     if (success) {
       setNewMirrorUrl('');
+      setNewMirrorHeaders('');
       setShowAddForm(false);
     }
   };
@@ -71,6 +73,7 @@ export const DownloadsTab: React.FC<DownloadsTabProps> = ({
   const handleCloseForm = () => {
     setShowAddForm(false);
     setNewMirrorUrl('');
+    setNewMirrorHeaders('');
     setAddError(null);
   };
 
@@ -158,8 +161,8 @@ export const DownloadsTab: React.FC<DownloadsTabProps> = ({
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              <div className="p-4 bg-white/[0.02] border-b border-white/[0.06]">
-                {/* Inline Input with Buttons */}
+              <div className="p-4 bg-white/[0.02] border-b border-white/[0.06] space-y-3">
+                {/* URL Input with Buttons */}
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -196,6 +199,21 @@ export const DownloadsTab: React.FC<DownloadsTabProps> = ({
                     </button>
                   </div>
                 </div>
+
+                {/* Custom Headers Input */}
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    value={newMirrorHeaders}
+                    onChange={(e) => setNewMirrorHeaders(e.target.value)}
+                    placeholder={t('settings.downloads.headersPlaceholder', 'Custom headers (optional): Authorization="Bearer token" User-Agent="{hytaleAgent}"')}
+                    className="w-full h-10 px-4 rounded-xl bg-[#1c1c1e] border border-white/[0.08] text-white placeholder-white/30 focus:border-white/20 focus:outline-none transition-colors font-mono text-xs"
+                    disabled={isAdding}
+                  />
+                  <p className="text-[10px] text-white/30 px-1">
+                    {t('settings.downloads.headersHint', 'Format: header=value or header="value with spaces". Use {hytaleAgent} for official User-Agent.')}
+                  </p>
+                </div>
                 
                 {/* Error Message */}
                 <AnimatePresence>
@@ -207,7 +225,7 @@ export const DownloadsTab: React.FC<DownloadsTabProps> = ({
                       transition={{ duration: 0.15 }}
                       className="overflow-hidden"
                     >
-                      <div className="flex items-start gap-2 mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                         <AlertCircle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-red-400">{addError}</p>
                       </div>

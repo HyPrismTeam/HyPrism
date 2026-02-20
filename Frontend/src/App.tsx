@@ -95,7 +95,6 @@ async function GetInstances(): Promise<InstanceInfo[]> {
 const GetWrapperStatus = stub<null>('GetWrapperStatus', null);
 const WrapperInstallLatest = stub('WrapperInstallLatest', true);
 const WrapperLaunch = stub('WrapperLaunch', true);
-const SetLauncherBranch = stub<void>('SetLauncherBranch', undefined as void);
 const CheckRosettaStatus = stub<{ NeedsInstall: boolean; Message: string; Command: string; TutorialUrl?: string } | null>('CheckRosettaStatus', null);
 
 // Modal loading fallback - minimal spinner
@@ -194,6 +193,9 @@ const App: React.FC = () => {
   const [isOfficialProfile, setIsOfficialProfile] = useState<boolean>(false);
   const [isOfficialServerMode, setIsOfficialServerMode] = useState<boolean>(false);
   const officialServerBlocked = isOfficialServerMode && !isOfficialProfile;
+
+  // Download sources state
+  const [hasDownloadSources, setHasDownloadSources] = useState<boolean>(true);
 
   // Background, news, and accent color settings
   // Initialize as null to prevent flash — don't render background until config is loaded
@@ -485,6 +487,15 @@ const App: React.FC = () => {
           }
         } catch (e) {
           console.error('Failed to check Rosetta status:', e);
+        }
+
+        // Load download sources status
+        try {
+          const sourcesResult = await ipc.settings.hasDownloadSources();
+          setHasDownloadSources(sourcesResult.hasDownloadSources);
+        } catch (e) {
+          console.error('Failed to check download sources:', e);
+          setHasDownloadSources(false);
         }
       } catch (e) {
         console.error('Failed to load settings:', e);
@@ -813,7 +824,8 @@ const App: React.FC = () => {
 
   const handleLauncherBranchChange = async (branch: string) => {
     try {
-      await SetLauncherBranch(branch);
+      // Use ipc.settings.update instead of stub SetLauncherBranch
+      await ipc.settings.update({ launcherBranch: branch });
       setLauncherBranch(branch);
       console.log('Launcher branch changed to:', branch);
     } catch (err) {
@@ -997,6 +1009,7 @@ const App: React.FC = () => {
               officialServerBlocked={officialServerBlocked}
               isOfficialProfile={isOfficialProfile}
               isOfficialServerMode={isOfficialServerMode}
+              hasDownloadSources={hasDownloadSources}
             />
           )}
 
