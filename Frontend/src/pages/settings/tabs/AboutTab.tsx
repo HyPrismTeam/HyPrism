@@ -1,10 +1,22 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Github, Bug } from 'lucide-react';
+import { Github, Bug, Users, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Controls';
 import { DiscordIcon } from '@/components/icons/DiscordIcon';
 import appIcon from '@/assets/images/logo.png';
 import type { Contributor } from '@/hooks/useSettings';
+
+// Core team members - logins and roles only, avatars come from GitHub API
+const CORE_TEAM_CONFIG = [
+  { login: 'yyyumeniku', displayName: 'yyyumeniku', roleKey: 'creatorRole' },
+  { login: 'sanasol', displayName: 'sanasol', roleKey: 'authRole' },
+  { login: 'freakdaniel', displayName: 'Daniel Freak', roleKey: 'codevRole' },
+  { login: 'XargonWan', displayName: 'XargonWan', roleKey: 'cicdRole' },
+  { login: 'FowlBytez', displayName: 'FowlBytez', roleKey: 'testerRole' },
+  { login: 'CupRusk', displayName: 'CupRusk', roleKey: 'installerRole' },
+];
+
+const CORE_TEAM_LOGINS = CORE_TEAM_CONFIG.map(m => m.login.toLowerCase());
 
 interface AboutTabProps {
   gc: string;
@@ -36,15 +48,44 @@ export const AboutTab: React.FC<AboutTabProps> = ({
     return name.slice(0, maxLength - 2) + '...';
   };
 
-  const maintainerFallback: Contributor = {
-    login: 'yyyumeniku',
-    avatar_url: 'https://avatars.githubusercontent.com/u/108021304?v=4',
-    html_url: 'https://github.com/yyyumeniku',
-    contributions: 0,
-  };
+  // Build core team with avatars from contributors data
+  const coreTeam = CORE_TEAM_CONFIG.map(member => {
+    const contributor = contributors.find(c => c.login.toLowerCase() === member.login.toLowerCase());
+    return {
+      ...member,
+      avatar_url: contributor?.avatar_url || `https://github.com/${member.login}.png`,
+      html_url: contributor?.html_url || `https://github.com/${member.login}`,
+    };
+  });
 
-  const maintainer = contributors.find(c => c.login.toLowerCase() === 'yyyumeniku') ?? maintainerFallback;
-  const otherContributors = contributors.filter(c => !['yyyumeniku', 'freakdaniel'].includes(c.login.toLowerCase()));
+  // Known bot accounts to filter out
+  const BOT_LOGINS = [
+    'copilot',
+    'github-actions',
+    'dependabot',
+    'renovate',
+    'semantic-release-bot',
+    'allcontributors',
+    'imgbot',
+    'codecov',
+    'snyk-bot',
+    'greenkeeper',
+    'google-labs-jules',
+  ];
+
+  // Filter out core team members and bots from contributors list
+  const otherContributors = contributors.filter(c => {
+    const login = c.login.toLowerCase();
+    // Exclude core team
+    if (CORE_TEAM_LOGINS.includes(login)) return false;
+    // Exclude known bots
+    if (BOT_LOGINS.includes(login)) return false;
+    // Exclude accounts ending with [bot]
+    if (login.endsWith('[bot]')) return false;
+    // Exclude accounts containing 'bot' as a suffix pattern
+    if (login.match(/-bot$|_bot$|bot\[bot\]$/)) return false;
+    return true;
+  });
 
   const openUrl = (url: string) => {
     import('@/utils/openUrl').then(({ openUrl: open }) => open(url));
@@ -53,6 +94,7 @@ export const AboutTab: React.FC<AboutTabProps> = ({
   return (
     <div className="space-y-6 w-full max-w-6xl mx-auto">
       <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)] gap-6 items-start">
+        {/* Left Panel - App Info */}
         <div className={`p-5 rounded-2xl ${gc} space-y-5`}>
           <div className="flex flex-col items-center text-center">
             <img
@@ -97,99 +139,94 @@ export const AboutTab: React.FC<AboutTabProps> = ({
           >
             {t('settings.aboutSettings.replayIntro')}
           </Button>
+
+          {/* Disclaimer - shown in left panel on xl screens */}
+          <p className="hidden xl:block text-white/40 text-xs text-center leading-relaxed pt-2">
+            {t('settings.aboutSettings.disclaimer')}
+          </p>
         </div>
 
-        <div className="pt-1">
+        {/* Right Panel - Team & Contributors */}
+        <div className="space-y-6">
           {isLoadingContributors ? (
-            <div className="flex justify-center py-4">
+            <div className="flex justify-center py-8">
               <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: `${accentColor}30`, borderTopColor: accentColor }} />
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* Maintainer & Auth Server Creator */}
-              <div className="flex flex-wrap gap-3 xl:gap-4">
-                {maintainer && (
-                  <button
-                    onClick={() => openUrl(maintainer.html_url)}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
-                  >
-                    <img
-                      src={maintainer.avatar_url}
-                      alt={maintainer.login}
-                      className="w-12 h-12 rounded-full"
-                    />
-                    <div className="text-left">
-                      <span className="text-white font-medium text-sm">{maintainer.login}</span>
-                      <p className="text-xs text-white/40">{t('settings.aboutSettings.maintainerRole')}</p>
-                    </div>
-                  </button>
-                )}
-                <button
-                  onClick={() => openUrl('https://github.com/sanasol')}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
-                >
-                  <img
-                    src="https://avatars.githubusercontent.com/u/1709666?v=4"
-                    alt="sanasol"
-                    className="w-12 h-12 rounded-full"
-                  />
-                  <div className="text-left">
-                    <span className="text-white font-medium text-sm">sanasol</span>
-                    <p className="text-xs text-white/40">{t('settings.aboutSettings.authRole')}</p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => openUrl('https://github.com/freakdaniel')}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors min-w-[240px] max-w-[360px]"
-                >
-                  <img
-                    src="https://avatars.githubusercontent.com/u/212660794?v=4"
-                    alt="freakdaniel"
-                    className="w-12 h-12 rounded-full"
-                  />
-                  <div className="text-left">
-                    <span className="text-white font-medium text-sm">Daniel Freak</span>
-                    <p className="text-xs text-white/40">{t('settings.aboutSettings.codevRole')}</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Description */}
-              <p className="text-xs text-white/40 text-center xl:text-left">{t('settings.aboutSettings.contributorsDescription')}</p>
-
-              {contributorsError ? (
-                <p className="text-xs text-white/35 text-center xl:text-left">{contributorsError}</p>
-              ) : null}
-
-              {/* Other Contributors */}
-              {otherContributors.length > 0 && (
-                <div className="flex flex-wrap gap-3 sm:gap-4 justify-center xl:justify-start">
-                  {otherContributors.map((contributor) => (
+            <>
+              {/* Core Team Section */}
+              <div className={`p-4 rounded-2xl ${gc}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles size={18} className="text-purple-400" />
+                  <h3 className="text-sm font-semibold text-white">{t('settings.aboutSettings.coreTeam')}</h3>
+                </div>
+                <p className="text-xs text-white/40 mb-4">{t('settings.aboutSettings.coreTeamDescription')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {coreTeam.map((member) => (
                     <button
-                      key={contributor.login}
-                      onClick={() => openUrl(contributor.html_url)}
-                      className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors w-[88px]"
-                      title={`${contributor.login} - ${contributor.contributions} contributions`}
+                      key={member.login}
+                      onClick={() => openUrl(member.html_url)}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] transition-colors"
                     >
                       <img
-                        src={contributor.avatar_url}
-                        alt={contributor.login}
-                        className="w-12 h-12 rounded-full"
+                        src={member.avatar_url}
+                        alt={member.login}
+                        className="w-10 h-10 rounded-full flex-shrink-0"
                       />
-                      <span className="text-xs text-white/60 max-w-full truncate text-center">
-                        {truncateName(contributor.login, 10)}
-                      </span>
+                      <div className="text-left min-w-0">
+                        <span className="text-white font-medium text-sm block truncate">
+                          {member.displayName}
+                        </span>
+                        <p className="text-[11px] text-white/40 truncate">
+                          {t(`settings.aboutSettings.${member.roleKey}`)}
+                        </p>
+                      </div>
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Contributors Section */}
+              {otherContributors.length > 0 && (
+                <div className={`p-4 rounded-2xl ${gc}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Users size={18} className="text-white/60" />
+                    <h3 className="text-sm font-semibold text-white">{t('settings.aboutSettings.contributors')}</h3>
+                  </div>
+                  <p className="text-xs text-white/40 mb-3">{t('settings.aboutSettings.contributorsDescription')}</p>
+                  
+                  {contributorsError && (
+                    <p className="text-xs text-white/35 mb-3">{contributorsError}</p>
+                  )}
+                  
+                  <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 gap-2">
+                    {otherContributors.map((contributor) => (
+                      <button
+                        key={contributor.login}
+                        onClick={() => openUrl(contributor.html_url)}
+                        className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                        title={`${contributor.login} - ${contributor.contributions} contributions`}
+                      >
+                        <img
+                          src={contributor.avatar_url}
+                          alt={contributor.login}
+                          className="w-10 h-10 rounded-full"
+                        />
+                        <span className="text-[10px] text-white/60 max-w-full truncate text-center w-full">
+                          {truncateName(contributor.login, 10)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <div className={`p-4 rounded-2xl ${gc}`}>
+      {/* Disclaimer - shown separately on smaller screens */}
+      <div className={`p-4 rounded-2xl ${gc} xl:hidden`}>
         <p className="text-white/50 text-sm text-center">
           {t('settings.aboutSettings.disclaimer')}
         </p>
