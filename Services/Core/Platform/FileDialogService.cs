@@ -517,6 +517,104 @@ public class FileDialogService : IFileDialogService
     }
 
     /// <summary>
+    /// Opens a file picker dialog configured for selecting instance archive files (ZIP or PWR).
+    /// </summary>
+    public async Task<string?> BrowseInstanceArchiveAsync()
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return await BrowseInstanceArchiveWindowsAsync();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return await BrowseInstanceArchiveMacOSAsync();
+            }
+            else
+            {
+                return await BrowseInstanceArchiveLinuxAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Files", $"Failed to browse instance archive: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static async Task<string?> BrowseInstanceArchiveWindowsAsync()
+    {
+        var script = @"Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.OpenFileDialog; $dialog.Filter = 'Instance Archives (*.zip;*.pwr)|*.zip;*.pwr|Zip Files (*.zip)|*.zip|PWR Files (*.pwr)|*.pwr|All Files (*.*)|*.*'; $dialog.Multiselect = $false; $dialog.Title = 'Select Instance Archive'; if ($dialog.ShowDialog() -eq 'OK') { $dialog.FileName }";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "powershell",
+            Arguments = $"-NoProfile -Command \"{script}\"",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return null;
+
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return string.IsNullOrWhiteSpace(output) ? null : output.Trim();
+    }
+
+    private static async Task<string?> BrowseInstanceArchiveMacOSAsync()
+    {
+        var script = @"tell application ""Finder""
+            activate
+            set theFile to choose file with prompt ""Select Instance Archive"" of type {""zip"", ""public.zip-archive"", ""pwr"", ""public.data""}
+            return POSIX path of theFile
+        end tell";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "osascript",
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return null;
+
+        await process.StandardInput.WriteAsync(script);
+        process.StandardInput.Close();
+
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output) ? output.Trim() : null;
+    }
+
+    private static async Task<string?> BrowseInstanceArchiveLinuxAsync()
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "zenity",
+            Arguments = "--file-selection --title=\"Select Instance Archive\" --file-filter=\"Instance Archives | *.zip *.pwr\" --file-filter=\"All files | *\"",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null) return null;
+
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output) ? output.Trim() : null;
+    }
+
+    /// <summary>
     /// Opens a file picker dialog configured for selecting ZIP files.
     /// </summary>
     public async Task<string?> BrowseZipFileAsync()

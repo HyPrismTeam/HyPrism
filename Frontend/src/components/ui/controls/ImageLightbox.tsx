@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { IconButton } from './IconButton';
 
 export function ImageLightbox({
@@ -17,6 +20,8 @@ export function ImageLightbox({
   onIndexChange: (next: number) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -28,60 +33,66 @@ export function ImageLightbox({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen, index, images.length, onClose, onIndexChange]);
 
-  if (!isOpen) return null;
   const total = images.length;
   const current = Math.min(Math.max(index, 0), Math.max(total - 1, 0));
   const currentImage = images[current];
 
-  return (
-    <div
-      className="fixed inset-0 z-[400] bg-black/80 flex items-center justify-center p-6"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="relative w-full max-w-5xl">
-        <div className="absolute -top-3 -right-3 z-20">
-          <IconButton variant="overlay" size="sm" title="Close" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </IconButton>
-        </div>
-
-        <div className="glass-panel-static-solid rounded-3xl border border-white/10 overflow-hidden">
-          <div className="relative">
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center"
+          onClick={(e) => e.target === e.currentTarget && onClose()}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="relative max-w-5xl max-h-[80vh] px-6"
+          >
             <img
               src={currentImage?.url}
               alt={currentImage?.title ?? title ?? ''}
-              className="block w-full max-h-[78vh] object-contain bg-black/20"
+              className="block max-w-full max-h-[80vh] object-contain rounded-xl"
               draggable={false}
             />
+          </motion.div>
 
-            <div className="absolute inset-x-0 bottom-0 p-4 flex items-center justify-center gap-3">
+          {total > 1 && (
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3">
               <IconButton
                 variant="overlay"
                 size="sm"
-                title="Previous"
+                title={t('accessibility.previous')}
                 onClick={() => onIndexChange(Math.max(0, current - 1))}
                 disabled={current <= 0}
               >
                 <ChevronLeft className="w-4 h-4" />
               </IconButton>
 
-              <div className="px-3 py-2 rounded-2xl text-xs font-semibold bg-black/30 border border-white/10 text-white/80">
-                {total === 0 ? '0/0' : `${current + 1}/${total}`}
+              <div className="px-3 py-2 rounded-2xl text-xs font-semibold bg-black/50 border border-white/10 text-white/80 min-w-[60px] text-center">
+                {`${current + 1}/${total}`}
               </div>
 
               <IconButton
                 variant="overlay"
                 size="sm"
-                title="Next"
+                title={t('accessibility.next')}
                 onClick={() => onIndexChange(Math.min(total - 1, current + 1))}
                 disabled={current >= total - 1}
               >
                 <ChevronRight className="w-4 h-4" />
               </IconButton>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 }

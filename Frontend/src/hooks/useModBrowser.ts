@@ -425,7 +425,12 @@ export const useModBrowser = (options: UseModBrowserOptions) => {
     e.stopPropagation();
     dragDepthRef.current = 0;
     setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
+    const allFiles = Array.from(e.dataTransfer.files);
+    // Filter to only .jar files
+    const files = allFiles.filter((file) => {
+      const name = file.name?.toLowerCase() || '';
+      return name.endsWith('.jar') || name.endsWith('.jar.disabled');
+    });
     if (files.length === 0) return;
     setIsImporting(true);
     let successCount = 0;

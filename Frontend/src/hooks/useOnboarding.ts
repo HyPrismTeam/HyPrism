@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, User, Palette, FolderOpen, Info, Cpu } from 'lucide-react';
+import { Globe, User, Palette, Info, Cpu } from 'lucide-react';
 import { ipc } from '@/lib/ipc';
 import { openUrl } from '@/utils/openUrl';
 import { useAccentColor } from '@/contexts/AccentColorContext';
@@ -18,8 +18,8 @@ export interface GpuAdapter {
   type: string;
 }
 
-export type OnboardingPhase = 'splash' | 'auth' | 'setup';
-export type OnboardingStep = 'language' | 'profile' | 'hardware' | 'visual' | 'location' | 'about';
+export type OnboardingPhase = 'splash' | 'auth' | 'warning' | 'setup';
+export type OnboardingStep = 'language' | 'profile' | 'hardware' | 'visual' | 'about';
 
 export interface OnboardingState {
   phase: OnboardingPhase;
@@ -188,7 +188,6 @@ export function useOnboarding(options: UseOnboardingOptions) {
 
     allSteps.push(
       { id: 'visual', label: t('onboarding.visual'), icon: Palette },
-      { id: 'location', label: t('onboarding.location'), icon: FolderOpen },
       { id: 'about', label: t('onboarding.about'), icon: Info }
     );
 
@@ -447,8 +446,16 @@ export function useOnboarding(options: UseOnboardingOptions) {
 
   const handleSkipAuth = useCallback(() => {
     setIsAuthenticated(false);
+    setPhase('warning');
+  }, []);
+
+  const handleContinueWithoutAuth = useCallback(() => {
     setPhase('setup');
     setCurrentStep('language');
+  }, []);
+
+  const handleBackToAuth = useCallback(() => {
+    setPhase('auth');
   }, []);
 
   // ============================================================================
@@ -604,6 +611,8 @@ export function useOnboarding(options: UseOnboardingOptions) {
     handleGpuPreferenceChange,
     handleLogin,
     handleSkipAuth,
+    handleContinueWithoutAuth,
+    handleBackToAuth,
     handleComplete,
     handleSkip,
     openGitHub,

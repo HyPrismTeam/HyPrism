@@ -422,6 +422,48 @@ public class ModService : IModService
             // Add to manifest
             var mods = GetInstanceInstalledMods(instancePath);
             
+            // Find and remove old mod files before updating manifest
+            var oldMods = mods.Where(m => 
+                m.CurseForgeId == numericModId || 
+                m.CurseForgeId == slugOrId || 
+                m.Id == $"cf-{numericModId}" || 
+                m.Id == $"cf-{slugOrId}").ToList();
+            
+            foreach (var oldMod in oldMods)
+            {
+                // Delete old mod file if it's different from the new one
+                if (!string.IsNullOrWhiteSpace(oldMod.FileName) && oldMod.FileName != cfFile.FileName)
+                {
+                    var oldFilePath = Path.Combine(modsPath, oldMod.FileName);
+                    var oldDisabledFilePath = Path.Combine(modsPath, oldMod.FileName + ".disabled");
+                    
+                    if (File.Exists(oldFilePath))
+                    {
+                        try
+                        {
+                            File.Delete(oldFilePath);
+                            Logger.Info("ModService", $"Deleted old mod file: {oldMod.FileName}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warning("ModService", $"Failed to delete old mod file {oldMod.FileName}: {ex.Message}");
+                        }
+                    }
+                    else if (File.Exists(oldDisabledFilePath))
+                    {
+                        try
+                        {
+                            File.Delete(oldDisabledFilePath);
+                            Logger.Info("ModService", $"Deleted old disabled mod file: {oldMod.FileName}.disabled");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warning("ModService", $"Failed to delete old disabled mod file {oldMod.FileName}.disabled: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            
             // Remove existing entry for this mod if any (check both numeric ID and old slug-based ID)
             mods.RemoveAll(m => m.CurseForgeId == numericModId || m.CurseForgeId == slugOrId || m.Id == $"cf-{numericModId}" || m.Id == $"cf-{slugOrId}");
             

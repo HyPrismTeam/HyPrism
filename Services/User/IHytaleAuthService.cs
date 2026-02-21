@@ -1,3 +1,5 @@
+using HyPrism.Models;
+
 namespace HyPrism.Services.User;
 
 /// <summary>
@@ -54,4 +56,18 @@ public interface IHytaleAuthService
     /// </summary>
     /// <returns>Valid session from any official profile, or null if none available.</returns>
     Task<HytaleAuthSession?> GetValidOfficialSessionAsync();
+
+    /// <summary>
+    /// Saves the current session to the active profile's folder.
+    /// Use this after LoginAsync() when re-authenticating within an existing official profile.
+    /// </summary>
+    void SaveCurrentSession();
+
+    /// <summary>
+    /// Saves the current session to a specific profile's folder.
+    /// Used when creating a new official profile to enable Hytale source access.
+    /// </summary>
+    /// <param name="profile">The profile to save the session to.</param>
+    /// <returns>True if the session was saved successfully.</returns>
+    bool SaveSessionToProfile(Profile profile);
 }

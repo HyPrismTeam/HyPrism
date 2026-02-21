@@ -56,12 +56,21 @@ async function GetUUID(): Promise<string> { return (await ipc.profile.get()).uui
 // Game actions
 function LaunchGame(data?: unknown): void { ipc.game.launch(data); }
 
-// TODO: These need dedicated IPC channels in IpcService.cs
-const stub = <T,>(name: string, fallback: T) => async (..._args: any[]): Promise<T> => {
+// Get recent logs from backend
+async function GetRecentLogs(_count: number = 10): Promise<string[]> {
+  try {
+    return await ipc.logs.get();
+  } catch (e) {
+    console.error('[IPC] GetRecentLogs failed:', e);
+    return [];
+  }
+}
+
+// Stub for functions that don't have IPC channels yet
+const stub = <T,>(name: string, fallback: T) => async (..._args: unknown[]): Promise<T> => {
   console.warn(`[IPC] ${name}: no IPC channel yet`);
   return fallback;
 };
-const GetRecentLogs = stub<string[]>('GetRecentLogs', []);
 
 // Real IPC call to check if game is running
 async function IsGameRunning(): Promise<boolean> {
@@ -95,7 +104,6 @@ async function GetInstances(): Promise<InstanceInfo[]> {
 const GetWrapperStatus = stub<null>('GetWrapperStatus', null);
 const WrapperInstallLatest = stub('WrapperInstallLatest', true);
 const WrapperLaunch = stub('WrapperLaunch', true);
-const SetLauncherBranch = stub<void>('SetLauncherBranch', undefined as void);
 const CheckRosettaStatus = stub<{ NeedsInstall: boolean; Message: string; Command: string; TutorialUrl?: string } | null>('CheckRosettaStatus', null);
 
 // Modal loading fallback - minimal spinner
@@ -194,6 +202,9 @@ const App: React.FC = () => {
   const [isOfficialProfile, setIsOfficialProfile] = useState<boolean>(false);
   const [isOfficialServerMode, setIsOfficialServerMode] = useState<boolean>(false);
   const officialServerBlocked = isOfficialServerMode && !isOfficialProfile;
+
+  // Download sources state
+  const [hasDownloadSources, setHasDownloadSources] = useState<boolean>(true);
 
   // Background, news, and accent color settings
   // Initialize as null to prevent flash — don't render background until config is loaded
@@ -388,7 +399,7 @@ const App: React.FC = () => {
     try {
       const settings = await ipc.settings.get();
       const domain = settings.authDomain?.trim() ?? '';
-      const isOfficial = domain === 'sessionserver.hytale.com' || domain === 'official'
+      const isOfficial = domain === 'sessions.hytale.com' || domain === 'official'
         || domain.includes('hytale.com');
       setIsOfficialServerMode(isOfficial && settings.onlineMode);
 
@@ -485,6 +496,15 @@ const App: React.FC = () => {
           }
         } catch (e) {
           console.error('Failed to check Rosetta status:', e);
+        }
+
+        // Load download sources status
+        try {
+          const sourcesResult = await ipc.settings.hasDownloadSources();
+          setHasDownloadSources(sourcesResult.hasDownloadSources);
+        } catch (e) {
+          console.error('Failed to check download sources:', e);
+          setHasDownloadSources(false);
         }
       } catch (e) {
         console.error('Failed to load settings:', e);
@@ -614,11 +634,14 @@ const App: React.FC = () => {
         if (exitCode !== undefined && exitCode !== null && exitCode !== 0) {
           try {
             const logs = await GetRecentLogs(10);
+            // Clear any concurrent error to avoid showing two error modals
+            setError(null);
             setLaunchTimeoutError({
               message: t('app.gameCrashed', { code: exitCode }),
               logs: logs || []
             });
           } catch {
+            setError(null);
             setLaunchTimeoutError({
               message: t('app.gameCrashed', { code: exitCode }),
               logs: []
@@ -646,6 +669,8 @@ const App: React.FC = () => {
     });
 
     const unsubError = EventsOn('error', (err: any) => {
+      // Clear any concurrent launch timeout error to avoid showing two error modals
+      setLaunchTimeoutError(null);
       setError(err);
       clearDownloadState();
       setProgress(0);
@@ -813,7 +838,8 @@ const App: React.FC = () => {
 
   const handleLauncherBranchChange = async (branch: string) => {
     try {
-      await SetLauncherBranch(branch);
+      // Use ipc.settings.update instead of stub SetLauncherBranch
+      await ipc.settings.update({ launcherBranch: branch });
       setLauncherBranch(branch);
       console.log('Launcher branch changed to:', branch);
     } catch (err) {
@@ -847,7 +873,7 @@ const App: React.FC = () => {
       try {
         const ok = await WrapperInstallLatest();
         if (!ok) {
-          window.alert('Install failed - check logs');
+          window.alert(t('wrapper.installFailed'));
         }
       } catch (e) {
         console.error('Install failed', e);
@@ -860,7 +886,7 @@ const App: React.FC = () => {
       setIsWrapperWorking(true);
       try {
         const ok = await WrapperLaunch();
-        if (!ok) window.alert('Failed to launch HyPrism');
+        if (!ok) window.alert(t('wrapper.launchFailed'));
       } catch (e) {
         console.error('Launch failed', e);
       }
@@ -873,17 +899,17 @@ const App: React.FC = () => {
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="bg-black/70 p-6 rounded-lg w-[720px] max-w-full">
             <h1 className="text-2xl font-bold mb-2">HyPrism</h1>
-            <p className="mb-4">Wrapper mode — scarica e avvia la versione completa di HyPrism</p>
+            <p className="mb-4">{t('wrapper.description')}</p>
 
             <div className="mb-4">
-              <div>Installed: {wrapperStatus?.installed ? wrapperStatus.installedVersion : 'none'}</div>
-              <div>Latest: {wrapperStatus?.latestVersion || '—'}</div>
-              <div className="mt-2">{wrapperStatus?.updateAvailable ? <span className="text-yellow-400">Update available</span> : <span className="text-green-400">Up to date</span>}</div>
+              <div>{t('wrapper.installed')} {wrapperStatus?.installed ? wrapperStatus.installedVersion : t('wrapper.none')}</div>
+              <div>{t('wrapper.latest')} {wrapperStatus?.latestVersion || '—'}</div>
+              <div className="mt-2">{wrapperStatus?.updateAvailable ? <span className="text-yellow-400">{t('wrapper.updateAvailable')}</span> : <span className="text-green-400">{t('wrapper.upToDate')}</span>}</div>
             </div>
 
             <div className="flex gap-3 mb-4">
               <Button onClick={refreshWrapperStatusLocal} disabled={isWrapperWorking}>
-                Check for updates
+                {t('wrapper.checkForUpdates')}
               </Button>
               <LauncherActionButton
                 variant="update"
@@ -891,7 +917,7 @@ const App: React.FC = () => {
                 disabled={!wrapperStatus?.updateAvailable || isWrapperWorking}
                 className="h-10 px-4 rounded-xl text-sm"
               >
-                Download & Install
+                {t('wrapper.downloadInstall')}
               </LauncherActionButton>
               <LauncherActionButton
                 variant="play"
@@ -899,12 +925,12 @@ const App: React.FC = () => {
                 disabled={!wrapperStatus?.installed || isWrapperWorking}
                 className="h-10 px-4 rounded-xl text-sm"
               >
-                Launch
+                {t('wrapper.launch')}
               </LauncherActionButton>
             </div>
 
             <div className="mt-6">
-              <Suspense fallback={<div>Loading news…</div>}>
+              <Suspense fallback={<div>{t('wrapper.loadingNews')}</div>}>
                 <NewsPreview getNews={async (count) => { const n = await GetNews(count); return n; }} isPaused={false} />
               </Suspense>
             </div>
@@ -997,6 +1023,7 @@ const App: React.FC = () => {
               officialServerBlocked={officialServerBlocked}
               isOfficialProfile={isOfficialProfile}
               isOfficialServerMode={isOfficialServerMode}
+              hasDownloadSources={hasDownloadSources}
             />
           )}
 
@@ -1038,6 +1065,7 @@ const App: React.FC = () => {
               onCancelDownload={handleCancelDownload}
               onLaunchInstance={handleLaunchFromInstances}
               officialServerBlocked={officialServerBlocked}
+              hasDownloadSources={hasDownloadSources}
             />
           )}
 
@@ -1100,7 +1128,7 @@ const App: React.FC = () => {
               message: launchTimeoutError.message,
               technical: launchTimeoutError.logs.length > 0 
                 ? launchTimeoutError.logs.join('\n')
-                : 'No log entries available',
+                : t('error.noLogEntries'),
               timestamp: new Date().toISOString(),
               launcherVersion: launcherVersion
             }}

@@ -17,6 +17,7 @@ using HyPrism.Services.Core.App;
 using HyPrism.Services.Core.Integration;
 using HyPrism.Services.Core.Platform;
 using HyPrism.Services.Game;
+using HyPrism.Services.Game.Butler;
 using HyPrism.Services.Game.Instance;
 using HyPrism.Services.Game.Launch;
 using HyPrism.Services.Game.Mod;
@@ -67,6 +68,7 @@ namespace HyPrism.Services.Core.Ipc;
 /// @type VersionListResponse { versions: VersionInfo[]; hasOfficialAccount: boolean; officialSourceAvailable: boolean; }
 /// @type LauncherUpdateInfo { currentVersion: string; latestVersion: string; changelog?: string; downloadUrl?: string; assetName?: string; releaseUrl?: string; isBeta?: boolean; }
 /// @type LauncherUpdateProgress { stage: string; progress: number; message: string; downloadedBytes?: number; totalBytes?: number; downloadedFilePath?: string; hasDownloadedFile?: boolean; }
+/// @type AuthServerPingResult { isAvailable: boolean; pingMs: number; authDomain: string; error?: string; checkedAt: string; isOfficial: boolean; }
 public class IpcService
 {
     private readonly IServiceProvider _services;
@@ -585,7 +587,7 @@ public class IpcService
             catch (Exception ex)
             {
                 Logger.Error("IPC", $"Failed to get versions with sources: {ex.Message}");
-                Reply("hyprism:game:versionsWithSources:reply", new { versions = new List<object>(), hasOfficialAccount = false, officialSourceAvailable = false });
+                Reply("hyprism:game:versionsWithSources:reply", new { versions = new List<object>(), hasOfficialAccount = false, officialSourceAvailable = false, hasDownloadSources = false, enabledMirrorCount = 0 });
             }
         });
     }
@@ -893,85 +895,38 @@ public class IpcService
             }
         });
 
-        // Import instance from zip (using file dialog service)
+        // Import instance from zip or pwr file (using file dialog service)
         Electron.IpcMain.On("hyprism:instance:import", async (_) =>
         {
             try
             {
                 var fileDialog = _services.GetRequiredService<IFileDialogService>();
-                // Show file picker for zip files
-                var zipPath = await fileDialog.BrowseZipFileAsync();
+                // Show file picker for zip/pwr files
+                var filePath = await fileDialog.BrowseInstanceArchiveAsync();
                 
-                if (string.IsNullOrEmpty(zipPath) || !File.Exists(zipPath))
+                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
                 {
                     Logger.Info("IPC", "Import cancelled or file not found");
                     Reply("hyprism:instance:import:reply", false);
                     return;
                 }
                 
-                Logger.Info("IPC", $"Importing instance from: {zipPath}");
+                Logger.Info("IPC", $"Importing instance from: {filePath}");
                 
-                // Extract to a temp location first to check structure
-                var tempDir = Path.Combine(Path.GetTempPath(), $"hyprism-import-{Guid.NewGuid()}");
-                Directory.CreateDirectory(tempDir);
+                var extension = Path.GetExtension(filePath).ToLowerInvariant();
                 
-                ZipFile.ExtractToDirectory(zipPath, tempDir, true);
-                
-                // Determine target path - check if zip has meta.json metadata
-                var metaPath = Path.Combine(tempDir, "meta.json");
-                var branch = "release";
-                var version = 0; // Latest
-                string? existingId = null;
-
-                if (File.Exists(metaPath))
+                if (extension == ".pwr")
                 {
-                    var meta = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllText(metaPath), JsonOpts);
-                    branch = meta?.TryGetValue("branch", out var b) == true ? b.GetString() ?? "release" : "release";
-                    if (meta?.TryGetValue("version", out var v) == true) version = v.GetInt32();
-                    if (meta?.TryGetValue("id", out var idEl) == true) existingId = idEl.GetString();
+                    // Handle PWR file import using Butler
+                    await ImportPwrFileAsync(filePath, instanceService);
+                }
+                else
+                {
+                    // Handle ZIP file import (existing logic)
+                    await ImportZipFileAsync(filePath, instanceService);
                 }
                 
-                // Check if instance with this ID already exists
-                var existingInstances = instanceService.GetInstalledInstances();
-                var idAlreadyExists = !string.IsNullOrEmpty(existingId) && 
-                    existingInstances.Any(i => i.Id == existingId);
-                
-                // Generate new ID if existing one conflicts or doesn't exist
-                var newInstanceId = idAlreadyExists || string.IsNullOrEmpty(existingId) 
-                    ? Guid.NewGuid().ToString() 
-                    : existingId;
-                
-                var targetPath = instanceService.CreateInstanceDirectory(branch, newInstanceId);
-                
-                // Update meta.json with new ID if it was changed
-                if (File.Exists(metaPath) && (idAlreadyExists || string.IsNullOrEmpty(existingId)))
-                {
-                    var metaContent = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(metaPath), JsonOpts);
-                    if (metaContent != null)
-                    {
-                        metaContent["id"] = newInstanceId;
-                        File.WriteAllText(metaPath, JsonSerializer.Serialize(metaContent, JsonOpts));
-                        Logger.Info("IPC", $"Updated instance ID from '{existingId}' to '{newInstanceId}'");
-                    }
-                }
-                
-                // Move contents from temp to target
-                foreach (var file in Directory.GetFiles(tempDir))
-                {
-                    var destFile = Path.Combine(targetPath, Path.GetFileName(file));
-                    File.Move(file, destFile, true);
-                }
-                foreach (var dir in Directory.GetDirectories(tempDir))
-                {
-                    var destDir = Path.Combine(targetPath, Path.GetFileName(dir));
-                    if (Directory.Exists(destDir)) Directory.Delete(destDir, true);
-                    Directory.Move(dir, destDir);
-                }
-                
-                // Clean up temp directory
-                try { Directory.Delete(tempDir, true); } catch { /* ignore */ }
-                
-                Logger.Success("IPC", $"Imported instance to: {targetPath}");
+                Logger.Success("IPC", $"Instance imported successfully");
                 Reply("hyprism:instance:import:reply", true);
             }
             catch (Exception ex)
@@ -1367,7 +1322,16 @@ public class IpcService
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
                 var index = doc.RootElement.GetProperty("index").GetInt32();
-                Reply("hyprism:profile:switch:reply", new { success = profileMgmt.SwitchProfile(index) });
+                var success = profileMgmt.SwitchProfile(index);
+                
+                // Reload Hytale session for the new profile
+                if (success)
+                {
+                    var authService = _services.GetRequiredService<IHytaleAuthService>();
+                    authService.ReloadSessionForCurrentProfile();
+                }
+                
+                Reply("hyprism:profile:switch:reply", new { success });
             }
             catch (Exception ex)
             {
@@ -1405,6 +1369,13 @@ public class IpcService
                 {
                     profile.IsOfficial = isOfficial;
                     _services.GetRequiredService<ConfigService>().SaveConfig();
+                    
+                    // Save Hytale session to the new profile if it's official
+                    if (isOfficial)
+                    {
+                        var authService = _services.GetRequiredService<IHytaleAuthService>();
+                        authService.SaveSessionToProfile(profile);
+                    }
                 }
                 Reply("hyprism:profile:create:reply", profile != null ? (object)profile : new { error = "Failed to create profile" });
             }
@@ -1637,6 +1608,30 @@ public class IpcService
             }
         });
 
+        // @ipc invoke hyprism:settings:hasDownloadSources -> { hasDownloadSources: boolean; hasOfficialAccount: boolean; enabledMirrorCount: number; }
+        Electron.IpcMain.On("hyprism:settings:hasDownloadSources", async (_) =>
+        {
+            await Task.CompletedTask;
+            try
+            {
+                var versionService = _services.GetRequiredService<IVersionService>();
+                Reply("hyprism:settings:hasDownloadSources:reply", new {
+                    hasDownloadSources = versionService.HasDownloadSources(),
+                    hasOfficialAccount = versionService.HasOfficialAccount,
+                    enabledMirrorCount = versionService.EnabledMirrorCount
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"hasDownloadSources failed: {ex.Message}");
+                Reply("hyprism:settings:hasDownloadSources:reply", new {
+                    hasDownloadSources = false,
+                    hasOfficialAccount = false,
+                    enabledMirrorCount = 0
+                });
+            }
+        });
+
         // @ipc invoke hyprism:settings:getMirrors -> MirrorInfo[]
         Electron.IpcMain.On("hyprism:settings:getMirrors", async (_) =>
         {
@@ -1663,7 +1658,7 @@ public class IpcService
             }
         });
 
-        // @ipc invoke hyprism:settings:addMirror -> { success: boolean; error?: string; mirror?: MirrorInfo; }
+        // @ipc invoke hyprism:settings:addMirror -> { success: boolean; error?: string; mirror?: MirrorInfo; } 0
         Electron.IpcMain.On("hyprism:settings:addMirror", async (args) =>
         {
             try
@@ -1671,7 +1666,12 @@ public class IpcService
                 var appPath = _services.GetRequiredService<AppPathConfiguration>();
                 var json = ArgsToJson(args);
                 var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-                var url = request?.GetValueOrDefault("url").GetString() ?? "";
+                var url = request?.TryGetValue("url", out var urlEl) == true && urlEl.ValueKind == JsonValueKind.String
+                    ? urlEl.GetString() ?? ""
+                    : "";
+                var headersString = request?.TryGetValue("headers", out var headersEl) == true && headersEl.ValueKind == JsonValueKind.String
+                    ? headersEl.GetString() ?? ""
+                    : "";
                 
                 if (string.IsNullOrWhiteSpace(url))
                 {
@@ -1679,14 +1679,25 @@ public class IpcService
                     return;
                 }
                 
+                // Parse custom headers before discovery so they're used during requests
+                var parsedHeaders = !string.IsNullOrWhiteSpace(headersString) 
+                    ? ParseHeadersString(headersString) 
+                    : null;
+                
                 var httpClient = _services.GetRequiredService<HttpClient>();
                 var discoveryService = new MirrorDiscoveryService(httpClient);
-                var result = await discoveryService.DiscoverMirrorAsync(url);
+                var result = await discoveryService.DiscoverMirrorAsync(url, parsedHeaders);
                 
                 if (!result.Success || result.Mirror == null)
                 {
                     Reply("hyprism:settings:addMirror:reply", new { success = false, error = result.Error ?? "Discovery failed" });
                     return;
+                }
+                
+                // Apply custom headers to mirror config for future use
+                if (parsedHeaders != null && parsedHeaders.Count > 0)
+                {
+                    result.Mirror.Headers = parsedHeaders;
                 }
                 
                 // Check if mirror with same ID already exists
@@ -1803,6 +1814,125 @@ public class IpcService
                 Reply("hyprism:settings:toggleMirror:reply", new { success = false, error = ex.Message });
             }
         });
+
+        // @ipc invoke hyprism:network:pingAuthServer -> AuthServerPingResult
+        Electron.IpcMain.On("hyprism:network:pingAuthServer", async (args) =>
+        {
+            try
+            {
+                var json = ArgsToJson(args);
+                var request = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                var authDomainOverride = request?.TryGetValue("authDomain", out var domainEl) == true 
+                    && domainEl.ValueKind == JsonValueKind.String
+                    ? domainEl.GetString() : null;
+                
+                var settingsSvc = _services.GetRequiredService<ISettingsService>();
+                var authDomain = !string.IsNullOrWhiteSpace(authDomainOverride) 
+                    ? authDomainOverride 
+                    : settingsSvc.GetAuthDomain();
+                
+                if (string.IsNullOrWhiteSpace(authDomain))
+                {
+                    authDomain = "sessions.sanasol.ws";
+                }
+                
+                var isOfficial = IsOfficialAuthDomain(authDomain);
+                
+                // Official auth servers are always considered available (no ping needed)
+                if (isOfficial)
+                {
+                    Reply("hyprism:network:pingAuthServer:reply", new
+                    {
+                        isAvailable = true,
+                        pingMs = 0L,
+                        authDomain = authDomain,
+                        checkedAt = DateTime.UtcNow.ToString("o"),
+                        isOfficial = true
+                    });
+                    return;
+                }
+                
+                // Build ping URL for custom auth server
+                var pingUrl = BuildAuthPingUrl(authDomain);
+                var httpClient = _services.GetRequiredService<HttpClient>();
+                
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var response = await httpClient.GetAsync(pingUrl, cts.Token);
+                    sw.Stop();
+                    
+                    // Consider 2xx and some 4xx as "server is reachable"
+                    var isAvailable = response.IsSuccessStatusCode || 
+                        (int)response.StatusCode == 404 || 
+                        (int)response.StatusCode == 401 ||
+                        (int)response.StatusCode == 403;
+                    
+                    Reply("hyprism:network:pingAuthServer:reply", new
+                    {
+                        isAvailable,
+                        pingMs = sw.ElapsedMilliseconds,
+                        authDomain = authDomain,
+                        checkedAt = DateTime.UtcNow.ToString("o"),
+                        isOfficial = false
+                    });
+                }
+                catch (Exception pingEx)
+                {
+                    sw.Stop();
+                    Logger.Warning("IPC", $"Auth server ping failed for {authDomain}: {pingEx.Message}");
+                    Reply("hyprism:network:pingAuthServer:reply", new
+                    {
+                        isAvailable = false,
+                        pingMs = sw.ElapsedMilliseconds,
+                        authDomain = authDomain,
+                        error = pingEx.Message,
+                        checkedAt = DateTime.UtcNow.ToString("o"),
+                        isOfficial = false
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("IPC", $"Auth server ping failed: {ex.Message}");
+                Reply("hyprism:network:pingAuthServer:reply", new
+                {
+                    isAvailable = false,
+                    pingMs = -1L,
+                    authDomain = "",
+                    error = ex.Message,
+                    checkedAt = DateTime.UtcNow.ToString("o"),
+                    isOfficial = false
+                });
+            }
+        });
+    }
+
+    private static bool IsOfficialAuthDomain(string domain)
+    {
+        if (string.IsNullOrWhiteSpace(domain)) return false;
+        var normalized = domain.Trim().ToLowerInvariant();
+        // Remove scheme if present
+        if (normalized.StartsWith("https://")) normalized = normalized[8..];
+        if (normalized.StartsWith("http://")) normalized = normalized[7..];
+        normalized = normalized.TrimEnd('/');
+        
+        return normalized == "sessions.hytale.com" || 
+               normalized.EndsWith(".hytale.com") ||
+               normalized == "hytale.com";
+    }
+
+    private static string BuildAuthPingUrl(string authDomain)
+    {
+        var normalized = authDomain.Trim().TrimEnd('/');
+        if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = $"https://{normalized}";
+        }
+        // Ping the health/status endpoint or just the root
+        return $"{normalized}/health";
     }
 
     private static string GetMirrorHostname(MirrorMeta mirror)
@@ -2093,11 +2223,95 @@ public class IpcService
                     // Delete the actual mod file if it exists
                     if (!string.IsNullOrEmpty(modToRemove.FileName))
                     {
-                        var modFilePath = Path.Combine(instancePath, "UserData", "Mods", modToRemove.FileName);
+                        var modsDir = Path.Combine(instancePath, "UserData", "Mods");
+                        var modFilePath = Path.Combine(modsDir, modToRemove.FileName);
+                        var deleted = false;
+                        
+                        // Try original file path first
                         if (File.Exists(modFilePath))
                         {
-                            try { File.Delete(modFilePath); }
+                            try 
+                            { 
+                                File.Delete(modFilePath); 
+                                deleted = true;
+                                Logger.Info("IPC", $"Deleted mod file: {modToRemove.FileName}");
+                            }
                             catch (Exception ex) { Logger.Warning("IPC", $"Failed to delete mod file: {ex.Message}"); }
+                        }
+                        
+                        // Also try .disabled version (for disabled mods)
+                        if (!deleted)
+                        {
+                            // Try common disabled file patterns
+                            var disabledPaths = new[]
+                            {
+                                Path.Combine(modsDir, modToRemove.FileName + ".disabled"),
+                                // If FileName already contains original extension stored separately
+                            };
+                            
+                            foreach (var disabledPath in disabledPaths)
+                            {
+                                if (File.Exists(disabledPath))
+                                {
+                                    try 
+                                    { 
+                                        File.Delete(disabledPath); 
+                                        deleted = true;
+                                        Logger.Info("IPC", $"Deleted disabled mod file: {Path.GetFileName(disabledPath)}");
+                                        break;
+                                    }
+                                    catch (Exception ex) { Logger.Warning("IPC", $"Failed to delete disabled mod file: {ex.Message}"); }
+                                }
+                            }
+                        }
+                        
+                        // If still not found, search for any file matching the mod's stem
+                        if (!deleted && Directory.Exists(modsDir))
+                        {
+                            var stem = Path.GetFileNameWithoutExtension(modToRemove.FileName);
+                            // Handle double extension like .jar.disabled
+                            if (stem.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) || 
+                                stem.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                            {
+                                stem = Path.GetFileNameWithoutExtension(stem);
+                            }
+                            
+                            try
+                            {
+                                var candidates = Directory.GetFiles(modsDir)
+                                    .Where(f => Path.GetFileName(f).StartsWith(stem, StringComparison.OrdinalIgnoreCase))
+                                    .ToList();
+                                
+                                foreach (var candidate in candidates)
+                                {
+                                    var candidateName = Path.GetFileName(candidate).ToLowerInvariant();
+                                    // Match files like stem.jar, stem.jar.disabled, stem.zip, stem.zip.disabled
+                                    if (candidateName == $"{stem.ToLowerInvariant()}.jar" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.jar.disabled" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.zip" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.zip.disabled" ||
+                                        candidateName == $"{stem.ToLowerInvariant()}.disabled")
+                                    {
+                                        try
+                                        {
+                                            File.Delete(candidate);
+                                            Logger.Info("IPC", $"Deleted mod file by stem match: {Path.GetFileName(candidate)}");
+                                            deleted = true;
+                                            break;
+                                        }
+                                        catch (Exception ex) { Logger.Warning("IPC", $"Failed to delete mod file {Path.GetFileName(candidate)}: {ex.Message}"); }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Warning("IPC", $"Failed to search for mod files: {ex.Message}");
+                            }
+                        }
+                        
+                        if (!deleted)
+                        {
+                            Logger.Warning("IPC", $"Could not find mod file to delete: {modToRemove.FileName}");
                         }
                     }
                     
@@ -2988,6 +3202,176 @@ public class IpcService
         {
             Logger.Warning("IPC", $"Failed to enumerate directory {sourceDir}: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Parses a custom headers string in the format: header=value header="value with spaces"
+    /// Supports quoted values with spaces.
+    /// </summary>
+    private static Dictionary<string, string> ParseHeadersString(string headersString)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(headersString))
+            return headers;
+
+        // Regex to match: name=value or name="quoted value"
+        // Handles: Authorization="Bearer token" User-Agent="My Agent/1.0" X-Custom=simple
+        var regex = new System.Text.RegularExpressions.Regex(
+            @"([A-Za-z0-9_-]+)=(?:""([^""]*)""|(\S+))",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        var matches = regex.Matches(headersString);
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var name = match.Groups[1].Value;
+            // Group 2 is quoted value, Group 3 is unquoted value
+            var value = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value;
+            
+            if (!string.IsNullOrEmpty(name))
+            {
+                headers[name] = value;
+            }
+        }
+
+        return headers;
+    }
+
+    /// <summary>
+    /// Imports a ZIP file as a new instance.
+    /// </summary>
+    private async Task ImportZipFileAsync(string zipPath, IInstanceService instanceService)
+    {
+        // Extract to a temp location first to check structure
+        var tempDir = Path.Combine(Path.GetTempPath(), $"hyprism-import-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        
+        await Task.Run(() => ZipFile.ExtractToDirectory(zipPath, tempDir, true));
+        
+        // Determine target path - check if zip has meta.json metadata
+        var metaPath = Path.Combine(tempDir, "meta.json");
+        var branch = "release";
+        var version = 0;
+        string? existingId = null;
+
+        if (File.Exists(metaPath))
+        {
+            var meta = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllText(metaPath), JsonOpts);
+            branch = meta?.TryGetValue("branch", out var b) == true ? b.GetString() ?? "release" : "release";
+            if (meta?.TryGetValue("version", out var v) == true) version = v.GetInt32();
+            if (meta?.TryGetValue("id", out var idEl) == true) existingId = idEl.GetString();
+        }
+        
+        // Check if instance with this ID already exists
+        var existingInstances = instanceService.GetInstalledInstances();
+        var idAlreadyExists = !string.IsNullOrEmpty(existingId) && 
+            existingInstances.Any(i => i.Id == existingId);
+        
+        // Generate new ID if existing one conflicts or doesn't exist
+        var newInstanceId = idAlreadyExists || string.IsNullOrEmpty(existingId) 
+            ? Guid.NewGuid().ToString() 
+            : existingId;
+        
+        var targetPath = instanceService.CreateInstanceDirectory(branch, newInstanceId);
+        
+        // Update meta.json with new ID if it was changed
+        if (File.Exists(metaPath) && (idAlreadyExists || string.IsNullOrEmpty(existingId)))
+        {
+            var metaContent = JsonSerializer.Deserialize<Dictionary<string, object>>(File.ReadAllText(metaPath), JsonOpts);
+            if (metaContent != null)
+            {
+                metaContent["id"] = newInstanceId;
+                File.WriteAllText(metaPath, JsonSerializer.Serialize(metaContent, JsonOpts));
+                Logger.Info("IPC", $"Updated instance ID from '{existingId}' to '{newInstanceId}'");
+            }
+        }
+        
+        // Move contents from temp to target
+        foreach (var file in Directory.GetFiles(tempDir))
+        {
+            var destFile = Path.Combine(targetPath, Path.GetFileName(file));
+            File.Move(file, destFile, true);
+        }
+        foreach (var dir in Directory.GetDirectories(tempDir))
+        {
+            var destDir = Path.Combine(targetPath, Path.GetFileName(dir));
+            if (Directory.Exists(destDir)) Directory.Delete(destDir, true);
+            Directory.Move(dir, destDir);
+        }
+        
+        // Clean up temp directory
+        try { Directory.Delete(tempDir, true); } catch { /* ignore */ }
+        
+        Logger.Success("IPC", $"Imported ZIP instance to: {targetPath}");
+    }
+
+    /// <summary>
+    /// Imports a PWR file as a new instance using Butler.
+    /// </summary>
+    private async Task ImportPwrFileAsync(string pwrPath, IInstanceService instanceService)
+    {
+        var butlerService = _services.GetRequiredService<IButlerService>();
+        
+        // Try to parse version info from the filename
+        // Common patterns: v{version}-{os}-{arch}.pwr, 0_to_{version}.pwr, {version}.pwr
+        var fileName = Path.GetFileNameWithoutExtension(pwrPath);
+        var version = TryParseVersionFromPwrFilename(fileName);
+        var branch = "release"; // Default to release branch
+        
+        // Generate a new instance ID
+        var newInstanceId = Guid.NewGuid().ToString();
+        var targetPath = instanceService.CreateInstanceDirectory(branch, newInstanceId);
+        
+        Logger.Info("IPC", $"Importing PWR to new instance: {targetPath} (detected version: {version})");
+        
+        // Apply the PWR file using Butler
+        await butlerService.ApplyPwrAsync(pwrPath, targetPath, (progress, message) =>
+        {
+            Logger.Debug("IPC", $"Import progress: {progress}% - {message}");
+        });
+        
+        // Create meta.json for the new instance
+        var meta = new InstanceMeta
+        {
+            Id = newInstanceId,
+            Name = $"Imported {(version > 0 ? $"v{version}" : "Game")}",
+            Branch = branch,
+            Version = version,
+            InstalledVersion = version,
+            CreatedAt = DateTime.UtcNow,
+            IsLatest = false
+        };
+        
+        instanceService.SaveInstanceMeta(targetPath, meta);
+        
+        Logger.Success("IPC", $"Imported PWR instance to: {targetPath}");
+    }
+
+    /// <summary>
+    /// Tries to parse version number from PWR filename.
+    /// Supports patterns: v{version}-{os}-{arch}, 0_to_{version}, {version}, etc.
+    /// </summary>
+    private static int TryParseVersionFromPwrFilename(string filename)
+    {
+        // Pattern: v{version}-{os}-{arch} (e.g., v123-linux-x64)
+        var versionMatch = System.Text.RegularExpressions.Regex.Match(filename, @"^v(\d+)");
+        if (versionMatch.Success && int.TryParse(versionMatch.Groups[1].Value, out var v1))
+            return v1;
+        
+        // Pattern: 0_to_{version} or {from}_to_{version} (e.g., 0_to_456)
+        var patchMatch = System.Text.RegularExpressions.Regex.Match(filename, @"_to_(\d+)");
+        if (patchMatch.Success && int.TryParse(patchMatch.Groups[1].Value, out var v2))
+            return v2;
+        
+        // Pattern: just a number (e.g., 123)
+        if (int.TryParse(filename, out var v3))
+            return v3;
+        
+        // Pattern: number at start (e.g., 123-something)
+        var startMatch = System.Text.RegularExpressions.Regex.Match(filename, @"^(\d+)");
+        if (startMatch.Success && int.TryParse(startMatch.Groups[1].Value, out var v4))
+            return v4;
+        
+        return 0; // Unknown version
     }
 
     // #endregion

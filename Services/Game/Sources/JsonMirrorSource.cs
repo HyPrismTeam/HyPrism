@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
+using HyPrism.Services.Core.Integration;
 
 namespace HyPrism.Services.Game.Sources;
 
@@ -38,6 +39,66 @@ public class JsonMirrorSource : IVersionSource
     {
         _meta = meta ?? throw new ArgumentNullException(nameof(meta));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
+
+    /// <summary>
+    /// Creates an HttpRequestMessage with custom headers from the mirror config.
+    /// Expands {hytaleAgent} variable to the official Hytale launcher User-Agent.
+    /// </summary>
+    private async Task<HttpRequestMessage> CreateRequestWithHeadersAsync(
+        HttpMethod method, string url, CancellationToken ct = default)
+    {
+        var request = new HttpRequestMessage(method, url);
+        await ApplyCustomHeadersAsync(request, ct);
+        return request;
+    }
+
+    /// <summary>
+    /// Applies custom headers from the mirror config to an HttpRequestMessage.
+    /// Expands {hytaleAgent} variable to the official Hytale launcher User-Agent.
+    /// </summary>
+    private async Task ApplyCustomHeadersAsync(HttpRequestMessage request, CancellationToken ct = default)
+    {
+        if (_meta.Headers == null || _meta.Headers.Count == 0)
+            return;
+
+        string? hytaleAgent = null;
+
+        foreach (var (headerName, headerValue) in _meta.Headers)
+        {
+            var expandedValue = headerValue;
+
+            // Expand {hytaleAgent} variable
+            if (expandedValue.Contains("{hytaleAgent}", StringComparison.OrdinalIgnoreCase))
+            {
+                if (hytaleAgent == null)
+                {
+                    var launcherVersion = await HytaleLauncherHeaderHelper.GetLauncherVersionAsync(_httpClient, ct);
+                    hytaleAgent = $"hytale-launcher/{launcherVersion}";
+                }
+                expandedValue = expandedValue.Replace("{hytaleAgent}", hytaleAgent, StringComparison.OrdinalIgnoreCase);
+            }
+
+            request.Headers.TryAddWithoutValidation(headerName, expandedValue);
+        }
+    }
+
+    /// <summary>
+    /// Sends a GET request with custom headers applied.
+    /// </summary>
+    private async Task<HttpResponseMessage> GetWithHeadersAsync(string url, CancellationToken ct = default)
+    {
+        using var request = await CreateRequestWithHeadersAsync(HttpMethod.Get, url, ct);
+        return await _httpClient.SendAsync(request, ct);
+    }
+
+    /// <summary>
+    /// Sends a GET request with custom headers and ResponseHeadersRead option.
+    /// </summary>
+    private async Task<HttpResponseMessage> GetWithHeadersStreamAsync(string url, CancellationToken ct = default)
+    {
+        using var request = await CreateRequestWithHeadersAsync(HttpMethod.Get, url, ct);
+        return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
     }
 
     #region IVersionSource Implementation
@@ -226,7 +287,7 @@ public class JsonMirrorSource : IVersionSource
                 using var pingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 pingCts.CancelAfter(TimeSpan.FromSeconds(_meta.SpeedTest.PingTimeoutSeconds));
 
-                using var pingReq = new HttpRequestMessage(HttpMethod.Head, pingUrl);
+                using var pingReq = await CreateRequestWithHeadersAsync(HttpMethod.Head, pingUrl, pingCts.Token);
                 using var pingResp = await _httpClient.SendAsync(pingReq, pingCts.Token);
 
                 result.PingMs = (long)(DateTime.UtcNow - pingStart).TotalMilliseconds;
@@ -245,7 +306,7 @@ public class JsonMirrorSource : IVersionSource
                     using var getCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     getCts.CancelAfter(TimeSpan.FromSeconds(_meta.SpeedTest.PingTimeoutSeconds));
                     
-                    using var getReq = new HttpRequestMessage(HttpMethod.Get, pingUrl);
+                    using var getReq = await CreateRequestWithHeadersAsync(HttpMethod.Get, pingUrl, getCts.Token);
                     using var getResp = await _httpClient.SendAsync(getReq, HttpCompletionOption.ResponseHeadersRead, getCts.Token);
                     
                     result.PingMs = (long)(DateTime.UtcNow - getStart).TotalMilliseconds;
@@ -277,7 +338,7 @@ public class JsonMirrorSource : IVersionSource
                     using var speedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                     speedCts.CancelAfter(TimeSpan.FromSeconds(30));
 
-                    using var req = new HttpRequestMessage(HttpMethod.Get, testUrl);
+                    using var req = await CreateRequestWithHeadersAsync(HttpMethod.Get, testUrl, speedCts.Token);
                     req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, testSize - 1);
 
                     using var resp = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, speedCts.Token);
@@ -391,6 +452,9 @@ public class JsonMirrorSource : IVersionSource
                 case "html-autoindex":
                     versions = await DiscoverVersionsHtmlAsync(os, arch, branch, ct);
                     break;
+                case "manifest":
+                    versions = await DiscoverVersionsManifestAsync(os, arch, branch, ct);
+                    break;
                 case "static-list":
                     versions = discovery.StaticVersions?.OrderByDescending(v => v).ToList() ?? new List<int>();
                     break;
@@ -436,7 +500,7 @@ public class JsonMirrorSource : IVersionSource
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-        var response = await _httpClient.GetAsync(url, cts.Token);
+        var response = await GetWithHeadersAsync(url, cts.Token);
         if (!response.IsSuccessStatusCode)
         {
             Logger.Warning($"Mirror:{SourceId}", $"API returned {response.StatusCode}");
@@ -465,7 +529,7 @@ public class JsonMirrorSource : IVersionSource
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-        var response = await _httpClient.GetAsync(url, cts.Token);
+        var response = await GetWithHeadersAsync(url, cts.Token);
         if (!response.IsSuccessStatusCode)
         {
             Logger.Warning($"Mirror:{SourceId}", $"HTML index returned {response.StatusCode}");
@@ -474,6 +538,95 @@ public class JsonMirrorSource : IVersionSource
 
         var html = await response.Content.ReadAsStringAsync(cts.Token);
         return ParseVersionsFromHtml(html, discovery.HtmlPattern, discovery.MinFileSizeBytes);
+    }
+
+    /// <summary>
+    /// Discovers versions from a manifest.json file.
+    /// Expects: { "files": { "{os}/{arch}/{branch}/{from}_to_{to}.pwr": { "size": N }, ... } }
+    /// </summary>
+    private async Task<List<int>> DiscoverVersionsManifestAsync(
+        string os, string arch, string branch, CancellationToken ct)
+    {
+        var discovery = _meta.Pattern!.VersionDiscovery;
+        if (string.IsNullOrEmpty(discovery.Url)) return new List<int>();
+
+        var url = discovery.Url; // Manifest URL is absolute, no placeholders
+        Logger.Info($"Mirror:{SourceId}", $"Fetching manifest from {url}...");
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(15));
+
+        var response = await GetWithHeadersAsync(url, cts.Token);
+        if (!response.IsSuccessStatusCode)
+        {
+            Logger.Warning($"Mirror:{SourceId}", $"Manifest returned {response.StatusCode}");
+            return new List<int>();
+        }
+
+        var json = await response.Content.ReadAsStringAsync(cts.Token);
+        return ParseVersionsFromManifest(json, os, arch, branch);
+    }
+
+    /// <summary>
+    /// Parses version numbers from manifest.json.
+    /// File paths: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+    /// Returns list of available 'to' versions (targets) for the given os/arch/branch.
+    /// </summary>
+    private List<int> ParseVersionsFromManifest(string json, string os, string arch, string branch)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("files", out var filesNode) ||
+                filesNode.ValueKind != JsonValueKind.Object)
+            {
+                Logger.Warning($"Mirror:{SourceId}", "Manifest missing 'files' object");
+                return new List<int>();
+            }
+
+            // Apply OS/arch mappings to match manifest paths
+            var mappedOs = ApplyMapping(_meta.Pattern?.OsMapping, os);
+            var mappedArch = ApplyMapping(_meta.Pattern?.ArchMapping, arch);
+
+            // Pattern: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+            var prefix = $"{mappedOs}/{mappedArch}/{branch}/";
+            var patchPattern = new System.Text.RegularExpressions.Regex(
+                @"(\d+)_to_(\d+)\.pwr$", 
+                System.Text.RegularExpressions.RegexOptions.Compiled);
+
+            var versions = new HashSet<int>();
+
+            foreach (var file in filesNode.EnumerateObject())
+            {
+                if (!file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var match = patchPattern.Match(file.Name);
+                if (match.Success)
+                {
+                    // Add target version (to)
+                    if (int.TryParse(match.Groups[2].Value, out var toVersion))
+                    {
+                        versions.Add(toVersion);
+                    }
+                }
+            }
+
+            Logger.Debug($"Mirror:{SourceId}", $"Manifest: found {versions.Count} versions for {mappedOs}/{mappedArch}/{branch}");
+            return versions.OrderByDescending(v => v).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Mirror:{SourceId}", $"Failed to parse manifest: {ex.Message}");
+            return new List<int>();
+        }
+    }
+
+    private static string ApplyMapping(Dictionary<string, string>? mapping, string value)
+    {
+        if (mapping != null && mapping.TryGetValue(value, out var mapped))
+            return mapped;
+        return value;
     }
 
     /// <summary>
@@ -804,7 +957,7 @@ public class JsonMirrorSource : IVersionSource
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(15));
 
-            var response = await _httpClient.GetAsync(apiUrl, cts.Token);
+            var response = await GetWithHeadersAsync(apiUrl, cts.Token);
             if (!response.IsSuccessStatusCode)
             {
                 Logger.Warning($"Mirror:{SourceId}", $"API returned {response.StatusCode}");

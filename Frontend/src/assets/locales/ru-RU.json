@@ -36,7 +36,8 @@
     "Latest": "Последняя",
     "refresh": "Обновить",
     "unknown": "Неизвестно",
-    "clear": "Очистить"
+    "clear": "Очистить",
+    "selectVersion": "Выберите версию"
   },
   "app": {
     "title": "HyPrism",
@@ -185,7 +186,20 @@
       "mirrorsHint": "Альтернативные источники от сообщества",
       "unavailable": "Недоступно",
       "testing": "Проверка...",
-      "testSpeed": "Тест скорости"
+      "testSpeed": "Тест скорости",
+      "communityMirrors": "Комьюнити зеркала",
+      "mirrorsDescription": "Альтернативные источники загрузки файлов игры",
+      "addMirror": "Добавить зеркало",
+      "refreshMirrors": "Обновить зеркала",
+      "addMirrorBtn": "Добавить",
+      "headersPlaceholder": "Заголовки (опционально): Authorization=\"Bearer xxx\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "Формат: заголовок=значение или заголовок=\"значение с пробелами\". Используйте {hytaleAgent} для официального User-Agent.",
+      "mirrorUrlHint": "Введите базовый URL зеркала Hytale. Лаунчер попытается автоматически определить конфигурацию.",
+      "noMirrors": "Зеркала не настроены",
+      "noMirrorsHint": "Добавьте зеркало для загрузки файлов игры без официального аккаунта",
+      "disable": "Отключить",
+      "enable": "Включить",
+      "deleteMirror": "Удалить зеркало"
     },
     "javaSettings": {
       "javaRuntime": "Java runtime",
@@ -241,7 +255,16 @@
       "authCustomHint": "Введите адрес своего сервера авторизации",
       "currentServer": "Текущий сервер",
       "officialProfileNote": "Официальные аккаунты могут использовать только официальную авторизацию Hytale.",
-      "unofficialProfileNote": "Неофициальные аккаунты не могут использовать официальную авторизацию Hytale."
+      "unofficialProfileNote": "Неофициальные аккаунты не могут использовать официальную авторизацию Hytale.",
+      "authServerStatus": "Статус сервера авторизации",
+      "authServerStatusHint": "Проверить доступность сервера авторизации.",
+      "authServerOnline": "Онлайн",
+      "authServerOffline": "Недоступен",
+      "authServerChecking": "Проверка...",
+      "authServerPing": "{{ping}}мс",
+      "authServerCheckNow": "Проверить",
+      "authServerOfflineWarning": "Сервер авторизации недоступен. Онлайн-режим временно отключён.",
+      "authServerOfficialNote": "Официальные серверы всегда считаются доступными."
     },
     "graphicsSettings": {
       "title": "Настройки графики",
@@ -309,7 +332,7 @@
       "launchBranch": "Ветка запуска",
       "userData": "Пользовательские данные",
       "empty": "Похоже, вы ещё ничего не скачали",
-      "dropZipImport": "Перетащите ZIP для импорта экземпляра",
+      "dropZipImport": "Перетащите ZIP или PWR для импорта",
       "noInstances": "Нет установленных экземпляров",
       "installHytale": "Установите Hytale для создания экземпляра",
       "notPlayed": "Не играли",
@@ -330,8 +353,16 @@
       "version": "Версия {0}",
       "description": "Современный лаунчер для Hytale",
       "unofficial": "Неофициальный лаунчер Hytale",
-      "maintainerRole": "Разработчик и Сопровождающий",
+      "coreTeam": "Команда разработки",
+      "coreTeamDescription": "Люди, стоящие за разработкой HyPrism",
+      "contributors": "Контрибуторы",
+      "creatorRole": "Создатель проекта",
       "authRole": "Создатель сервера авторизации",
+      "codevRole": "Соведущий по лаунчеру",
+      "cicdRole": "CI/CD Деплойер",
+      "testerRole": "Главный тестировщик",
+      "installerRole": "Создатель установщика",
+      "maintainerRole": "Разработчик и Сопровождающий",
       "contributorRole": "Участник",
       "others": "И другие",
       "contributorsDescription": "Потрясающие люди, которые помогли в создании этого лаунчера",
@@ -610,7 +641,9 @@
     "copyError": "Скопировать ошибку",
     "reportIssue": "Сообщить о проблеме",
     "ok": "ОК",
-    "dismiss": "Закрыть"
+    "dismiss": "Закрыть",
+    "somethingWrong": "Что-то пошло не так",
+    "noLogEntries": "Нет записей в логах"
   },
   "update": {
     "downloading": "Загрузка...",
@@ -622,7 +655,9 @@
   "updateOverlay": {
     "title": "ОБНОВЛЕНИЕ ЛАУНЧЕРА",
     "message": "Подождите, мы загружаем и устанавливаем последнюю версию HyPrism.",
-    "autoRestart": "Лаунчер перезапустится автоматически после завершения обновления."
+    "autoRestart": "Лаунчер перезапустится автоматически после завершения обновления.",
+    "failed": "Ошибка обновления",
+    "installing": "Установка"
   },
   "modManager": {
     "title": "Менеджер модов",
@@ -713,6 +748,7 @@
     "installedCount": "Установлено {{count}} мод(ов)",
     "installFailed": "Не удалось установить моды. Попробуйте ещё раз.",
     "importFailed": "Не удалось импортировать моды",
+    "openCurseforge": "Открыть страницу CurseForge",
     "releaseType": {
       "release": "Релиз",
       "beta": "Бета",
@@ -829,6 +865,14 @@
       "error": "Произошла ошибка при авторизации.",
       "noHytaleProfile": "У вашего аккаунта ещё нет доступа к Hytale. Вы можете приобрести игру на официальном сайте.",
       "createFailed": "Не удалось создать профиль из аккаунта Hytale."
+    },
+    "warning": {
+      "title": "Нет источников загрузки",
+      "description": "Без аккаунта Hytale вы не сможете загружать файлы игры с официальных серверов.",
+      "noSources": "Веб-ресурсы для загрузки недоступны",
+      "noSourcesHint": "Чтобы загрузить игру, вам нужно будет добавить зеркало в Настройках → Загрузки, или позже войти в аккаунт Hytale.",
+      "continue": "Продолжить",
+      "back": "Вернуться к авторизации"
     }
   },
   "languageSelector": {
@@ -855,5 +899,28 @@
     "unmute": "Вкл. звук",
     "mute": "Выкл. звук",
     "on": "Музыка"
+  },
+  "wrapper": {
+    "description": "Режим обёртки — скачайте и запустите полную версию HyPrism",
+    "installed": "Установлено:",
+    "none": "нет",
+    "latest": "Последняя:",
+    "updateAvailable": "Доступно обновление",
+    "upToDate": "Актуальная версия",
+    "checkForUpdates": "Проверить обновления",
+    "downloadInstall": "Скачать и установить",
+    "launch": "Запустить",
+    "installFailed": "Ошибка установки — проверьте логи",
+    "launchFailed": "Не удалось запустить HyPrism",
+    "loadingNews": "Загрузка новостей…"
+  },
+  "accessibility": {
+    "previous": "Предыдущий",
+    "next": "Следующий",
+    "segmentedControl": "Сегментный контрол"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

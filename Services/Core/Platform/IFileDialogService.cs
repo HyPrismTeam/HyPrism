@@ -35,8 +35,15 @@ public interface IFileDialogService
     Task<string?> SaveFileAsync(string defaultFileName, string filter, string? initialPath = null);
     
     /// <summary>
+    /// Opens a file picker dialog configured for selecting instance archive files (ZIP or PWR).
+    /// </summary>
+    /// <returns>The selected file path, or <c>null</c> if cancelled.</returns>
+    Task<string?> BrowseInstanceArchiveAsync();
+    
+    /// <summary>
     /// Opens a file picker dialog configured for selecting ZIP files.
     /// </summary>
     /// <returns>The selected file path, or <c>null</c> if cancelled.</returns>
+    [Obsolete("Use BrowseInstanceArchiveAsync instead")]
     Task<string?> BrowseZipFileAsync();
 }

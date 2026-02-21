@@ -6,6 +6,8 @@
 - **Multi-instance support** — Run different game versions, mod configurations, or test setups simultaneously
 - **Instance metadata** — Track installation state, version, patch status, and mod list per instance
 - **Instance deletion** — Clean removal of game files with confirmation
+- **Instance import/export** — Import instances from ZIP archives or PWR patch files, export instances for backup/sharing
+- **PWR file support** — Import full game builds directly from `.pwr` files (official Hytale patch format)
 - **Dashboard quick switcher** — Icon-only current instance selector (left of Play) opens a dropdown with instance icons + names
 
 ## Authentication

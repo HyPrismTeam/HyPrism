@@ -216,4 +216,22 @@ public interface IVersionService
     /// Call this after adding, deleting, or modifying mirror configurations.
     /// </summary>
     void ReloadMirrorSources();
+    
+    /// <summary>
+    /// Checks whether there are any download sources available
+    /// (either official Hytale account or enabled mirrors).
+    /// </summary>
+    /// <returns>True if at least one download source is available.</returns>
+    bool HasDownloadSources();
+    
+    /// <summary>
+    /// Gets the number of currently enabled mirror sources.
+    /// </summary>
+    int EnabledMirrorCount { get; }
+    
+    /// <summary>
+    /// Clears all cached version and patch data.
+    /// Call this when download sources become unavailable.
+    /// </summary>
+    void ClearVersionCache();
 }

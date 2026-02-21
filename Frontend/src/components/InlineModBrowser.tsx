@@ -15,6 +15,7 @@ import {
   IconButton,
   LinkButton,
   DropdownTriggerButton,
+  DropdownMenu,
   MenuItemButton,
   ImageLightbox,
 } from '@/components/ui/Controls';
@@ -175,23 +176,21 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
               open={isCategoryDropdownOpen}
               onClick={() => { setIsCategoryDropdownOpen(!isCategoryDropdownOpen); setIsSortDropdownOpen(false); }}
             />
-            {isCategoryDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto">
-                {categories.map(cat => (
-                  <MenuItemButton
-                    key={cat.id}
-                    onClick={() => { setSelectedCategory(cat.id); setIsCategoryDropdownOpen(false); }}
-                    className={selectedCategory === cat.id ? '!text-white bg-white/[0.08]' : ''}
-                  >
-                    {(() => {
-                      const key = `modManager.category.${cat.name.replace(/[\s\\/]+/g, '_').toLowerCase()}`;
-                      const translated = t(key);
-                      return translated !== key ? translated : cat.name;
-                    })()}
-                  </MenuItemButton>
-                ))}
-              </div>
-            )}
+            <DropdownMenu isOpen={isCategoryDropdownOpen} maxHeight="256px">
+              {categories.map(cat => (
+                <MenuItemButton
+                  key={cat.id}
+                  onClick={() => { setSelectedCategory(cat.id); setIsCategoryDropdownOpen(false); }}
+                  className={selectedCategory === cat.id ? '!text-white bg-white/[0.08]' : ''}
+                >
+                  {(() => {
+                    const key = `modManager.category.${cat.name.replace(/[\s\\/]+/g, '_').toLowerCase()}`;
+                    const translated = t(key);
+                    return translated !== key ? translated : cat.name;
+                  })()}
+                </MenuItemButton>
+              ))}
+            </DropdownMenu>
           </div>
 
           {/* Sort dropdown */}
@@ -201,19 +200,17 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
               open={isSortDropdownOpen}
               onClick={() => { setIsSortDropdownOpen(!isSortDropdownOpen); setIsCategoryDropdownOpen(false); }}
             />
-            {isSortDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
-                {sortOptions.map(opt => (
-                  <MenuItemButton
-                    key={opt.id}
-                    onClick={() => { setSelectedSortField(opt.id); setIsSortDropdownOpen(false); }}
-                    className={selectedSortField === opt.id ? '!text-white bg-white/[0.08]' : ''}
-                  >
-                    {opt.name}
-                  </MenuItemButton>
-                ))}
-              </div>
-            )}
+            <DropdownMenu isOpen={isSortDropdownOpen}>
+              {sortOptions.map(opt => (
+                <MenuItemButton
+                  key={opt.id}
+                  onClick={() => { setSelectedSortField(opt.id); setIsSortDropdownOpen(false); }}
+                  className={selectedSortField === opt.id ? '!text-white bg-white/[0.08]' : ''}
+                >
+                  {opt.name}
+                </MenuItemButton>
+              ))}
+            </DropdownMenu>
           </div>
         </div>
 
@@ -387,7 +384,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
                         <LinkButton
                           onClick={(e) => handleOpenModPage(e, mod)}
                           className="!text-white font-medium truncate text-left underline-offset-2"
-                          title="Open CurseForge page"
+                          title={t('modManager.openCurseforge')}
                         >
                           {mod.name}
                         </LinkButton>
@@ -451,7 +448,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
                 <LinkButton
                   onClick={(e) => handleOpenModPage(e, selectedMod)}
                   className="!text-white font-bold text-lg truncate flex-1 text-left underline-offset-2"
-                  title="Open CurseForge page"
+                  title={t('modManager.openCurseforge')}
                 >
                   {selectedMod.name}
                 </LinkButton>
@@ -474,6 +471,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
                       alt={selectedMod.screenshots[activeScreenshot]?.title}
                       className="w-full h-full object-cover cursor-pointer"
                       onClick={() => setLightboxIndex(activeScreenshot)}
+                      draggable={false}
                     />
                   </div>
                   {selectedMod.screenshots.length > 1 && (
@@ -486,7 +484,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
                             i === activeScreenshot ? 'border-white/40' : 'border-transparent opacity-60 hover:opacity-100'
                           }`}
                         >
-                          <img src={ss.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          <img src={ss.thumbnailUrl} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />
                         </button>
                       ))}
                     </div>

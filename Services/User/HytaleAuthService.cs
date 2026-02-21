@@ -66,6 +66,9 @@ public class HytaleAuthService : IHytaleAuthService
     /// <returns>The authenticated session, or null on failure/cancellation.</returns>
     public async Task<HytaleAuthSession?> LoginAsync(CancellationToken cancellationToken = default)
     {
+        // Stop any previous listener to avoid port conflicts
+        StopListener();
+        
         try
         {
             // Step 1: Generate PKCE
@@ -80,7 +83,7 @@ public class HytaleAuthService : IHytaleAuthService
             listener.Start();
             _callbackListener = listener;
             
-            _authCodeTcs = new TaskCompletionSource<string>();
+            _authCodeTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             // Step 3: Build auth URL
             var state = GenerateState(port);
@@ -153,7 +156,8 @@ public class HytaleAuthService : IHytaleAuthService
             };
             
             CurrentSession = session;
-            SaveSession();
+            // Note: We don't save session here - caller should save to the appropriate profile
+            // using SaveSessionToProfile() after profile creation, or SaveCurrentSession() for existing profiles
             
             Logger.Success("HytaleAuth", $"Logged in as {session.Username} ({session.UUID})");
             return session;
@@ -162,6 +166,11 @@ public class HytaleAuthService : IHytaleAuthService
         {
             Logger.Error("HytaleAuth", $"Login failed: {ex.Message}");
             return null;
+        }
+        finally
+        {
+            // Ensure listener is always stopped
+            StopListener();
         }
     }
 
@@ -296,12 +305,12 @@ public class HytaleAuthService : IHytaleAuthService
                 string responseHtml;
                 if (!string.IsNullOrEmpty(code))
                 {
-                    responseHtml = "<html><body><h1>Authorization successful!</h1><p>You can close this window and return to HyPrism.</p></body></html>";
+                    responseHtml = @"<html><head><script>window.close();</script></head><body><h1>Authorization successful!</h1><p>You can close this window and return to HyPrism.</p></body></html>";
                     _authCodeTcs?.TrySetResult(code);
                 }
                 else if (!string.IsNullOrEmpty(error))
                 {
-                    responseHtml = $"<html><body><h1>Authorization failed</h1><p>{error}</p></body></html>";
+                    responseHtml = $@"<html><head><script>setTimeout(function(){{window.close();}},3000);</script></head><body><h1>Authorization failed</h1><p>{error}</p><p>This window will close automatically...</p></body></html>";
                     _authCodeTcs?.TrySetException(new Exception($"OAuth error: {error}"));
                 }
                 else
@@ -796,6 +805,47 @@ public class HytaleAuthService : IHytaleAuthService
         {
             Logger.Warning("HytaleAuth", $"Failed to load session: {ex.Message}");
             CurrentSession = null;
+        }
+    }
+
+    /// <summary>
+    /// Saves current session to the active profile's folder.
+    /// Use this after LoginAsync() when re-authenticating within an existing official profile.
+    /// </summary>
+    public void SaveCurrentSession()
+    {
+        SaveSession();
+    }
+
+    /// <summary>
+    /// Saves the current session to a specific profile's folder.
+    /// Used when creating a new official profile to enable Hytale source access.
+    /// </summary>
+    /// <param name="profile">The profile to save the session to.</param>
+    /// <returns>True if the session was saved successfully.</returns>
+    public bool SaveSessionToProfile(Profile profile)
+    {
+        if (CurrentSession == null)
+        {
+            Logger.Warning("HytaleAuth", "Cannot save session: no current session");
+            return false;
+        }
+
+        try
+        {
+            var profileDir = UtilityService.GetProfileFolderPath(_appDir, profile, createIfMissing: true);
+            var sessionPath = Path.Combine(profileDir, "hytale_session.json");
+
+            var json = JsonSerializer.Serialize(CurrentSession, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(sessionPath, json);
+            
+            Logger.Success("HytaleAuth", $"Saved Hytale session to profile '{profile.Name}'");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("HytaleAuth", $"Failed to save session to profile: {ex.Message}");
+            return false;
         }
     }
 

@@ -142,6 +142,33 @@
       "dualAuth": "DualAuth（実験的）",
       "dualAuthHint": "静的なJARパッチングの代わりにランタイムJavaエージェントでサーバー認証を行います。クラッシュや接続の問題が発生する可能性があります。"
     },
+    "downloads": {
+      "title": "ダウンロード",
+      "howDownloadsWork": "ダウンロードの仕組み",
+      "howDownloadsWorkDescription": "HyPrismはゲームファイルをダウンロードするために最速のソースを自動的に選択します。「速度テスト」を押して接続を確認してください。",
+      "launchAfterDownload": "ダウンロード後にゲームを起動",
+      "launchAfterDownloadHint": "有効にすると、選択したインスタンスのインストール後にランチャーが自動的にゲームを起動します。",
+      "officialSource": "公式ソース",
+      "officialSourceHint": "公式Hytaleサーバーからダウンロード",
+      "mirrors": "コミュニティミラー",
+      "mirrorsHint": "コミュニティからの代替ソース",
+      "unavailable": "利用不可",
+      "testing": "テスト中...",
+      "testSpeed": "速度テスト",
+      "communityMirrors": "コミュニティミラー",
+      "mirrorsDescription": "ゲームファイルの代替ダウンロードソース",
+      "addMirror": "ミラーを追加",
+      "refreshMirrors": "ミラーを更新",
+      "addMirrorBtn": "ミラーを追加",
+      "headersPlaceholder": "カスタムヘッダー（オプション）：Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "形式：header=value または header=\"スペースを含む値\"。公式User-Agentには {hytaleAgent} を使用してください。",
+      "mirrorUrlHint": "HytaleミラーのベースURLを入力してください。ランチャーが設定を自動検出します。",
+      "noMirrors": "ミラーが設定されていません",
+      "noMirrorsHint": "公式アカウントなしでゲームファイルをダウンロードするにはミラーを追加してください",
+      "disable": "無効",
+      "enable": "有効",
+      "deleteMirror": "ミラーを削除"
+    },
     "javaSettings": {
       "javaRuntime": "Java ランタイム",
       "javaRuntimeHint": "シングルプレイヤーサーバーの起動に使用するJava実行ファイルを選択",
@@ -250,7 +277,7 @@
       "launchBranch": "起動ブランチ",
       "userData": "ユーザーデータ",
       "empty": "まだ何もダウンロードしていないようです。",
-      "dropZipImport": "ZIPをドロップしてインスタンスをインポート",
+      "dropZipImport": "ZIPまたはPWRをドロップしてインスタンスをインポート",
       "noInstances": "インスタンスがインストールされていません",
       "installHytale": "Hytaleをインストールしてインスタンスを作成",
       "notPlayed": "未プレイ",
@@ -271,8 +298,16 @@
       "version": "バージョン {0}",
       "description": "Hytaleのためのモダンなランチャー",
       "unofficial": "非公式Hytaleランチャー",
+      "coreTeam": "コアチーム",
+      "coreTeamDescription": "HyPrism開発の中心メンバー",
+      "contributors": "コントリビューター",
+      "creatorRole": "プロジェクト作成者",
+      "authRole": "認証サーバー作成者",
+      "codevRole": "ランチャー共同リーダー",
+      "cicdRole": "CI/CDデプロイヤー",
+      "testerRole": "リードテスター",
+      "installerRole": "インストーラー作成者",
       "maintainerRole": "メンテナ & 開発者",
-      "authRole": "認証サーバーの作成者 & メンテナ",
       "contributorRole": "コントリビューター",
       "others": "その他",
       "contributorsDescription": "このランチャーの作成を支援した素晴らしい人々",
@@ -587,7 +622,9 @@
     "copyError": "エラーをコピー",
     "reportIssue": "問題を報告",
     "ok": "OK",
-    "dismiss": "閉じる"
+    "dismiss": "閉じる",
+    "somethingWrong": "問題が発生しました",
+    "noLogEntries": "ログエントリがありません"
   },
   "update": {
     "downloading": "ダウンロード中...",
@@ -599,7 +636,9 @@
   "updateOverlay": {
     "title": "ランチャーを更新中",
     "message": "HyPrismの最新バージョンをダウンロードしてインストールしています。お待ちください。",
-    "autoRestart": "更新が完了すると、ランチャーは自動的に再起動します。"
+    "autoRestart": "更新が完了すると、ランチャーは自動的に再起動します。",
+    "failed": "更新に失敗しました",
+    "installing": "インストール中"
   },
   "modManager": {
     "title": "Modマネージャー",
@@ -680,6 +719,7 @@
     "installedCount": "{{count}}個のModをインストールしました",
     "installFailed": "Modのインストールに失敗しました。もう一度お試しください。",
     "importFailed": "Modのインポートに失敗しました",
+    "openCurseforge": "CurseForgeページを開く",
     "releaseType": {
       "release": "リリース",
       "beta": "ベータ",
@@ -832,5 +872,28 @@
     "unmute": "ミュート解除",
     "mute": "ミュート",
     "on": "音楽"
+  },
+  "wrapper": {
+    "description": "ラッパーモード — HyPrismのフルバージョンをダウンロードして起動",
+    "installed": "インストール済み:",
+    "none": "なし",
+    "latest": "最新:",
+    "updateAvailable": "更新があります",
+    "upToDate": "最新です",
+    "checkForUpdates": "更新を確認",
+    "downloadInstall": "ダウンロードしてインストール",
+    "launch": "起動",
+    "installFailed": "インストールに失敗 - ログを確認してください",
+    "launchFailed": "HyPrismの起動に失敗しました",
+    "loadingNews": "ニュースを読み込み中…"
+  },
+  "accessibility": {
+    "previous": "前へ",
+    "next": "次へ",
+    "segmentedControl": "セグメントコントロール"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

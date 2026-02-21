@@ -2,6 +2,7 @@ import React from 'react';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { SplashPhase } from './SplashPhase';
 import { AuthPhase } from './AuthPhase';
+import { WarningPhase } from './WarningPhase';
 import { SetupPhase } from './SetupPhase';
 
 interface OnboardingPageProps {
@@ -25,6 +26,10 @@ export const OnboardingPage: React.FC<OnboardingPageProps> = ({ onComplete }) =>
 
   if (onboarding.phase === 'auth') {
     return <AuthPhase onboarding={onboarding} />;
+  }
+
+  if (onboarding.phase === 'warning') {
+    return <WarningPhase onboarding={onboarding} />;
   }
 
   // Setup phase

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAccentColor } from '@/contexts/AccentColorContext';
 import { type SaveInfo } from '@/lib/ipc';
-import { IconButton, MenuActionButton } from '@/components/ui/controls';
+import { IconButton } from '@/components/ui/controls';
 import { formatBytes } from '@/utils/format';
 import type { InstalledVersionInfo } from '@/types';
 import { openSaveFolder, deleteSaveFolder } from '@/hooks';
@@ -120,24 +120,25 @@ export const WorldsTab: React.FC<WorldsTabProps> = ({
                   </div>
                 </div>
 
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="w-[240px] rounded-2xl overflow-hidden border border-white/15 bg-[#0a0a0a]/35">
-                    <MenuActionButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenSaveFolder(save.name);
-                      }}
-                    >
-                      <FolderOpen size={18} />
-                      {t('common.openFolder')}
-                    </MenuActionButton>
-                    <div className="h-px bg-white/10" />
-                    <MenuActionButton onClick={(e) => handleDeleteSave(e, save.name)}>
-                      <Trash2 size={18} />
-                      {t('common.delete')}
-                    </MenuActionButton>
-                  </div>
+                {/* Hover Actions - Small icons in top-right corner */}
+                <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenSaveFolder(save.name);
+                    }}
+                    className="p-1.5 rounded-lg bg-black/60 hover:bg-black/80 border border-white/10 hover:border-white/20 text-white/70 hover:text-white transition-all"
+                    title={t('common.openFolder')}
+                  >
+                    <FolderOpen size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteSave(e, save.name)}
+                    className="p-1.5 rounded-lg bg-black/60 hover:bg-red-500/80 border border-white/10 hover:border-red-400/50 text-white/70 hover:text-white transition-all"
+                    title={t('common.delete')}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}

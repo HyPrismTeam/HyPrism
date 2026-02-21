@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { X, ChevronDown, Check, Image, Box, Loader2, GitBranch, Lock } from 'lucide-react';
+import { X, ChevronDown, Check, Image, Box, Loader2, GitBranch, Lock, AlertCircle } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { Button, IconButton } from '@/components/ui/Controls';
 
@@ -36,6 +36,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   const [availableVersions, setAvailableVersions] = useState<VersionInfo[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [hasDownloadSources, setHasDownloadSources] = useState(true);
 
   const branchRef = useRef<HTMLDivElement>(null);
   const versionRef = useRef<HTMLDivElement>(null);
@@ -54,22 +55,25 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
           return;
         }
 
-        const versions = response.versions || [];
-        // Add "Latest" entry at the beginning if not already present
-        const hasLatest = versions.some(v => v.version === 0);
-        if (!hasLatest) {
-          const latestSource = response.officialSourceAvailable && response.hasOfficialAccount ? 'Official' : 'Mirror';
-          versions.unshift({ version: 0, source: latestSource as 'Official' | 'Mirror', isLatest: true });
-        }
+        // Track whether download sources are available
+        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
+
+        // Filter out version 0 (latest placeholder) and keep only real versions
+        const versions = (response.versions || []).filter(v => v.version !== 0);
         setAvailableVersions(versions);
-        // Default to "Latest" (version 0) when changing branches
-        setSelectedVersion(0);
+        // Default to the first (highest) version
+        if (versions.length > 0) {
+          setSelectedVersion(versions[0].version);
+        } else {
+          setSelectedVersion(0);
+        }
       } catch (err) {
         if (requestId !== versionsRequestIdRef.current || !isOpen) {
           return;
         }
         console.error('Failed to load versions:', err);
-        setAvailableVersions([{ version: 0, source: 'Mirror', isLatest: true }]);
+        setAvailableVersions([]);
+        setHasDownloadSources(false);
       } finally {
         if (requestId === versionsRequestIdRef.current && isOpen) {
           setIsLoadingVersions(false);
@@ -84,9 +88,9 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
 
   // Generate default name when branch/version changes (only if not manually edited)
   useEffect(() => {
-    if (!isNameLocked) {
+    if (!isNameLocked && selectedVersion > 0) {
       const branchLabel = selectedBranch === GameBranch.RELEASE ? 'Release' : 'Pre-Release';
-      const versionLabel = selectedVersion === 0 ? 'Latest' : `v${selectedVersion}`;
+      const versionLabel = `v${selectedVersion}`;
       setCustomName(`${branchLabel} ${versionLabel}`);
     }
   }, [selectedBranch, selectedVersion, isNameLocked]);
@@ -109,7 +113,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSelectedBranch(GameBranch.RELEASE);
-      setSelectedVersion(0);
+      // selectedVersion will be set by loadVersions effect
       setIsNameLocked(false);
       setIconFile(null);
       setIconPreview(null);
@@ -131,17 +135,14 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   };
 
   const handleCreate = async () => {
-    if (isCreating) return;
+    if (isCreating || selectedVersion <= 0) return;
     setIsCreating(true);
 
     try {
-      // Resolve the version (0 = latest)
-      const resolvedVersion = selectedVersion === 0 ? await getLatestVersion(selectedBranch) : selectedVersion;
-
       // Create the instance (directory + metadata only, no download)
       const createResult = await ipc.instance.create({
         branch: selectedBranch,
-        version: resolvedVersion,
+        version: selectedVersion,
         customName: customName?.trim() || undefined,
       });
 
@@ -159,21 +160,12 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
       }
 
       // Notify parent (refresh instance list)
-      onCreateStart?.(selectedBranch, resolvedVersion, customName);
+      onCreateStart?.(selectedBranch, selectedVersion, customName);
 
       onClose();
     } catch (err) {
       console.error('Failed to create instance:', err);
       setIsCreating(false);
-    }
-  };
-
-  const getLatestVersion = async (branch: string): Promise<number> => {
-    try {
-      const versions = await ipc.game.versions({ branch });
-      return versions.find(v => v !== 0) || 1;
-    } catch {
-      return 1;
     }
   };
 
@@ -304,36 +296,60 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
                     />
                   </button>
 
-                  {isBranchOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-10 bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50 overflow-hidden">
-                      {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
-                        <button
-                          key={branch}
-                          onClick={() => {
-                            setSelectedBranch(branch);
-                            setIsBranchOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 flex items-center gap-2 text-sm ${
-                            selectedBranch === branch
-                              ? 'text-white'
-                              : 'text-white/70 hover:bg-white/10 hover:text-white'
-                          }`}
-                          style={selectedBranch === branch ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
-                        >
-                          {selectedBranch === branch && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
-                          <span className={selectedBranch === branch ? '' : 'ml-[18px]'}>
-                            {branch === GameBranch.RELEASE ? t('main.release') : t('main.preRelease')}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {isBranchOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        className="absolute top-full left-0 right-0 mt-1 z-10 bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50 overflow-hidden"
+                      >
+                        {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
+                          <button
+                            key={branch}
+                            onClick={() => {
+                              setSelectedBranch(branch);
+                              setIsBranchOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 flex items-center gap-2 text-sm ${
+                              selectedBranch === branch
+                                ? 'text-white'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                            style={selectedBranch === branch ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                          >
+                            {selectedBranch === branch && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
+                            <span className={selectedBranch === branch ? '' : 'ml-[18px]'}>
+                              {branch === GameBranch.RELEASE ? t('main.release') : t('main.preRelease')}
+                            </span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
               {/* Version Selector */}
               <div className="space-y-1">
                 <label className="text-xs text-white/50">{t('common.version')}</label>
+                {!hasDownloadSources && !isLoadingVersions ? (
+                  /* No sources warning - replaces version selector */
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-amber-400 font-medium">
+                          {t('instances.noDownloadSources', 'No download sources available')}
+                        </p>
+                        <p className="text-[10px] text-amber-400/70 mt-0.5">
+                          {t('instances.noDownloadSourcesHint', 'Add a mirror in Settings → Downloads or link your Hytale account to download game files.')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div ref={versionRef} className="relative">
                   <button
                     onClick={() => {
@@ -347,10 +363,10 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
                     <span className="font-medium">
                       {isLoadingVersions ? (
                         <Loader2 size={14} className="animate-spin" />
-                      ) : selectedVersion === 0 ? (
-                        t('main.latest')
-                      ) : (
+                      ) : selectedVersion > 0 ? (
                         `v${selectedVersion}`
+                      ) : (
+                        t('common.selectVersion', 'Select version')
                       )}
                     </span>
                     <ChevronDown 
@@ -359,36 +375,45 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
                     />
                   </button>
 
-                  {isVersionOpen && !isLoadingVersions && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-10 max-h-48 overflow-y-auto bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50">
-                      {availableVersions.map((versionInfo) => (
-                        <button
-                          key={versionInfo.version}
-                          onClick={() => {
-                            setSelectedVersion(versionInfo.version);
-                            setIsVersionOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 flex items-center justify-between text-sm ${
-                            selectedVersion === versionInfo.version
-                              ? 'text-white'
-                              : 'text-white/70 hover:bg-white/10 hover:text-white'
-                          }`}
-                          style={selectedVersion === versionInfo.version ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
-                        >
-                          <div className="flex items-center gap-2">
-                            {selectedVersion === versionInfo.version && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
-                            <span className={selectedVersion === versionInfo.version ? '' : 'ml-[18px]'}>
-                              {versionInfo.version === 0 ? t('main.latest') : `v${versionInfo.version}`}
+                  <AnimatePresence>
+                    {isVersionOpen && !isLoadingVersions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        className="absolute top-full left-0 right-0 mt-1 z-10 max-h-48 overflow-y-auto bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50"
+                      >
+                        {availableVersions.map((versionInfo) => (
+                          <button
+                            key={versionInfo.version}
+                            onClick={() => {
+                              setSelectedVersion(versionInfo.version);
+                              setIsVersionOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 flex items-center justify-between text-sm ${
+                              selectedVersion === versionInfo.version
+                                ? 'text-white'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                            style={selectedVersion === versionInfo.version ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                          >
+                            <div className="flex items-center gap-2">
+                              {selectedVersion === versionInfo.version && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
+                              <span className={selectedVersion === versionInfo.version ? '' : 'ml-[18px]'}>
+                                v{versionInfo.version}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-white/30 uppercase tracking-wider">
+                              {versionInfo.source === 'Official' ? 'Hytale' : 'Mirror'}
                             </span>
-                          </div>
-                          <span className="text-[10px] text-white/30 uppercase tracking-wider">
-                            {versionInfo.source === 'Official' ? 'Hytale' : 'Mirror'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -401,7 +426,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
             <Button
               variant="primary"
               onClick={handleCreate}
-              disabled={isCreating || !customName.trim()}
+              disabled={isCreating || !customName.trim() || !hasDownloadSources || selectedVersion <= 0}
             >
               {isCreating ? (
                 <>

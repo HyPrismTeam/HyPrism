@@ -166,6 +166,33 @@
       "dualAuth": "DualAuth (Experimental)",
       "dualAuthHint": "Usa un agente Java en tiempo de ejecución para la autenticación del servidor en lugar de parcheo estático del JAR. Puede causar fallos o problemas de conexión."
     },
+    "downloads": {
+      "title": "Descargas",
+      "howDownloadsWork": "Cómo funcionan las descargas",
+      "howDownloadsWorkDescription": "HyPrism selecciona automáticamente la fuente más rápida disponible para descargar archivos del juego. Pulsa \"Probar Velocidad\" para verificar tu conexión.",
+      "launchAfterDownload": "Iniciar juego después de descargar",
+      "launchAfterDownloadHint": "Cuando está habilitado, el launcher iniciará el juego automáticamente después de instalar la instancia seleccionada.",
+      "officialSource": "Fuente Oficial",
+      "officialSourceHint": "Descargar desde servidores oficiales de Hytale",
+      "mirrors": "Espejos de la Comunidad",
+      "mirrorsHint": "Fuentes alternativas de la comunidad",
+      "unavailable": "No disponible",
+      "testing": "Probando...",
+      "testSpeed": "Probar Velocidad",
+      "communityMirrors": "Espejos de la Comunidad",
+      "mirrorsDescription": "Fuentes de descarga alternativas para archivos del juego",
+      "addMirror": "Añadir Espejo",
+      "refreshMirrors": "Actualizar espejos",
+      "addMirrorBtn": "Añadir Espejo",
+      "headersPlaceholder": "Cabeceras personalizadas (opcional): Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "Formato: header=valor o header=\"valor con espacios\". Usa {hytaleAgent} para el User-Agent oficial.",
+      "mirrorUrlHint": "Introduce la URL base de un espejo Hytale. El launcher intentará detectar automáticamente la configuración.",
+      "noMirrors": "No hay espejos configurados",
+      "noMirrorsHint": "Añade un espejo para descargar archivos del juego sin una cuenta oficial",
+      "disable": "Desactivar",
+      "enable": "Activar",
+      "deleteMirror": "Eliminar espejo"
+    },
     "javaSettings": {
       "javaRuntime": "Java Runtime",
       "javaRuntimeHint": "Elige qué ejecutable de Java usar para el servidor de un jugador",
@@ -286,7 +313,7 @@
       "launchBranch": "Rama de inicio",
       "userData": "Datos de usuario",
       "empty": "Parece que aún no has descargado nada.",
-      "dropZipImport": "Suelta ZIP para importar instancia",
+      "dropZipImport": "Suelta ZIP o PWR para importar instancia",
       "noInstances": "No hay instancias instaladas",
       "installHytale": "Instala Hytale para crear una instancia",
       "notPlayed": "No jugado",
@@ -307,8 +334,16 @@
       "version": "Versión {0}",
       "description": "Un lanzador moderno para Hytale",
       "unofficial": "Lanzador No Oficial de Hytale",
+      "coreTeam": "Equipo Principal",
+      "coreTeamDescription": "Las personas detrás del desarrollo de HyPrism",
+      "contributors": "Colaboradores",
+      "creatorRole": "Creador del Proyecto",
+      "authRole": "Creador del Servidor de Auth",
+      "codevRole": "Co-Líder del Lanzador",
+      "cicdRole": "Desplegador CI/CD",
+      "testerRole": "Tester Principal",
+      "installerRole": "Creador del Instalador",
       "maintainerRole": "Mantenedor y Desarrollador",
-      "authRole": "Creador y Mantenedor del Servidor de Autenticación",
       "contributorRole": "Colaborador",
       "others": "Y otros",
       "contributorsDescription": "Personas increíbles que ayudaron en la creación de este lanzador",
@@ -587,7 +622,9 @@
     "copyError": "Copiar Error",
     "reportIssue": "Reportar Problema",
     "ok": "OK",
-    "dismiss": "Cerrar"
+    "dismiss": "Cerrar",
+    "somethingWrong": "Algo salió mal",
+    "noLogEntries": "Sin entradas de registro"
   },
   "update": {
     "downloading": "Descargando...",
@@ -599,7 +636,9 @@
   "updateOverlay": {
     "title": "ACTUALIZANDO LAUNCHER",
     "message": "Por favor espera mientras descargamos e instalamos la última versión de HyPrism.",
-    "autoRestart": "El launcher se reiniciará automáticamente cuando se complete la actualización."
+    "autoRestart": "El launcher se reiniciará automáticamente cuando se complete la actualización.",
+    "failed": "Error en la actualización",
+    "installing": "Instalando"
   },
   "modManager": {
     "title": "Gestor de Mods",
@@ -713,6 +752,7 @@
     "installedCount": "{{count}} mod(s) instalado(s)",
     "installFailed": "Error al instalar mods. Por favor, inténtalo de nuevo.",
     "importFailed": "Error al importar mods",
+    "openCurseforge": "Abrir página de CurseForge",
     "releaseType": {
       "release": "Lanzamiento",
       "beta": "Beta",
@@ -832,5 +872,28 @@
     "unmute": "Activar sonido",
     "mute": "Silenciar",
     "on": "Música"
+  },
+  "wrapper": {
+    "description": "Modo wrapper — descarga y ejecuta la versión completa de HyPrism",
+    "installed": "Instalado:",
+    "none": "ninguno",
+    "latest": "Última:",
+    "updateAvailable": "Actualización disponible",
+    "upToDate": "Actualizado",
+    "checkForUpdates": "Buscar actualizaciones",
+    "downloadInstall": "Descargar e Instalar",
+    "launch": "Iniciar",
+    "installFailed": "Error en la instalación - revisa los logs",
+    "launchFailed": "Error al iniciar HyPrism",
+    "loadingNews": "Cargando noticias…"
+  },
+  "accessibility": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "segmentedControl": "Control segmentado"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

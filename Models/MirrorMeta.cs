@@ -73,6 +73,14 @@ public class MirrorMeta
     /// </summary>
     [JsonPropertyName("cache")]
     public MirrorCacheConfig Cache { get; set; } = new();
+
+    /// <summary>
+    /// Custom HTTP headers to send with requests to this mirror.
+    /// Format in UI: header=value or header="value with spaces"
+    /// Supports variables: {hytaleAgent} - official Hytale launcher User-Agent
+    /// </summary>
+    [JsonPropertyName("headers")]
+    public Dictionary<string, string>? Headers { get; set; }
 }
 
 /// <summary>

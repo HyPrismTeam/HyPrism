@@ -52,6 +52,7 @@ interface InstancesPageProps {
   onCancelDownload?: () => void;
   onLaunchInstance?: (branch: string, version: number, instanceId?: string) => void;
   officialServerBlocked?: boolean;
+  hasDownloadSources?: boolean;
 }
 
 // ============================================================================
@@ -68,6 +69,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
     canCancel = false,
     onCancelDownload,
     officialServerBlocked = false,
+    hasDownloadSources = true,
   } = props;
 
   const { t } = useTranslation();
@@ -110,7 +112,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
       );
     }
     
-    const versionLabel = inst.isLatestInstance ? '★' : `v${inst.version}`;
+    const versionLabel = inst.version > 0 ? `v${inst.version}` : '?';
     return <span className="font-bold" style={{ color: accentColor, fontSize: size * 0.8 }}>{versionLabel}</span>;
   };
 
@@ -268,8 +270,15 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
 
                         if (!isInstalled) {
                           const anotherDownloading = page.isDownloading && !isThisDownloading;
+                          const downloadDisabled = anotherDownloading || !hasDownloadSources;
                           return (
-                            <LauncherActionButton variant="download" onClick={() => page.selectedInstance && !anotherDownloading && page.handleLaunchInstance(page.selectedInstance)} disabled={anotherDownloading} className="h-10 px-4 rounded-xl text-sm">
+                            <LauncherActionButton 
+                              variant="download" 
+                              onClick={() => page.selectedInstance && !downloadDisabled && page.handleLaunchInstance(page.selectedInstance)} 
+                              disabled={downloadDisabled} 
+                              className="h-10 px-4 rounded-xl text-sm"
+                              title={!hasDownloadSources ? t('instances.noDownloadSources') : undefined}
+                            >
                               <Download size={16} />
                               {t('main.download')}
                             </LauncherActionButton>
@@ -304,31 +313,39 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
                           <MoreVertical size={18} />
                         </IconButton>
 
-                        {page.showInstanceMenu && (
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-[#1c1c1e] border border-white/[0.08] rounded-xl shadow-xl z-50 overflow-hidden">
-                            <MenuItemButton onClick={() => { page.setShowEditModal(true); page.setShowInstanceMenu(false); }}>
-                              <Edit2 size={14} />
-                              {t('common.edit')}
-                            </MenuItemButton>
-                            <MenuItemButton onClick={() => { page.instanceActions.openFolder(page.selectedInstance!.id); page.setShowInstanceMenu(false); }}>
-                              <FolderOpen size={14} />
-                              {t('common.openFolder')}
-                            </MenuItemButton>
-                            <MenuItemButton onClick={() => { openInstanceModsFolder(page.selectedInstance!.id); page.setShowInstanceMenu(false); }}>
-                              <Package size={14} />
-                              {t('modManager.openModsFolder')}
-                            </MenuItemButton>
-                            <MenuItemButton onClick={() => { page.instanceActions.handleExport(page.selectedInstance!, page.setExportingInstance); page.setShowInstanceMenu(false); }} disabled={page.exportingInstance !== null}>
-                              {page.exportingInstance === page.selectedInstance?.id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                              {t('common.export')}
-                            </MenuItemButton>
-                            <div className="border-t border-white/10 my-1" />
-                            <MenuItemButton onClick={() => { page.setInstanceToDelete(page.selectedInstance); page.setShowInstanceMenu(false); }} variant="danger">
-                              <Trash2 size={14} />
-                              {t('common.delete')}
-                            </MenuItemButton>
-                          </div>
-                        )}
+                        <AnimatePresence>
+                          {page.showInstanceMenu && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                              transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                              className="absolute right-0 top-full mt-2 w-48 bg-[#1c1c1e] border border-white/[0.08] rounded-xl shadow-xl z-50 overflow-hidden"
+                            >
+                              <MenuItemButton onClick={() => { page.setShowEditModal(true); page.setShowInstanceMenu(false); }}>
+                                <Edit2 size={14} />
+                                {t('common.edit')}
+                              </MenuItemButton>
+                              <MenuItemButton onClick={() => { page.instanceActions.openFolder(page.selectedInstance!.id); page.setShowInstanceMenu(false); }}>
+                                <FolderOpen size={14} />
+                                {t('common.openFolder')}
+                              </MenuItemButton>
+                              <MenuItemButton onClick={() => { openInstanceModsFolder(page.selectedInstance!.id); page.setShowInstanceMenu(false); }}>
+                                <Package size={14} />
+                                {t('modManager.openModsFolder')}
+                              </MenuItemButton>
+                              <MenuItemButton onClick={() => { page.instanceActions.handleExport(page.selectedInstance!, page.setExportingInstance); page.setShowInstanceMenu(false); }} disabled={page.exportingInstance !== null}>
+                                {page.exportingInstance === page.selectedInstance?.id ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                                {t('common.export')}
+                              </MenuItemButton>
+                              <div className="border-t border-white/10 my-1" />
+                              <MenuItemButton onClick={() => { page.setInstanceToDelete(page.selectedInstance); page.setShowInstanceMenu(false); }} variant="danger">
+                                <Trash2 size={14} />
+                                {t('common.delete')}
+                              </MenuItemButton>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
                   </div>

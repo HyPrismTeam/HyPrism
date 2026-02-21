@@ -105,9 +105,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             rpm \
-            libfuse2
-            
+            libfuse2 \
+            flatpak \
+            flatpak-builder
+
+      - name: Prepare Flatpak remotes
+        run: |
+          sudo flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak remote-add --system --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak remote-add --user --if-not-exists flathub-beta https://dl.flathub.org/beta-repo/flathub-beta.flatpakrepo
+
+      - name: Diagnose Flatpak environment
+        run: |
+          echo "=== flatpak --version ==="
+          flatpak --version
+          echo "=== system remotes ==="
+          flatpak remotes --system || true
+          echo "=== system runtimes (25.08 / Electron2) ==="
+          flatpak list --system --runtime | grep -E 'freedesktop|electronjs|25\.08|Electron2' || true
+
       - name: Build Linux ${{ matrix.arch }}
+        continue-on-error: true
         run: |
           chmod +x Scripts/publish.sh
           ./Scripts/publish.sh linux --arch ${{ matrix.arch }}

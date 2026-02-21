@@ -2158,9 +2158,9 @@ public class InstanceService : IInstanceService
 
     /// <summary>
     /// Changes the version/branch of an existing instance.
-    /// Removes game client files (Client/, game/ sub-directories) while keeping
-    /// UserData and meta.json, then updates meta.json with the new branch/version
-    /// and marks IsLatest = false so the launcher never suggests updates.
+    /// For upgrades within the same branch: preserves game files and sets up for patching.
+    /// For downgrades or branch changes: removes game client files and prepares for fresh download.
+    /// Always keeps UserData and meta.json, and marks IsLatest = false.
     /// </summary>
     public bool ChangeInstanceVersion(string instanceId, string branch, int version)
     {
@@ -2180,31 +2180,63 @@ public class InstanceService : IInstanceService
                 return false;
             }
 
-            // Remove game client directories while keeping UserData and meta.json
-            var clientDir = Path.Combine(instancePath, "Client");
-            var gameDir = Path.Combine(instancePath, "game");
-
-            if (Directory.Exists(clientDir))
-            {
-                Directory.Delete(clientDir, true);
-                Logger.Info("InstanceService", $"Removed Client directory for {instanceId}");
-            }
-
-            if (Directory.Exists(gameDir))
-            {
-                Directory.Delete(gameDir, true);
-                Logger.Info("InstanceService", $"Removed game directory for {instanceId}");
-            }
-
-            // Update meta.json with new branch, version, and mark as non-latest
             var normalizedBranch = UtilityService.NormalizeVersionType(branch);
-            meta.Branch = normalizedBranch;
-            meta.Version = version;
-            meta.InstalledVersion = 0;
-            meta.PendingVersion = 0;
-            meta.IsLatest = false;
+            var currentBranch = UtilityService.NormalizeVersionType(meta.Branch);
+            var currentInstalledVersion = meta.InstalledVersion;
+            var hasInstalledGame = currentInstalledVersion > 0 && IsClientPresent(instancePath);
 
-            SaveInstanceMeta(instancePath, meta);
+            // Determine if we can use patching:
+            // - Same branch (or compatible branches)
+            // - Upgrade (target version > installed version)
+            // - Game is actually installed
+            bool canUsePatch = hasInstalledGame
+                && currentBranch == normalizedBranch
+                && version > currentInstalledVersion;
+
+            if (canUsePatch)
+            {
+                // PATCH MODE: Keep game files, set up for differential update
+                Logger.Info("InstanceService", $"Patch mode: upgrading {instanceId} from v{currentInstalledVersion} to v{version}");
+                
+                // Set PendingVersion to trigger patching on next launch
+                meta.Branch = normalizedBranch;
+                meta.Version = version;
+                meta.PendingVersion = version;
+                // Keep InstalledVersion as-is so patcher knows the starting point
+                meta.IsLatest = false;
+
+                SaveInstanceMeta(instancePath, meta);
+            }
+            else
+            {
+                // FULL DOWNLOAD MODE: Remove game files for clean install
+                Logger.Info("InstanceService", $"Full download mode: {instanceId} from {currentBranch} v{currentInstalledVersion} to {normalizedBranch} v{version}");
+                
+                // Remove game client directories while keeping UserData and meta.json
+                var clientDir = Path.Combine(instancePath, "Client");
+                var gameDir = Path.Combine(instancePath, "game");
+
+                if (Directory.Exists(clientDir))
+                {
+                    Directory.Delete(clientDir, true);
+                    Logger.Info("InstanceService", $"Removed Client directory for {instanceId}");
+                }
+
+                if (Directory.Exists(gameDir))
+                {
+                    Directory.Delete(gameDir, true);
+                    Logger.Info("InstanceService", $"Removed game directory for {instanceId}");
+                }
+
+                // Update meta.json with new branch, version, and mark as non-latest
+                meta.Branch = normalizedBranch;
+                meta.Version = version;
+                meta.InstalledVersion = 0;
+                meta.PendingVersion = 0;
+                meta.IsLatest = false;
+
+                SaveInstanceMeta(instancePath, meta);
+            }
 
             // Update Config.Instances entry as well
             var config = GetConfig();
@@ -2215,7 +2247,8 @@ public class InstanceService : IInstanceService
                 configInstance.Version = version;
             }
 
-            Logger.Success("InstanceService", $"Changed instance {instanceId} to {normalizedBranch} v{version} (non-latest)");
+            var mode = canUsePatch ? "patch" : "full-download";
+            Logger.Success("InstanceService", $"Changed instance {instanceId} to {normalizedBranch} v{version} (non-latest, mode={mode})");
             return true;
         }
         catch (Exception ex)

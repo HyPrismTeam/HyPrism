@@ -166,6 +166,33 @@
       "dualAuth": "DualAuth (Експериментальний)",
       "dualAuthHint": "Використовує Java Agent для автентифікації сервера під час виконання замість статичної модифікації JAR. Може спричинити вильоти та проблеми з підключенням."
     },
+    "downloads": {
+      "title": "Завантаження",
+      "howDownloadsWork": "Як працюють завантаження",
+      "howDownloadsWorkDescription": "HyPrism автоматично вибирає найшвидше доступне джерело для завантаження файлів гри. Натисніть «Тест швидкості», щоб перевірити з'єднання.",
+      "launchAfterDownload": "Запустити гру після завантаження",
+      "launchAfterDownloadHint": "Коли увімкнено, лаунчер автоматично запустить гру після встановлення вибраного екземпляра.",
+      "officialSource": "Офіційне джерело",
+      "officialSourceHint": "Завантажити з офіційних серверів Hytale",
+      "mirrors": "Дзеркала спільноти",
+      "mirrorsHint": "Альтернативні джерела від спільноти",
+      "unavailable": "Недоступно",
+      "testing": "Тестування...",
+      "testSpeed": "Тест швидкості",
+      "communityMirrors": "Дзеркала спільноти",
+      "mirrorsDescription": "Альтернативні джерела завантаження файлів гри",
+      "addMirror": "Додати дзеркало",
+      "refreshMirrors": "Оновити дзеркала",
+      "addMirrorBtn": "Додати дзеркало",
+      "headersPlaceholder": "Власні заголовки (необов'язково): Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "Формат: header=value або header=\"значення з пробілами\". Використовуйте {hytaleAgent} для офіційного User-Agent.",
+      "mirrorUrlHint": "Введіть базову URL дзеркала Hytale. Лаунчер спробує автоматично визначити конфігурацію.",
+      "noMirrors": "Дзеркала не налаштовані",
+      "noMirrorsHint": "Додайте дзеркало для завантаження файлів гри без офіційного облікового запису",
+      "disable": "Вимкнути",
+      "enable": "Увімкнути",
+      "deleteMirror": "Видалити дзеркало"
+    },
     "javaSettings": {
       "javaRuntime": "Java Runtime",
       "javaRuntimeHint": "Виберіть, який виконуваний файл Java використовувати для однокористувацького сервера",
@@ -274,7 +301,7 @@
       "launchBranch": "Гілка запуску",
       "userData": "Дані користувача",
       "empty": "Що, ви ще нічого не завантажили.",
-      "dropZipImport": "Перетягнути ZIP-архів для імпорту екземпляра",
+      "dropZipImport": "Перетягнути ZIP або PWR для імпорту екземпляра",
       "noInstances": "Екземпляри не встановлено",
       "installHytale": "Встановити Hytale для створення екземпляра",
       "notPlayed": "Не грали",
@@ -295,8 +322,16 @@
       "version": "Версія {0}",
       "description": "Сучасний лаунчер для Hytale",
       "unofficial": "Неофіційний лаунчер Hytale",
+      "coreTeam": "Основна команда",
+      "coreTeamDescription": "Люди, що стоять за розробкою HyPrism",
+      "contributors": "Учасники",
+      "creatorRole": "Творець проєкту",
+      "authRole": "Творець Auth сервера",
+      "codevRole": "Співкерівник лаунчера",
+      "cicdRole": "CI/CD розгортання",
+      "testerRole": "Головний тестувальник",
+      "installerRole": "Творець інсталятора",
       "maintainerRole": "Мейнтейнер та Розробник",
-      "authRole": "Творець та Мейнтейнер Auth сервера",
       "contributorRole": "Учасник",
       "others": "Та інші",
       "contributorsDescription": "Чудові люди, які допомогли у створенні цього лаунчера",
@@ -587,7 +622,9 @@
     "copyError": "Копіювати",
     "reportIssue": "Повідомити про проблему",
     "ok": "ОК",
-    "dismiss": "Закрити"
+    "dismiss": "Закрити",
+    "somethingWrong": "Щось пішло не так",
+    "noLogEntries": "Записів в логах немає"
   },
   "update": {
     "downloading": "Завантаження...",
@@ -599,7 +636,9 @@
   "updateOverlay": {
     "title": "Оновлення...",
     "message": "Встановлюється оновлення. Будь ласка, зачекайте...",
-    "autoRestart": "Лаунчер перезапуститься автоматично."
+    "autoRestart": "Лаунчер перезапуститься автоматично.",
+    "failed": "Помилка оновлення",
+    "installing": "Встановлення"
   },
   "modManager": {
     "title": "Менеджер модів",
@@ -713,6 +752,7 @@
     "installedCount": "Встановлено {{count}} мод(ів)",
     "installFailed": "Не вдалося встановити моди. Спробуйте ще раз.",
     "importFailed": "Не вдалося імпортувати моди",
+    "openCurseforge": "Відкрити сторінку CurseForge",
     "releaseType": {
       "release": "Реліз",
       "beta": "Бета",
@@ -832,5 +872,28 @@
     "unmute": "Увімкнути звук",
     "mute": "Вимкнути звук",
     "on": "Музика"
+  },
+  "wrapper": {
+    "description": "Режим обгортки — завантажте та запустіть повну версію HyPrism",
+    "installed": "Встановлено:",
+    "none": "немає",
+    "latest": "Остання:",
+    "updateAvailable": "Доступне оновлення",
+    "upToDate": "Актуальна версія",
+    "checkForUpdates": "Перевірити оновлення",
+    "downloadInstall": "Завантажити та встановити",
+    "launch": "Запустити",
+    "installFailed": "Помилка встановлення — перевірте логи",
+    "launchFailed": "Не вдалося запустити HyPrism",
+    "loadingNews": "Завантаження новин…"
+  },
+  "accessibility": {
+    "previous": "Попередній",
+    "next": "Наступний",
+    "segmentedControl": "Сегментний контрол"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

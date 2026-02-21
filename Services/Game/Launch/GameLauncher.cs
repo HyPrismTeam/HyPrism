@@ -134,6 +134,18 @@ public class GameLauncher : IGameLauncher
             Logger.Warning("Game", $"Unofficial profile with official auth domain '{_config.AuthDomain}'. Falling back to custom auth domain '{DefaultCustomAuthDomain}' for this launch.");
         }
 
+        // Check auth server availability before proceeding (only for online mode with custom auth)
+        if (_config.OnlineMode && !isOfficialProfile && !IsOfficialDomain(_config.AuthDomain))
+        {
+            var authAvailable = await CheckAuthServerAvailabilityAsync(_config.AuthDomain, ct);
+            if (!authAvailable)
+            {
+                var errorMessage = $"Authentication server '{_config.AuthDomain}' is not reachable. Please check your network connection or auth server settings.";
+                Logger.Error("Game", errorMessage);
+                throw new Exception(errorMessage);
+            }
+        }
+
         var (executable, workingDir) = ResolveExecutablePaths(versionPath);
 
         if (!File.Exists(executable))
@@ -246,6 +258,52 @@ public class GameLauncher : IGameLauncher
         var value = domain.Trim();
         return value.Equals("official", StringComparison.OrdinalIgnoreCase)
             || value.Contains("hytale.com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Checks if the custom authentication server is reachable before launching the game.
+    /// </summary>
+    /// <param name="authDomain">The auth server domain to check.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if the auth server is reachable, false otherwise.</returns>
+    private async Task<bool> CheckAuthServerAvailabilityAsync(string authDomain, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(authDomain))
+        {
+            authDomain = DefaultCustomAuthDomain;
+        }
+
+        var normalized = authDomain.Trim().TrimEnd('/');
+        if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = $"https://{normalized}";
+        }
+
+        var pingUrl = $"{normalized}/health";
+        Logger.Info("Game", $"Checking auth server availability: {pingUrl}");
+
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            using var response = await _httpClient.GetAsync(pingUrl, cts.Token);
+            
+            // Consider server reachable if we get any response (including 404, 401, 403)
+            var isAvailable = response.IsSuccessStatusCode ||
+                (int)response.StatusCode == 404 ||
+                (int)response.StatusCode == 401 ||
+                (int)response.StatusCode == 403;
+
+            Logger.Info("Game", $"Auth server check result: {(isAvailable ? "available" : "unavailable")} (status: {(int)response.StatusCode})");
+            return isAvailable;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.Warning("Game", $"Auth server availability check failed: {ex.Message}");
+            return false;
+        }
     }
 
     private string? GetEffectiveCustomAuthDomain(bool logFallback)
@@ -493,6 +551,8 @@ public class GameLauncher : IGameLauncher
                         Logger.Error("Game", "Full re-authentication failed — cannot launch in authenticated mode");
                         throw new Exception("Official Hytale session expired and re-login failed. Please try logging in again from the profile settings.");
                     }
+                    // Save session to the active profile after successful re-authentication
+                    _hytaleAuthService.SaveCurrentSession();
                 }
 
                 identityToken = session.IdentityToken;

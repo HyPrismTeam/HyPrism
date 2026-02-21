@@ -229,8 +229,9 @@ public interface IInstanceService
 
     /// <summary>
     /// Changes the version/branch of an existing instance.
-    /// Clears the game client files (keeps UserData), updates meta.json,
-    /// and marks the instance as non-latest so it never suggests updates.
+    /// For upgrades within the same branch: preserves game files and sets up for patching.
+    /// For downgrades or branch changes: clears game client files and prepares for fresh download.
+    /// Always keeps UserData, and marks the instance as non-latest so it never suggests updates.
     /// </summary>
     /// <param name="instanceId">The unique instance ID.</param>
     /// <param name="branch">The new game branch (e.g. "release").</param>

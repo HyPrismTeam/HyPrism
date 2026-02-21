@@ -9,7 +9,6 @@ import { LanguageStep } from './steps/LanguageStep';
 import { ProfileStep } from './steps/ProfileStep';
 import { HardwareStep } from './steps/HardwareStep';
 import { VisualStep } from './steps/VisualStep';
-import { LocationStep } from './steps/LocationStep';
 import { AboutStep } from './steps/AboutStep';
 
 interface SetupPhaseProps {
@@ -101,7 +100,6 @@ export const SetupPhase: React.FC<SetupPhaseProps> = ({ onboarding }) => {
           {onboarding.currentStep === 'profile' && <ProfileStep onboarding={onboarding} />}
           {onboarding.currentStep === 'hardware' && <HardwareStep onboarding={onboarding} />}
           {onboarding.currentStep === 'visual' && <VisualStep onboarding={onboarding} />}
-          {onboarding.currentStep === 'location' && <LocationStep onboarding={onboarding} />}
           {onboarding.currentStep === 'about' && <AboutStep onboarding={onboarding} />}
         </div>
         

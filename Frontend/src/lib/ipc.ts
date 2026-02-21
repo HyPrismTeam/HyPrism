@@ -37,13 +37,15 @@ export function on(channel: string, callback: (data: unknown) => void): () => vo
 export function invoke<T = unknown>(channel: string, data?: unknown, timeout = 10000): Promise<T> {
   return new Promise((resolve, reject) => {
     const replyChannel = `${channel}:reply`;
-    const timer = setTimeout(() => {
+
+    // timeout = 0 means no timeout (wait indefinitely)
+    const timer = timeout > 0 ? setTimeout(() => {
       cleanup();
       reject(new Error(`IPC timeout on ${channel}`));
-    }, timeout);
+    }, timeout) : null;
 
     const cleanup = on(replyChannel, (response) => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       cleanup();
       try {
         const parsed = typeof response === 'string' ? JSON.parse(response) : response;
@@ -333,6 +335,15 @@ export interface LauncherUpdateProgress {
   hasDownloadedFile?: boolean;
 }
 
+export interface AuthServerPingResult {
+  isAvailable: boolean;
+  pingMs: number;
+  authDomain: string;
+  error?: string;
+  checkedAt: string;
+  isOfficial: boolean;
+}
+
 // #endregion
 
 // #region Typed IPC API (from @ipc annotations)
@@ -408,13 +419,18 @@ const _settings = {
   update: (data?: unknown) => invoke<{ success: boolean }>('hyprism:settings:update', data),
   testMirrorSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testMirrorSpeed', data),
   testOfficialSpeed: (data?: unknown) => invoke<MirrorSpeedTestResult>('hyprism:settings:testOfficialSpeed', data),
+  hasDownloadSources: (data?: unknown) => invoke<{ hasDownloadSources: boolean; hasOfficialAccount: boolean; enabledMirrorCount: number; }>('hyprism:settings:hasDownloadSources', data),
   getMirrors: (data?: unknown) => invoke<MirrorInfo[]>('hyprism:settings:getMirrors', data),
-  addMirror: (data?: unknown) => invoke<{ success: boolean; error?: string; mirror?: MirrorInfo; }>('hyprism:settings:addMirror', data),
+  addMirror: (data?: unknown) => invoke<{ success: boolean; error?: string; mirror?: MirrorInfo; }>('hyprism:settings:addMirror', data, 0),
   deleteMirror: (data?: unknown) => invoke<{ success: boolean; }>('hyprism:settings:deleteMirror', data),
   toggleMirror: (data?: unknown) => invoke<{ success: boolean; }>('hyprism:settings:toggleMirror', data),
   launcherPath: (data?: unknown) => invoke<string>('hyprism:settings:launcherPath', data),
   defaultInstanceDir: (data?: unknown) => invoke<string>('hyprism:settings:defaultInstanceDir', data),
   setInstanceDir: (data?: unknown) => invoke<{ success: boolean, path: string, noop?: boolean, reason?: string, error?: string }>('hyprism:settings:setInstanceDir', data, 300000),
+};
+
+const _network = {
+  pingAuthServer: (data?: unknown) => invoke<AuthServerPingResult>('hyprism:network:pingAuthServer', data),
 };
 
 const _i18n = {
@@ -489,6 +505,7 @@ export const ipc = {
   profile: _profile,
   auth: _auth,
   settings: _settings,
+  network: _network,
   i18n: _i18n,
   windowCtl: _window,
   browser: _browser,

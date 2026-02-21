@@ -87,12 +87,13 @@ public class VersionService : IVersionService
         var normalizedBranch = NormalizeBranch(branch);
         string osName = UtilityService.GetOS();
         string arch = UtilityService.GetArch();
+        var maxAge = TimeSpan.FromMinutes(15);
 
-        // Fast path: return from cache without locking
-        var freshCache = TryLoadFreshCache(osName, arch, TimeSpan.FromMinutes(15));
-        if (freshCache != null)
+        // Fast path: return from cache if this specific branch is fresh
+        var cachedSnapshot = TryLoadCacheSnapshot(osName, arch);
+        if (cachedSnapshot != null && IsBranchFresh(cachedSnapshot, normalizedBranch, maxAge))
         {
-            var versions = GetMergedVersionList(freshCache, normalizedBranch);
+            var versions = GetMergedVersionList(cachedSnapshot, normalizedBranch);
             if (versions.Count > 0)
             {
                 Logger.Info("Version", $"Using cached versions for {branch}: [{string.Join(", ", versions)}]");
@@ -105,10 +106,10 @@ public class VersionService : IVersionService
         try
         {
             // Re-check cache: another caller may have populated it while we waited
-            freshCache = TryLoadFreshCache(osName, arch, TimeSpan.FromMinutes(15));
-            if (freshCache != null)
+            cachedSnapshot = TryLoadCacheSnapshot(osName, arch);
+            if (cachedSnapshot != null && IsBranchFresh(cachedSnapshot, normalizedBranch, maxAge))
             {
-                var versions = GetMergedVersionList(freshCache, normalizedBranch);
+                var versions = GetMergedVersionList(cachedSnapshot, normalizedBranch);
                 if (versions.Count > 0)
                 {
                     return versions;
@@ -229,6 +230,9 @@ public class VersionService : IVersionService
             }
         }
 
+        // Update per-branch fetch timestamp
+        snapshot.BranchFetchedAt[normalizedBranch] = DateTime.UtcNow;
+
         // Save both caches together
         SaveCacheSnapshot(snapshot);
         SavePatchCacheSnapshot(patchSnapshot);
@@ -278,8 +282,8 @@ public class VersionService : IVersionService
         string osName = UtilityService.GetOS();
         string arch = UtilityService.GetArch();
 
-        var cached = TryLoadFreshCache(osName, arch, maxAge);
-        if (cached == null)
+        var cached = TryLoadCacheSnapshot(osName, arch);
+        if (cached == null || !IsBranchFresh(cached, normalizedBranch, maxAge))
         {
             return false;
         }
@@ -304,7 +308,9 @@ public class VersionService : IVersionService
         {
             HasOfficialAccount = HasOfficialAccount,
             OfficialSourceAvailable = snapshot?.Data.Hytale?.Branches.ContainsKey(normalizedBranch) == true 
-                && snapshot.Data.Hytale.Branches[normalizedBranch].Count > 0
+                && snapshot.Data.Hytale.Branches[normalizedBranch].Count > 0,
+            HasDownloadSources = HasDownloadSources(),
+            EnabledMirrorCount = EnabledMirrorCount
         };
 
         if (snapshot == null)
@@ -878,6 +884,63 @@ public class VersionService : IVersionService
     private string GetCacheSnapshotPath()
         => Path.Combine(_appDir, "Cache", "Game", "versions.json");
 
+    /// <summary>
+    /// Checks if a specific branch's data in the cache is fresh (within maxAge).
+    /// </summary>
+    private bool IsBranchFresh(VersionsCacheSnapshot snapshot, string branch, TimeSpan maxAge)
+    {
+        // Check per-branch timestamp first (new format)
+        if (snapshot.BranchFetchedAt.TryGetValue(branch, out var branchFetchedAt))
+        {
+            var branchAge = DateTime.UtcNow - branchFetchedAt;
+            return branchAge <= maxAge;
+        }
+        
+        // Fallback to global FetchedAtUtc for old cache format
+        // But only if this branch actually has data
+        var hasData = (snapshot.Data.Hytale?.Branches.ContainsKey(branch) == true) ||
+                      snapshot.Data.Mirrors.Any(m => m.Branches.ContainsKey(branch));
+        if (!hasData) return false;
+        
+        var globalAge = DateTime.UtcNow - snapshot.FetchedAtUtc;
+        return globalAge <= maxAge;
+    }
+
+    /// <summary>
+    /// Loads cache snapshot if it matches OS/arch, without checking freshness.
+    /// </summary>
+    private VersionsCacheSnapshot? TryLoadCacheSnapshot(string osName, string arch)
+    {
+        try
+        {
+            // Check memory cache first
+            if (_memoryCache != null)
+            {
+                if (string.Equals(_memoryCache.Os, osName, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(_memoryCache.Arch, arch, StringComparison.OrdinalIgnoreCase))
+                {
+                    return _memoryCache;
+                }
+            }
+
+            // Load from disk
+            var snapshot = LoadCacheSnapshot();
+            if (snapshot == null) return null;
+
+            if (!string.Equals(snapshot.Os, osName, StringComparison.OrdinalIgnoreCase)) return null;
+            if (!string.Equals(snapshot.Arch, arch, StringComparison.OrdinalIgnoreCase)) return null;
+
+            _memoryCache = snapshot;
+            return snapshot;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Version", $"Failed to load versions cache: {ex.Message}");
+        }
+
+        return null;
+    }
+
     private VersionsCacheSnapshot? TryLoadFreshCache(string osName, string arch, TimeSpan maxAge)
     {
         try
@@ -1240,6 +1303,54 @@ public class VersionService : IVersionService
         foreach (var source in _mirrorSources)
         {
             Logger.Debug("Version", $"Mirror {source.SourceId}: priority={source.Priority}");
+        }
+        
+        // If no download sources remain, clear the version cache
+        if (!HasDownloadSources())
+        {
+            Logger.Info("Version", "No download sources available after reload, clearing version cache");
+            ClearVersionCache();
+        }
+    }
+    
+    /// <inheritdoc/>
+    public bool HasDownloadSources()
+    {
+        return HasOfficialAccount || EnabledMirrorCount > 0;
+    }
+    
+    /// <inheritdoc/>
+    public int EnabledMirrorCount => _mirrorSources.Count;
+    
+    /// <inheritdoc/>
+    public void ClearVersionCache()
+    {
+        try
+        {
+            // Clear in-memory cache
+            _memoryCache = null;
+            
+            // Delete versions cache file
+            var versionsPath = GetCacheSnapshotPath();
+            if (File.Exists(versionsPath))
+            {
+                File.Delete(versionsPath);
+                Logger.Info("Version", "Deleted versions cache file");
+            }
+            
+            // Delete patches cache file
+            var patchesPath = GetPatchCacheSnapshotPath();
+            if (File.Exists(patchesPath))
+            {
+                File.Delete(patchesPath);
+                Logger.Info("Version", "Deleted patches cache file");
+            }
+            
+            Logger.Success("Version", "Version cache cleared");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Version", $"Failed to clear version cache: {ex.Message}");
         }
     }
 }

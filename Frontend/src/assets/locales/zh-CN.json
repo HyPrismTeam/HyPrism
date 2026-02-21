@@ -166,6 +166,33 @@
       "dualAuth": "DualAuth（实验性）",
       "dualAuthHint": "使用运行时 Java 代理进行服务器身份验证，而不是静态 JAR 补丁。可能导致崩溃或连接问题。"
     },
+    "downloads": {
+      "title": "下载",
+      "howDownloadsWork": "下载方式",
+      "howDownloadsWorkDescription": "HyPrism 自动选择最快的可用源来下载游戏文件。点击「测试速度」检查您的连接。",
+      "launchAfterDownload": "下载后启动游戏",
+      "launchAfterDownloadHint": "启用后，启动器将在安装所选实例后自动启动游戏。",
+      "officialSource": "官方源",
+      "officialSourceHint": "从官方 Hytale 服务器下载",
+      "mirrors": "社区镜像",
+      "mirrorsHint": "来自社区的替代源",
+      "unavailable": "不可用",
+      "testing": "测试中...",
+      "testSpeed": "测试速度",
+      "communityMirrors": "社区镜像",
+      "mirrorsDescription": "游戏文件的替代下载源",
+      "addMirror": "添加镜像",
+      "refreshMirrors": "刷新镜像",
+      "addMirrorBtn": "添加镜像",
+      "headersPlaceholder": "自定义请求头（可选）：Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "格式：header=value 或 header=\"带空格的值\"。使用 {hytaleAgent} 获取官方 User-Agent。",
+      "mirrorUrlHint": "输入 Hytale 镜像的基础 URL。启动器将尝试自动检测配置。",
+      "noMirrors": "未配置镜像",
+      "noMirrorsHint": "添加镜像以在没有官方账户的情况下下载游戏文件",
+      "disable": "禁用",
+      "enable": "启用",
+      "deleteMirror": "删除镜像"
+    },
     "javaSettings": {
       "javaRuntime": "Java 运行时",
       "javaRuntimeHint": "选择用于运行单人服务器的 Java 可执行文件",
@@ -286,7 +313,7 @@
       "launchBranch": "启动分支",
       "userData": "用户数据",
       "empty": "看起来您还没有下载任何内容",
-      "dropZipImport": "拖放 ZIP 以导入实例",
+      "dropZipImport": "拖放 ZIP 或 PWR 以导入实例",
       "noInstances": "未安装实例",
       "installHytale": "安装 Hytale 以创建实例",
       "notPlayed": "未游玩",
@@ -307,8 +334,16 @@
       "version": "版本 {0}",
       "description": "现代化的 Hytale 启动器",
       "unofficial": "非官方 Hytale 启动器",
+      "coreTeam": "核心团队",
+      "coreTeamDescription": "HyPrism 开发背后的团队",
+      "contributors": "贡献者",
+      "creatorRole": "项目创建者",
+      "authRole": "认证服务器创建者",
+      "codevRole": "启动器联合负责人",
+      "cicdRole": "CI/CD 部署者",
+      "testerRole": "首席测试员",
+      "installerRole": "安装程序创建者",
       "maintainerRole": "维护者 & 开发者",
-      "authRole": "认证服务器创建者 & 维护者",
       "contributorRole": "贡献者",
       "others": "以及其他",
       "contributorsDescription": "协助创建此启动器的出色人员",
@@ -587,7 +622,9 @@
     "copyError": "复制错误",
     "reportIssue": "报告问题",
     "ok": "确定",
-    "dismiss": "关闭"
+    "dismiss": "关闭",
+    "somethingWrong": "出现了一些问题",
+    "noLogEntries": "无日志条目"
   },
   "update": {
     "downloading": "下载中...",
@@ -599,7 +636,9 @@
   "updateOverlay": {
     "title": "正在更新启动器",
     "message": "请稍候，正在下载并安装最新版本的 HyPrism。",
-    "autoRestart": "更新完成后启动器将自动重启。"
+    "autoRestart": "更新完成后启动器将自动重启。",
+    "failed": "更新失败",
+    "installing": "正在安装"
   },
   "modManager": {
     "title": "模组管理",
@@ -713,6 +752,7 @@
     "installedCount": "已安装 {{count}} 个模组",
     "installFailed": "安装模组失败。请重试。",
     "importFailed": "导入模组失败",
+    "openCurseforge": "打开 CurseForge 页面",
     "releaseType": {
       "release": "正式版",
       "beta": "测试版",
@@ -832,5 +872,28 @@
     "unmute": "取消静音",
     "mute": "静音",
     "on": "音乐"
+  },
+  "wrapper": {
+    "description": "包装模式 — 下载并启动完整版 HyPrism",
+    "installed": "已安装：",
+    "none": "无",
+    "latest": "最新版：",
+    "updateAvailable": "有可用更新",
+    "upToDate": "已是最新",
+    "checkForUpdates": "检查更新",
+    "downloadInstall": "下载并安装",
+    "launch": "启动",
+    "installFailed": "安装失败 - 请检查日志",
+    "launchFailed": "启动 HyPrism 失败",
+    "loadingNews": "加载新闻中…"
+  },
+  "accessibility": {
+    "previous": "上一个",
+    "next": "下一个",
+    "segmentedControl": "分段控件"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

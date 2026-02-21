@@ -539,7 +539,8 @@ export function useInstancesPage(options: UseInstancesPageOptions) {
     const list = Array.from(files || []);
     if (list.length === 0) return;
 
-    const allowedExt = new Set(['.jar', '.zip', '.disabled']);
+    // Only allow .jar files (and .disabled for disabled mods)
+    const allowedExt = new Set(['.jar', '.disabled']);
     const maxBytes = 100 * 1024 * 1024;
 
     let okCount = 0;

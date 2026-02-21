@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { X, Image, Loader2, ChevronDown, Check, GitBranch, AlertTriangle, Edit3 } from 'lucide-react';
+import { X, Image, Loader2, ChevronDown, Check, GitBranch, AlertTriangle, Edit3, AlertCircle } from 'lucide-react';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { Button, IconButton } from '@/components/ui/Controls';
 
@@ -47,6 +47,7 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
   const [availableVersions, setAvailableVersions] = useState<VersionInfo[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [versionChanged, setVersionChanged] = useState(false);
+  const [hasDownloadSources, setHasDownloadSources] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const branchRef = useRef<HTMLDivElement>(null);
@@ -76,12 +77,16 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
         const response = await ipc.game.versionsWithSources({ branch: selectedBranch });
         if (requestId !== versionsRequestIdRef.current || !isOpen) return;
 
+        // Track whether download sources are available
+        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
+
         const versions = response.versions || [];
         setAvailableVersions(versions);
       } catch (err) {
         if (requestId !== versionsRequestIdRef.current || !isOpen) return;
         console.error('Failed to load versions:', err);
         setAvailableVersions([]);
+        setHasDownloadSources(false);
       } finally {
         if (requestId === versionsRequestIdRef.current && isOpen) {
           setIsLoadingVersions(false);
@@ -284,38 +289,62 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
                     />
                   </button>
 
-                  {isBranchOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-10 bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50 overflow-hidden">
-                      {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
-                        <button
-                          key={branch}
-                          onClick={() => {
-                            setSelectedBranch(branch);
-                            setIsBranchOpen(false);
-                            // Reset to first available version when changing branch
-                            setSelectedVersion(0);
-                          }}
-                          className={`w-full px-3 py-2 flex items-center gap-2 text-sm ${
-                            selectedBranch === branch
-                              ? 'text-white'
-                              : 'text-white/70 hover:bg-white/10 hover:text-white'
-                          }`}
-                          style={selectedBranch === branch ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
-                        >
-                          {selectedBranch === branch && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
-                          <span className={selectedBranch === branch ? '' : 'ml-[18px]'}>
-                            {branch === GameBranch.RELEASE ? t('main.release') : t('main.preRelease')}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {isBranchOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        className="absolute top-full left-0 right-0 mt-1 z-10 bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50 overflow-hidden"
+                      >
+                        {[GameBranch.RELEASE, GameBranch.PRE_RELEASE].map((branch) => (
+                          <button
+                            key={branch}
+                            onClick={() => {
+                              setSelectedBranch(branch);
+                              setIsBranchOpen(false);
+                              // Reset to first available version when changing branch
+                              setSelectedVersion(0);
+                            }}
+                            className={`w-full px-3 py-2 flex items-center gap-2 text-sm ${
+                              selectedBranch === branch
+                                ? 'text-white'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                            style={selectedBranch === branch ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                          >
+                            {selectedBranch === branch && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
+                            <span className={selectedBranch === branch ? '' : 'ml-[18px]'}>
+                              {branch === GameBranch.RELEASE ? t('main.release') : t('main.preRelease')}
+                            </span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
               {/* Version Selector */}
               <div className="space-y-1">
                 <label className="text-xs text-white/50">{t('common.version')}</label>
+                {!hasDownloadSources && !isLoadingVersions ? (
+                  /* No sources warning - replaces version selector */
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-amber-400 font-medium">
+                          {t('instances.noDownloadSources', 'No download sources available')}
+                        </p>
+                        <p className="text-[10px] text-amber-400/70 mt-0.5">
+                          {t('instances.noDownloadSourcesHint', 'Add a mirror in Settings → Downloads or link your Hytale account to download game files.')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div ref={versionRef} className="relative">
                   <button
                     onClick={() => {
@@ -339,41 +368,50 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
                     />
                   </button>
 
-                  {isVersionOpen && !isLoadingVersions && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-10 max-h-48 overflow-y-auto bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50">
-                      {availableVersions.map((versionInfo) => (
-                        <button
-                          key={versionInfo.version}
-                          onClick={() => {
-                            setSelectedVersion(versionInfo.version);
-                            setIsVersionOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 flex items-center justify-between text-sm ${
-                            selectedVersion === versionInfo.version
-                              ? 'text-white'
-                              : 'text-white/70 hover:bg-white/10 hover:text-white'
-                          }`}
-                          style={selectedVersion === versionInfo.version ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
-                        >
-                          <div className="flex items-center gap-2">
-                            {selectedVersion === versionInfo.version && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
-                            <span className={selectedVersion === versionInfo.version ? '' : 'ml-[18px]'}>
-                              {versionInfo.version === 0 ? t('main.latest') : `v${versionInfo.version}`}
+                  <AnimatePresence>
+                    {isVersionOpen && !isLoadingVersions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        className="absolute top-full left-0 right-0 mt-1 z-10 max-h-48 overflow-y-auto bg-[#2c2c2e] border border-white/[0.08] rounded-xl shadow-xl shadow-black/50"
+                      >
+                        {availableVersions.map((versionInfo) => (
+                          <button
+                            key={versionInfo.version}
+                            onClick={() => {
+                              setSelectedVersion(versionInfo.version);
+                              setIsVersionOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 flex items-center justify-between text-sm ${
+                              selectedVersion === versionInfo.version
+                                ? 'text-white'
+                                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                            }`}
+                            style={selectedVersion === versionInfo.version ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
+                          >
+                            <div className="flex items-center gap-2">
+                              {selectedVersion === versionInfo.version && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
+                              <span className={selectedVersion === versionInfo.version ? '' : 'ml-[18px]'}>
+                                v{versionInfo.version}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-white/30 uppercase tracking-wider">
+                              {versionInfo.source === 'Official' ? 'Hytale' : 'Mirror'}
                             </span>
-                          </div>
-                          <span className="text-[10px] text-white/30 uppercase tracking-wider">
-                            {versionInfo.source === 'Official' ? 'Hytale' : 'Mirror'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+                )}
               </div>
             </div>
 
             {/* Warning when version is changed */}
-            {versionChanged && (
+            {versionChanged && hasDownloadSources && (
               <div
                 className="p-3 rounded-xl border flex items-start gap-3"
                 style={{ backgroundColor: `${accentColor}12`, borderColor: `${accentColor}35` }}
