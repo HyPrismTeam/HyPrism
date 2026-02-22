@@ -492,11 +492,11 @@
       "authError": "Ocurrió un error durante el inicio de sesión. Por favor, inténtalo de nuevo.",
       "noHytaleProfile": "Tu cuenta de Hytale aún no tiene perfiles de juego. Se creará un perfil de juego cuando accedas al juego por primera vez.",
       "nameTitle": "Elige un Apodo",
-      "nameDesc": "Elige un nombre para tu perfil sin conexión (3-13 caracteres, letras inglesas, dígitos, - y _)",
+      "nameDesc": "Elige un nombre para tu perfil sin conexión (3-16 caracteres, letras inglesas, dígitos, - y _)",
       "namePlaceholder": "Introduce apodo...",
       "characters": "caracteres",
       "nickRules": "Solo A-Z, 0-9, - y _",
-      "nickInvalid": "El apodo debe tener 3-13 caracteres: letras inglesas, dígitos, guion o guion bajo.",
+      "nickInvalid": "El apodo debe tener 3-16 caracteres: letras inglesas, dígitos, guion o guion bajo.",
       "create": "Crear Perfil",
       "createFailed": "Error al crear el perfil. Por favor, inténtalo de nuevo.",
       "createError": "Ocurrió un error al crear el perfil."

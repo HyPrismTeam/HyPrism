@@ -16,7 +16,6 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **Mods exact targeting:** mod IPC accepts optional `instanceId`; when provided, it has priority over branch/version to prevent collisions between multiple instances with the same version.
 - **Mods changelog:** `hyprism:mods:changelog` returns the (best-effort) plaintext changelog for a specific CurseForge mod file (`modId` + `fileId`).
 - **Instance operations targeting:** instance delete/saves IPC handlers accept `instanceId` and resolve by GUID first, with branch/version kept only as backward-compatible fallback.
-- **Instance import:** `hyprism:instance:import` supports importing from both ZIP archives and PWR patch files. ZIP files are extracted directly; PWR files are applied using Butler to create a new instance with auto-detected version from filename.
 - **Instance icon refresh:** `hyprism:instance:getIcon` returns a cache-busted file URL (`?v=<lastWriteTicks>`) so updated logos appear immediately after overwrite.
 - **Frontend icon loading rule:** instance list icon requests are executed sequentially (not in parallel) to avoid mixed responses on shared IPC reply channels.
 - **Launcher updater IPC:**
@@ -136,4 +135,4 @@ All services are registered as singletons in `Bootstrapper.cs` and injected via 
 - **Mods storage policy:** profile switching does not redirect `UserData/Mods` to `Profiles/.../Mods`; mods remain instance-local.
 - **Profile folder format:** profile folders are stored under `Profiles/{profileId}` (GUID).
 - **Legacy migration:** launcher attempts to migrate legacy name-based profile folders in `Profiles/` to ID-based layout at startup (best-effort, non-destructive merge when both folders exist).
-- **Official profile auth routing:** switching to an official profile automatically sets auth domain to `sessions.hytale.com`.
+- **Official profile auth routing:** switching to an official profile automatically sets auth domain to `sessionserver.hytale.com`.

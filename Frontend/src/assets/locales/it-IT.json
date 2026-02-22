@@ -493,11 +493,11 @@
       "authError": "Si è verificato un errore durante l'accesso. Riprova.",
       "noHytaleProfile": "Il tuo account Hytale non ha ancora profili di gioco. Un profilo di gioco verrà creato al primo accesso al gioco.",
       "nameTitle": "Scegli un nickname",
-      "nameDesc": "Scegli un nome per il tuo profilo offline (3-13 caratteri, lettere inglesi, numeri, - e _)",
+      "nameDesc": "Scegli un nome per il tuo profilo offline (3-16 caratteri, lettere inglesi, numeri, - e _)",
       "namePlaceholder": "Inserisci il nickname...",
       "characters": "caratteri",
       "nickRules": "Solo A-Z, 0-9, - e _",
-      "nickInvalid": "Il nickname deve essere di 3-13 caratteri: lettere inglesi, numeri, trattino o underscore.",
+      "nickInvalid": "Il nickname deve essere di 3-16 caratteri: lettere inglesi, numeri, trattino o underscore.",
       "create": "Crea profilo",
       "createFailed": "Impossibile creare il profilo. Riprova.",
       "createError": "Si è verificato un errore durante la creazione del profilo."

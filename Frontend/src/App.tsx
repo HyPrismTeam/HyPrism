@@ -204,7 +204,21 @@ const App: React.FC = () => {
   const officialServerBlocked = isOfficialServerMode && !isOfficialProfile;
 
   // Download sources state
-  const [hasDownloadSources, setHasDownloadSources] = useState<boolean>(true);
+  const [enabledMirrorCount, setEnabledMirrorCount] = useState<number>(0);
+  const [hasOfficialAccount, setHasOfficialAccount] = useState<boolean>(false);
+  const hasDownloadSources = enabledMirrorCount > 0 || (hasOfficialAccount && isOfficialProfile);
+
+  const refreshDownloadSources = useCallback(async () => {
+    try {
+      const sourcesResult = await ipc.settings.hasDownloadSources();
+      setEnabledMirrorCount(typeof sourcesResult.enabledMirrorCount === 'number' ? sourcesResult.enabledMirrorCount : 0);
+      setHasOfficialAccount(!!sourcesResult.hasOfficialAccount);
+    } catch (e) {
+      console.error('Failed to check download sources:', e);
+      setEnabledMirrorCount(0);
+      setHasOfficialAccount(false);
+    }
+  }, []);
 
   // Background, news, and accent color settings
   // Initialize as null to prevent flash — don't render background until config is loaded
@@ -392,6 +406,8 @@ const App: React.FC = () => {
     setAvatarRefreshTrigger(prev => prev + 1);
     // Update official profile status
     await refreshOfficialStatus();
+    // Refresh download source availability (mirrors / official)
+    await refreshDownloadSources();
   };
 
   // Refresh official server/profile status for play-button blocking
@@ -499,13 +515,7 @@ const App: React.FC = () => {
         }
 
         // Load download sources status
-        try {
-          const sourcesResult = await ipc.settings.hasDownloadSources();
-          setHasDownloadSources(sourcesResult.hasDownloadSources);
-        } catch (e) {
-          console.error('Failed to check download sources:', e);
-          setHasDownloadSources(false);
-        }
+        await refreshDownloadSources();
       } catch (e) {
         console.error('Failed to load settings:', e);
       }
@@ -688,6 +698,12 @@ const App: React.FC = () => {
       unsubError();
     };
   }, []);
+
+  // Re-check download sources when navigating back from Settings (e.g. mirrors added/removed)
+  useEffect(() => {
+    if (currentPage === 'settings') return;
+    void refreshDownloadSources();
+  }, [currentPage, refreshDownloadSources]);
 
   const handlePlay = async () => {
     // Prevent launching if game is already running or download is in progress
@@ -1077,7 +1093,10 @@ const App: React.FC = () => {
               rosettaWarning={rosettaWarning}
               onBackgroundModeChange={(mode) => setBackgroundMode(mode)}
               onInstanceDeleted={handleInstanceDeleted}
-              onAuthSettingsChange={refreshOfficialStatus}
+              onAuthSettingsChange={async () => {
+                await refreshOfficialStatus();
+                await refreshDownloadSources();
+              }}
               onNavigateToMods={() => {
                 setCurrentPage('instances');
               }}

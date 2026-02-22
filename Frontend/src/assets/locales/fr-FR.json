@@ -492,11 +492,11 @@
       "authError": "Une erreur s'est produite lors de la connexion. Réessaie.",
       "noHytaleProfile": "Ton compte Hytale n'a pas encore de profils de jeu. Un profil de jeu sera créé lorsque tu accéderas au jeu pour la première fois.",
       "nameTitle": "Choisis un Pseudo",
-      "nameDesc": "Choisis un nom pour ton profil hors ligne (3-13 caractères, lettres anglaises, chiffres, - et _)",
+      "nameDesc": "Choisis un nom pour ton profil hors ligne (3-16 caractères, lettres anglaises, chiffres, - et _)",
       "namePlaceholder": "Entre un pseudo...",
       "characters": "caractères",
       "nickRules": "A-Z, 0-9, - et _ uniquement",
-      "nickInvalid": "Le pseudo doit contenir 3-13 caractères : lettres anglaises, chiffres, tiret ou underscore.",
+      "nickInvalid": "Le pseudo doit contenir 3-16 caractères : lettres anglaises, chiffres, tiret ou underscore.",
       "create": "Créer le Profil",
       "createFailed": "Échec de la création du profil. Réessaie.",
       "createError": "Une erreur s'est produite lors de la création du profil."

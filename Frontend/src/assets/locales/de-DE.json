@@ -492,11 +492,11 @@
       "authError": "Bei der Anmeldung ist ein Fehler aufgetreten. Bitte versuche es erneut.",
       "noHytaleProfile": "Dein Hytale-Konto hat noch keine Spielprofile. Ein Spielprofil wird beim ersten Spielzugang erstellt.",
       "nameTitle": "Spitznamen wählen",
-      "nameDesc": "Wähle einen Namen für dein Offline-Profil (3-13 Zeichen, englische Buchstaben, Ziffern, - und _)",
+      "nameDesc": "Wähle einen Namen für dein Offline-Profil (3-16 Zeichen, englische Buchstaben, Ziffern, - und _)",
       "namePlaceholder": "Spitznamen eingeben...",
       "characters": "Zeichen",
       "nickRules": "Nur A-Z, 0-9, - und _",
-      "nickInvalid": "Spitzname muss 3-13 Zeichen lang sein: englische Buchstaben, Ziffern, Bindestrich oder Unterstrich.",
+      "nickInvalid": "Spitzname muss 3-16 Zeichen lang sein: englische Buchstaben, Ziffern, Bindestrich oder Unterstrich.",
       "create": "Profil erstellen",
       "createFailed": "Profil konnte nicht erstellt werden. Bitte versuche es erneut.",
       "createError": "Beim Erstellen des Profils ist ein Fehler aufgetreten."

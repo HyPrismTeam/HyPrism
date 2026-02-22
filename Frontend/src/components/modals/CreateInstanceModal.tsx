@@ -55,11 +55,11 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
           return;
         }
 
-        // Track whether download sources are available
-        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
-
         // Filter out version 0 (latest placeholder) and keep only real versions
         const versions = (response.versions || []).filter(v => v.version !== 0);
+
+        // Track whether download sources are available (mirrors via versions list, or official account)
+        setHasDownloadSources(!!response.hasOfficialAccount || versions.length > 0);
         setAvailableVersions(versions);
         // Default to the first (highest) version
         if (versions.length > 0) {

@@ -492,11 +492,11 @@
       "authError": "Ocorreu um erro durante o login. Por favor, tente novamente.",
       "noHytaleProfile": "Sua conta Hytale ainda não possui perfis de jogo. Um perfil será criado quando você acessar o jogo pela primeira vez.",
       "nameTitle": "Escolha um Apelido",
-      "nameDesc": "Escolha um nome para seu perfil offline (3-13 caracteres, letras inglesas, dígitos, - e _)",
+      "nameDesc": "Escolha um nome para seu perfil offline (3-16 caracteres, letras inglesas, dígitos, - e _)",
       "namePlaceholder": "Digite o apelido...",
       "characters": "caracteres",
       "nickRules": "Apenas A-Z, 0-9, - e _",
-      "nickInvalid": "O apelido deve ter 3-13 caracteres: letras inglesas, dígitos, hífen ou sublinhado.",
+      "nickInvalid": "O apelido deve ter 3-16 caracteres: letras inglesas, dígitos, hífen ou sublinhado.",
       "create": "Criar Perfil",
       "createFailed": "Falha ao criar o perfil. Por favor, tente novamente.",
       "createError": "Ocorreu um erro ao criar o perfil."

@@ -6,33 +6,21 @@ import { useAccentColor } from '../contexts/AccentColorContext';
 import { ipc, Profile } from '@/lib/ipc';
 import { SelectionCard } from '@/components/ui/SelectionCard';
 import { Button, LinkButton, IconButton } from '@/components/ui/Controls';
+import { generateRandomNick } from '@/utils/randomNick';
 
 type WizardStep = 'choose-type' | 'official-auth' | 'unofficial-name' | 'done';
 type ErrorLevel = 'error' | 'warning';
 
-/** Offline nickname regex: 3-13 chars, English letters, digits, dash, underscore */
-const NICK_REGEX = /^[a-zA-Z0-9_-]{3,13}$/;
+/** Offline nickname regex: 3-16 chars, English letters, digits, dash, underscore */
+const NICK_REGEX = /^[a-zA-Z0-9_-]{3,16}$/;
 
 interface ProfileCreationWizardProps {
     onComplete: (profile: Profile) => void;
     onCancel: () => void;
 }
 
-/** Short adjectives + nouns for random nick generation (3-13 chars, ASCII only) */
 function generateRandomName(): string {
-    const adjectives = [
-        'Happy', 'Swift', 'Brave', 'Noble', 'Quiet', 'Bold', 'Lucky', 'Epic',
-        'Jolly', 'Lunar', 'Solar', 'Azure', 'Royal', 'Foxy', 'Wacky', 'Zesty'
-    ];
-    const nouns = [
-        'Panda', 'Tiger', 'Wolf', 'Fox', 'Bear', 'Eagle', 'Hawk', 'Lion',
-        'Raven', 'Owl', 'Shark', 'Cobra', 'Lynx', 'Ace', 'Star', 'Hero'
-    ];
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const name = `${adj}${noun}`;
-    // Ensure 3-13 chars
-    return name.length <= 13 ? name : name.substring(0, 13);
+    return generateRandomNick();
 }
 
 function generateUUID(): string {
@@ -294,7 +282,7 @@ export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ on
                                 value={name}
                                 onChange={(e) => { setName(e.target.value); setError(null); }}
                                 onKeyDown={handleNameKeyDown}
-                                maxLength={13}
+                                maxLength={16}
                                 autoFocus
                                 placeholder={t('profiles.wizard.namePlaceholder')}
                                 className="flex-1 bg-[#2c2c2e] text-white text-lg font-semibold px-4 py-3 rounded-xl border outline-none text-center"
@@ -309,7 +297,7 @@ export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ on
                         </div>
 
                         <p className={`text-xs ${isNickValid || !name.trim() ? 'text-white/30' : 'text-red-400/70'}`}>
-                            {name.length}/13 {t('profiles.wizard.characters')} · {t('profiles.wizard.nickRules')}
+                            {name.length}/16 {t('profiles.wizard.characters')} · {t('profiles.wizard.nickRules')}
                         </p>
 
                         {error && (

@@ -9,6 +9,8 @@ interface WarningPhaseProps {
 
 export const WarningPhase: React.FC<WarningPhaseProps> = ({ onboarding }) => {
   const bgImage = onboarding.getCurrentBackground();
+  const enabledMirrorCount = onboarding.skipAuthEnabledMirrorCount ?? 0;
+  const hasMirrors = enabledMirrorCount > 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
@@ -37,22 +39,42 @@ export const WarningPhase: React.FC<WarningPhaseProps> = ({ onboarding }) => {
           </div>
           
           <h1 className="text-2xl font-bold text-white mb-2">
-            {onboarding.t('onboarding.warning.title')}
+            {hasMirrors
+              ? onboarding.t('onboarding.warning.mirrorsTitle', 'Mirrors are enabled')
+              : onboarding.t('onboarding.warning.title')}
           </h1>
           <p className="text-sm text-white/60 mb-6 max-w-sm">
-            {onboarding.t('onboarding.warning.description')}
+            {hasMirrors
+              ? onboarding.t(
+                  'onboarding.warning.mirrorsDescription',
+                  'You chose to continue without a Hytale account. Downloads will use your configured mirrors.'
+                )
+              : onboarding.t('onboarding.warning.description')}
           </p>
           
           {/* Warning box */}
           <div className="w-full p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-6">
             <div className="flex items-start gap-3">
-              <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle
+                size={18}
+                className="text-amber-400 flex-shrink-0 mt-0.5"
+              />
               <div className="text-left">
                 <p className="text-sm text-amber-200 font-medium mb-1">
-                  {onboarding.t('onboarding.warning.noSources')}
+                  {hasMirrors
+                    ? onboarding.t(
+                        'onboarding.warning.mirrorsActive',
+                        `Mirrors detected (${enabledMirrorCount})`
+                      )
+                    : onboarding.t('onboarding.warning.noSources')}
                 </p>
                 <p className="text-xs text-amber-200/70">
-                  {onboarding.t('onboarding.warning.noSourcesHint')}
+                  {hasMirrors
+                    ? onboarding.t(
+                        'onboarding.warning.mirrorsHint',
+                        'You can manage mirrors in Settings → Downloads.'
+                      )
+                    : onboarding.t('onboarding.warning.noSourcesHint')}
                 </p>
               </div>
             </div>

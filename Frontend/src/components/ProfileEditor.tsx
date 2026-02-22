@@ -8,6 +8,7 @@ import { Button, IconButton } from '@/components/ui/Controls';
 import { ipc, Profile } from '@/lib/ipc';
 import { DeleteProfileConfirmationModal } from './modals/DeleteProfileConfirmationModal';
 import { ProfileCreationWizard } from './ProfileCreationWizard';
+import { generateRandomNick } from '@/utils/randomNick';
 
 // ── IPC wrappers (all backed by real channels now) ──
 
@@ -69,25 +70,7 @@ interface ProfileEditorProps {
 }
 
 function generateRandomName(): string {
-    // Short adjectives (max 5 chars) + short nouns (max 6 chars) + 4-digit number = max 15 chars
-    const adjectives = [
-        'Happy', 'Swift', 'Brave', 'Noble', 'Quiet', 'Bold', 'Lucky', 'Epic',
-        'Jolly', 'Lunar', 'Solar', 'Azure', 'Royal', 'Foxy', 'Wacky', 'Zesty',
-        'Fizzy', 'Dizzy', 'Funky', 'Jazzy', 'Snowy', 'Rainy', 'Sunny', 'Windy',
-        'Fiery', 'Icy', 'Misty', 'Dusty', 'Rusty', 'Shiny', 'Silky', 'Fuzzy'
-    ];
-    const nouns = [
-        'Panda', 'Tiger', 'Wolf', 'Dragon', 'Knight', 'Ranger', 'Mage', 'Fox',
-        'Bear', 'Eagle', 'Hawk', 'Lion', 'Falcon', 'Raven', 'Owl', 'Shark',
-        'Cobra', 'Viper', 'Lynx', 'Badger', 'Otter', 'Mantis', 'Pirate', 'Ninja',
-        'Viking', 'Wizard', 'Scout', 'Hero', 'Ace', 'Star', 'King', 'Queen'
-    ];
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const num = Math.floor(Math.random() * 9000) + 1000; // 4-digit number
-    const name = `${adj}${noun}${num}`;
-    // Safety check - truncate to 16 if somehow still too long
-    return name.length <= 16 ? name : name.substring(0, 16);
+    return generateRandomNick();
 }
 
 export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, onProfileUpdate, pageMode: isPageMode = false }) => {

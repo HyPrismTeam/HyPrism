@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Play, Download, Loader2, X, RefreshCw, User, ShieldAlert, Info, ArrowRight } from 'lucide-react';
+import { Play, Download, Loader2, X, RefreshCw, User, ShieldAlert, Info, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
 
 import { ipc, InstanceInfo } from '@/lib/ipc';
@@ -64,6 +64,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   const [showCancelButton, setShowCancelButton] = useState(false);
   const [selectedInstanceIcon, setSelectedInstanceIcon] = useState<string | null>(null);
+  const [showNoSourcesModal, setShowNoSourcesModal] = useState(false);
 
   const withCacheBust = (iconUrl: string) => {
     if (!iconUrl) return iconUrl;
@@ -78,6 +79,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
   useEffect(() => {
     if (!props.isDownloading) setShowCancelButton(false);
   }, [props.isDownloading]);
+
+  const openNoSourcesModal = () => setShowNoSourcesModal(true);
+  const closeNoSourcesModal = () => setShowNoSourcesModal(false);
 
   // Check if selectors should be hidden (during download/launch or game running)
   const shouldHideInfo = props.isDownloading || props.isGameRunning;
@@ -186,8 +190,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     // Official servers with unofficial profile — block play
     if (props.officialServerBlocked) {
       return (
-        <LauncherActionButton variant="play" disabled className="h-full px-8 text-base">
-          <ShieldAlert size={16} />
+        <LauncherActionButton
+          variant="play"
+          onClick={openNoSourcesModal}
+          className="h-full px-8 text-base"
+          title={t('onboarding.warning.title', 'No Download Sources')}
+        >
+          <Play size={16} fill="currentColor" />
           <span>{t('main.play')}</span>
         </LauncherActionButton>
       );
@@ -270,14 +279,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
         // Disable download if no sources available
         if (!props.hasDownloadSources) {
           return (
-            <Button
-              disabled
-              className="h-full px-8 rounded-2xl font-black tracking-tight text-base bg-white/10 text-white/50 border border-transparent"
+            <LauncherActionButton
+              variant="download"
+              onClick={openNoSourcesModal}
+              className="h-full px-8 text-base"
               title={t('instances.noDownloadSources', 'No download sources available')}
             >
               <Download size={16} />
               <span>{t('main.download')}</span>
-            </Button>
+            </LauncherActionButton>
           );
         }
         return (
@@ -309,14 +319,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     // Disable download if no sources available
     if (!props.hasDownloadSources) {
       return (
-        <Button
-          disabled
-          className="h-full px-8 rounded-2xl font-black tracking-tight text-base bg-white/10 text-white/50 border border-transparent"
+        <LauncherActionButton
+          variant="download"
+          onClick={openNoSourcesModal}
+          className="h-full px-8 text-base"
           title={t('instances.noDownloadSources', 'No download sources available')}
         >
           <Download size={16} />
           <span>{t('main.download')}</span>
-        </Button>
+        </LauncherActionButton>
       );
     }
     return (
@@ -338,6 +349,74 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
     >
       <PageContainer contentClassName="h-full">
       <div className="h-full flex flex-col items-center">
+
+      {/* No download sources modal (same content as onboarding warning) */}
+      <AnimatePresence>
+        {showNoSourcesModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center"
+          >
+            <motion.button
+              type="button"
+              aria-label={t('common.close', 'Close')}
+              className="absolute inset-0 bg-black/60"
+              onClick={closeNoSourcesModal}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="relative z-10 w-full max-w-md mx-4 overflow-hidden shadow-2xl glass-panel-static-solid"
+            >
+              <div className="p-8 flex flex-col items-center text-center">
+                <div className="w-16 h-16 mb-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <AlertTriangle size={32} className="text-amber-400" />
+                </div>
+
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {t('onboarding.warning.title', 'No Download Sources')}
+                </h2>
+                <p className="text-sm text-white/60 mb-6 max-w-sm">
+                  {t(
+                    'onboarding.warning.description',
+                    'Without a Hytale account, you cannot download game files from official servers.'
+                  )}
+                </p>
+
+                <div className="w-full p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-left">
+                      <p className="text-sm text-amber-200 font-medium mb-1">
+                        {t('onboarding.warning.noSources', 'No web resources available for download')}
+                      </p>
+                      <p className="text-xs text-amber-200/70">
+                        {t(
+                          'onboarding.warning.noSourcesHint',
+                          'To download the game, you will need to add a mirror in Settings → Downloads, or log in with your Hytale account later.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  variant="primary"
+                  onClick={closeNoSourcesModal}
+                  className="w-full px-6 py-4 rounded-xl font-semibold hover:opacity-90"
+                >
+                  {t('common.close', 'Close')}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Row: Profile left, Social right */}
       <div className="w-full flex justify-between items-start">
         {/* Profile Section */}
@@ -475,25 +554,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                       {t('main.officialServerBlocked')}
                     </span>
                   </div>
-                </motion.div>
-              ) : !props.isOfficialProfile && !props.isOfficialServerMode ? (
-                <motion.div
-                  key="educational"
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
-                  className="mt-3"
-                >
-                  <button
-                    onClick={() => ipc.browser.open('https://hytale.com')}
-                    className="rounded-full px-4 py-1.5 border border-white/20 bg-white/10 hover:bg-white/15 transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Info size={12} className="text-white/80 flex-shrink-0" />
-                    <span className="text-white/80 text-[11px] whitespace-nowrap">
-                      {t('main.educational')} — <span className="font-semibold" style={{ color: accentColor }}>{t('main.buyIt')}</span>
-                    </span>
-                  </button>
                 </motion.div>
               ) : null}
             </AnimatePresence>

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAccentColor } from '@/contexts/AccentColorContext';
 import { type SaveInfo } from '@/lib/ipc';
-import { IconButton } from '@/components/ui/controls';
+import { IconButton } from '@/components/ui/Controls';
 import { formatBytes } from '@/utils/format';
 import type { InstalledVersionInfo } from '@/types';
 import { openSaveFolder, deleteSaveFolder } from '@/hooks';

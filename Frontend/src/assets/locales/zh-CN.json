@@ -492,11 +492,11 @@
       "authError": "登录过程中发生错误。请重试。",
       "noHytaleProfile": "您的 Hytale 账户还没有游戏配置文件。首次访问游戏时将创建配置文件。",
       "nameTitle": "选择昵称",
-      "nameDesc": "为您的离线配置文件选择名称（3-13 个字符，英文字母、数字、- 和 _）",
+      "nameDesc": "为您的离线配置文件选择名称（3-16 个字符，英文字母、数字、- 和 _）",
       "namePlaceholder": "输入昵称...",
       "characters": "个字符",
       "nickRules": "仅限 A-Z、0-9、- 和 _",
-      "nickInvalid": "昵称必须为 3-13 个字符：英文字母、数字、短横线或下划线。",
+      "nickInvalid": "昵称必须为 3-16 个字符：英文字母、数字、短横线或下划线。",
       "create": "创建配置文件",
       "createFailed": "创建配置文件失败。请重试。",
       "createError": "创建配置文件时发生错误。"

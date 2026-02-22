@@ -511,11 +511,11 @@
       "authError": "An error occurred during sign-in. Please try again.",
       "noHytaleProfile": "Your Hytale account has no game profiles yet. A game profile will be created when you first access the game.",
       "nameTitle": "Choose a Nickname",
-      "nameDesc": "Pick a name for your offline profile (3-13 characters, English letters, digits, - and _)",
+      "nameDesc": "Pick a name for your offline profile (3-16 characters, English letters, digits, - and _)",
       "namePlaceholder": "Enter nickname...",
       "characters": "characters",
       "nickRules": "A-Z, 0-9, - and _ only",
-      "nickInvalid": "Nickname must be 3-13 characters: English letters, digits, dash or underscore.",
+      "nickInvalid": "Nickname must be 3-16 characters: English letters, digits, dash or underscore.",
       "create": "Create Profile",
       "createFailed": "Failed to create profile. Please try again.",
       "createError": "An error occurred while creating the profile."

@@ -492,11 +492,11 @@
       "authError": "Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.",
       "noHytaleProfile": "Hytale hesabınızda henüz oyun profili yok. Oyuna ilk eriştiğinizde bir profil oluşturulacak.",
       "nameTitle": "Takma Ad Seçin",
-      "nameDesc": "Çevrimdışı profiliniz için bir ad seçin (3-13 karakter, İngilizce harfler, rakamlar, - ve _)",
+      "nameDesc": "Çevrimdışı profiliniz için bir ad seçin (3-16 karakter, İngilizce harfler, rakamlar, - ve _)",
       "namePlaceholder": "Takma ad girin...",
       "characters": "karakter",
       "nickRules": "Sadece A-Z, 0-9, - ve _",
-      "nickInvalid": "Takma ad 3-13 karakter olmalıdır: İngilizce harfler, rakamlar, tire veya alt çizgi.",
+      "nickInvalid": "Takma ad 3-16 karakter olmalıdır: İngilizce harfler, rakamlar, tire veya alt çizgi.",
       "create": "Profil Oluştur",
       "createFailed": "Profil oluşturulamadı. Lütfen tekrar deneyin.",
       "createError": "Profil oluşturulurken bir hata oluştu."

@@ -447,7 +447,7 @@ public class LaunchService : ILaunchService
         return false;
     }
 
-    private const string WrapperVersion = "v3"; // Bump when wrapper content changes
+    private const string WrapperVersion = "v4"; // Bump when wrapper content changes
 
     private void EnsureJavaWrapper(string javaBin)
     {
@@ -523,7 +523,9 @@ public class LaunchService : ILaunchService
                          "  ARGS+=(\"$arg\")\n" +
                          "done\n" +
                          "if $IS_SERVER; then\n" +
-                         "  unset JAVA_TOOL_OPTIONS\n" +
+                         "  if [[ \"$JAVA_TOOL_OPTIONS\" != *\"-javaagent:\"* ]]; then\n" +
+                         "    unset JAVA_TOOL_OPTIONS\n" +
+                         "  fi\n" +
                          "fi\n" +
                          "exec \"$REAL_JAVA\" \"${ARGS[@]}\"\n";
 
