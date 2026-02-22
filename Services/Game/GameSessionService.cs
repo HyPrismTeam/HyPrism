@@ -463,8 +463,7 @@ public class GameSessionService : IGameSessionService
             }
             
             bool hasOfficialUrl = !string.IsNullOrEmpty(versionEntry.PwrUrl) 
-                && versionEntry.PwrUrl.Contains("game-patches.hytale.com") 
-                && versionEntry.PwrUrl.Contains("verify=");
+                && versionEntry.PwrUrl.Contains("game-patches.hytale.com");
             
             string pwrPath = Path.Combine(_appDir, "Cache", $"{branch}_{(isLatestInstance ? "latest" : "version")}_{targetVersion}.pwr");
 

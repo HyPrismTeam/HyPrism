@@ -232,8 +232,37 @@ public static class MirrorLoaderService
     /// </summary>
     private static List<MirrorMeta> GetDefaultMirrors()
     {
-        // No preset mirrors - users must add them manually via Settings > Downloads
-        // or by placing .mirror.json files in the Mirrors folder
-        return new List<MirrorMeta>();
+        return new List<MirrorMeta>
+        {
+            new() {
+                SchemaVersion = 1,
+                Id = "cobylobby",
+                Name = "CobyLobby",
+                Description = "Community mirror hosted by CobyLobby",
+                Priority = 100,
+                Enabled = true,
+                SourceType = "pattern",
+                Pattern = new MirrorPatternConfig
+                {
+                    FullBuildUrl = "{base}/launcher/patches/{os}/{arch}/{branch}/0/{version}.pwr",
+                    DiffPatchUrl = "{base}/launcher/patches/{os}/{arch}/{branch}/{from}/{to}.pwr",
+                    BaseUrl = "https://cobylobbyht.store",
+                    VersionDiscovery = new VersionDiscoveryConfig
+                    {
+                        Method = "json-api",
+                        Url = "{base}/launcher/patches/{branch}/versions?os_name={os}&arch={arch}",
+                        JsonPath = "items[].version"
+                    },
+                    OsMapping = new Dictionary<string, string>
+                    {
+                        ["osx"] = "darwin"
+                    },
+                    BranchMapping = new Dictionary<string, string>
+                    {
+                        ["pre-release"] = "prerelease"
+                    }
+                }
+            }
+        };
     }
 }
