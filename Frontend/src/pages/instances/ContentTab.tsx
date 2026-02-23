@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAccentColor } from '@/contexts/AccentColorContext';
 import { ipc, type ModInfo as CurseForgeModInfo } from '@/lib/ipc';
-import { Button, IconButton, LinkButton, SelectableCheckbox } from '@/components/ui/controls';
+import { Button, IconButton, LinkButton, SelectableCheckbox } from '@/components/ui/Controls';
 import type { InstalledVersionInfo, ModInfo, InstanceTab } from '@/types';
 
 export interface ContentTabProps {
@@ -335,7 +335,7 @@ export const ContentTab: React.FC<ContentTabProps> = ({
                             handleOpenModPage(e, mod);
                           }}
                           className="text-white font-medium truncate text-left"
-                          title="Open CurseForge page"
+                          title={t('modManager.openCurseforge')}
                         >
                           {displayName}
                         </LinkButton>

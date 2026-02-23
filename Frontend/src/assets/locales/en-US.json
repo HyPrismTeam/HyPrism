@@ -36,7 +36,8 @@
     "Latest": "Latest",
     "refresh": "Refresh",
     "unknown": "Unknown",
-    "clear": "Clear"
+    "clear": "Clear",
+    "selectVersion": "Select version"
   },
   "app": {
     "title": "HyPrism",
@@ -185,7 +186,20 @@
       "mirrorsHint": "Alternative sources from the community",
       "unavailable": "Unavailable",
       "testing": "Testing...",
-      "testSpeed": "Test Speed"
+      "testSpeed": "Test Speed",
+      "communityMirrors": "Community Mirrors",
+      "mirrorsDescription": "Alternative download sources for game files",
+      "addMirror": "Add Mirror",
+      "refreshMirrors": "Refresh mirrors",
+      "addMirrorBtn": "Add Mirror",
+      "headersPlaceholder": "Custom headers (optional): Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "Format: header=value or header=\"value with spaces\". Use {hytaleAgent} for official User-Agent.",
+      "mirrorUrlHint": "Enter the base URL of a Hytale mirror. The launcher will attempt to auto-detect the configuration.",
+      "noMirrors": "No mirrors configured",
+      "noMirrorsHint": "Add a mirror to download game files without an official account",
+      "disable": "Disable",
+      "enable": "Enable",
+      "deleteMirror": "Delete mirror"
     },
     "javaSettings": {
       "javaRuntime": "Java runtime",
@@ -241,7 +255,16 @@
       "authCustomHint": "Enter your own auth server address",
       "currentServer": "Current server",
       "officialProfileNote": "Official accounts can only use official Hytale authentication.",
-      "unofficialProfileNote": "Unofficial accounts cannot use official Hytale authentication."
+      "unofficialProfileNote": "Unofficial accounts cannot use official Hytale authentication.",
+      "authServerStatus": "Auth Server Status",
+      "authServerStatusHint": "Check if the authentication server is reachable.",
+      "authServerOnline": "Online",
+      "authServerOffline": "Offline",
+      "authServerChecking": "Checking...",
+      "authServerPing": "{{ping}}ms",
+      "authServerCheckNow": "Check Now",
+      "authServerOfflineWarning": "Auth server is unreachable. Online mode is temporarily disabled.",
+      "authServerOfficialNote": "Official servers are always considered available."
     },
     "graphicsSettings": {
       "title": "Graphics Settings",
@@ -309,7 +332,7 @@
       "launchBranch": "Launch branch",
       "userData": "User data",
       "empty": "Seems like you haven't downloaded anything yet",
-      "dropZipImport": "Drop ZIP to import instance",
+      "dropZipImport": "Drop ZIP or PWR to import instance",
       "noInstances": "No instances installed",
       "installHytale": "Install Hytale to create an instance",
       "notPlayed": "Not played",
@@ -330,8 +353,16 @@
       "version": "Version {0}",
       "description": "All in one launcher and mod manager fotr Hytale",
       "unofficial": "Unofficial Hytale Launcher",
+      "coreTeam": "Core Team",
+      "coreTeamDescription": "The people behind HyPrism development",
+      "contributors": "Contributors",
+      "creatorRole": "Project Creator",
+      "authRole": "Auth Server Creator",
+      "codevRole": "Co-Dev of Launcher",
+      "cicdRole": "Lead CI/CD Deployer",
+      "testerRole": "Lead QA/Tester/Misc",
+      "installerRole": "Installer Creator",
       "maintainerRole": "Maintainer & Developer",
-      "authRole": "Creator and Maintainer of the Auth Server",
       "contributorRole": "Contributor",
       "others": "And others",
       "contributorsDescription": "Awesome people that helped in the creation of this launcher",
@@ -480,11 +511,11 @@
       "authError": "An error occurred during sign-in. Please try again.",
       "noHytaleProfile": "Your Hytale account has no game profiles yet. A game profile will be created when you first access the game.",
       "nameTitle": "Choose a Nickname",
-      "nameDesc": "Pick a name for your offline profile (3-13 characters, English letters, digits, - and _)",
+      "nameDesc": "Pick a name for your offline profile (3-16 characters, English letters, digits, - and _)",
       "namePlaceholder": "Enter nickname...",
       "characters": "characters",
       "nickRules": "A-Z, 0-9, - and _ only",
-      "nickInvalid": "Nickname must be 3-13 characters: English letters, digits, dash or underscore.",
+      "nickInvalid": "Nickname must be 3-16 characters: English letters, digits, dash or underscore.",
       "create": "Create Profile",
       "createFailed": "Failed to create profile. Please try again.",
       "createError": "An error occurred while creating the profile."
@@ -610,7 +641,9 @@
     "copyError": "Copy Error",
     "reportIssue": "Report Issue",
     "ok": "OK",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "somethingWrong": "Something went wrong",
+    "noLogEntries": "No log entries available"
   },
   "update": {
     "downloading": "Downloading...",
@@ -622,7 +655,9 @@
   "updateOverlay": {
     "title": "UPDATING LAUNCHER",
     "message": "Please wait while we download and install the latest version of HyPrism.",
-    "autoRestart": "The launcher will restart automatically when the update is complete."
+    "autoRestart": "The launcher will restart automatically when the update is complete.",
+    "failed": "Failed updating",
+    "installing": "Installing"
   },
   "modManager": {
     "title": "Mod Manager",
@@ -736,6 +771,7 @@
     "installedCount": "Installed {{count}} mod(s)",
     "installFailed": "Failed to install mods. Please try again.",
     "importFailed": "Failed to import mods",
+    "openCurseforge": "Open CurseForge page",
     "releaseType": {
       "release": "Release",
       "beta": "Beta",
@@ -829,6 +865,14 @@
       "error": "An error occurred during authentication.",
       "noHytaleProfile": "Your account doesn't have access to Hytale yet. You can purchase the game on the official website.",
       "createFailed": "Failed to create profile from Hytale account."
+    },
+    "warning": {
+      "title": "No Download Sources",
+      "description": "Without a Hytale account, you cannot download game files from official servers.",
+      "noSources": "No web resources available for download",
+      "noSourcesHint": "To download the game, you will need to add a mirror in Settings → Downloads, or log in with your Hytale account later.",
+      "continue": "Continue",
+      "back": "Go Back to Login"
     }
   },
   "languageSelector": {
@@ -855,5 +899,28 @@
     "unmute": "Unmute",
     "mute": "Mute",
     "on": "Music"
+  },
+  "wrapper": {
+    "description": "Wrapper mode — download and launch the full version of HyPrism",
+    "installed": "Installed:",
+    "none": "none",
+    "latest": "Latest:",
+    "updateAvailable": "Update available",
+    "upToDate": "Up to date",
+    "checkForUpdates": "Check for updates",
+    "downloadInstall": "Download & Install",
+    "launch": "Launch",
+    "installFailed": "Install failed - check logs",
+    "launchFailed": "Failed to launch HyPrism",
+    "loadingNews": "Loading news…"
+  },
+  "accessibility": {
+    "previous": "Previous",
+    "next": "Next",
+    "segmentedControl": "Segmented control"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

@@ -52,6 +52,7 @@ interface InstancesPageProps {
   onCancelDownload?: () => void;
   onLaunchInstance?: (branch: string, version: number, instanceId?: string) => void;
   officialServerBlocked?: boolean;
+  hasDownloadSources?: boolean;
 }
 
 // ============================================================================
@@ -68,6 +69,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
     canCancel = false,
     onCancelDownload,
     officialServerBlocked = false,
+    hasDownloadSources = true,
   } = props;
 
   const { t } = useTranslation();
@@ -110,7 +112,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
       );
     }
     
-    const versionLabel = inst.isLatestInstance ? '★' : `v${inst.version}`;
+    const versionLabel = inst.version > 0 ? `v${inst.version}` : '?';
     return <span className="font-bold" style={{ color: accentColor, fontSize: size * 0.8 }}>{versionLabel}</span>;
   };
 
@@ -268,8 +270,15 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
 
                         if (!isInstalled) {
                           const anotherDownloading = page.isDownloading && !isThisDownloading;
+                          const downloadDisabled = anotherDownloading || !hasDownloadSources;
                           return (
-                            <LauncherActionButton variant="download" onClick={() => page.selectedInstance && !anotherDownloading && page.handleLaunchInstance(page.selectedInstance)} disabled={anotherDownloading} className="h-10 px-4 rounded-xl text-sm">
+                            <LauncherActionButton 
+                              variant="download" 
+                              onClick={() => page.selectedInstance && !downloadDisabled && page.handleLaunchInstance(page.selectedInstance)} 
+                              disabled={downloadDisabled} 
+                              className="h-10 px-4 rounded-xl text-sm"
+                              title={!hasDownloadSources ? t('instances.noDownloadSources') : undefined}
+                            >
                               <Download size={16} />
                               {t('main.download')}
                             </LauncherActionButton>

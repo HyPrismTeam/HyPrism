@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAccentColor } from '@/contexts/AccentColorContext';
 import { invoke, type ModInfo as CurseForgeModInfo, type ModScreenshot } from '@/lib/ipc';
-import { Button, IconButton, SelectableCheckbox } from '@/components/ui/controls';
+import { Button, IconButton, SelectableCheckbox } from '@/components/ui/Controls';
 import type { ModInfo } from '@/types';
 
 interface BulkOperationModalProps {

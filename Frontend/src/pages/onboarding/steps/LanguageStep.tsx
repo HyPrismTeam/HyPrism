@@ -29,19 +29,22 @@ export const LanguageStep: React.FC<LanguageStepProps> = ({ onboarding }) => {
               borderColor: i18n.language === lang.code ? `${onboarding.accentColor}50` : 'rgba(255,255,255,0.1)'
             }}
           >
-            <div className="flex items-center gap-2">
-              {i18n.language === lang.code && (
-                <div 
-                  className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: onboarding.accentColor }}
-                >
-                  <Check size={12} style={{ color: onboarding.accentTextColor }} strokeWidth={3} />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {i18n.language === lang.code && (
+                  <div 
+                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: onboarding.accentColor }}
+                  >
+                    <Check size={12} style={{ color: onboarding.accentTextColor }} strokeWidth={3} />
+                  </div>
+                )}
+                <div className={i18n.language !== lang.code ? 'ml-7' : ''}>
+                  <span className="text-white text-sm font-medium block">{lang.nativeName}</span>
+                  <span className="text-xs text-white/40">{lang.name}</span>
                 </div>
-              )}
-              <div className={i18n.language !== lang.code ? 'ml-7' : ''}>
-                <span className="text-white text-sm font-medium block">{lang.nativeName}</span>
-                <span className="text-xs text-white/40">{lang.name}</span>
               </div>
+              <span className={`fi fi-${lang.flagCode} text-xl rounded-sm`}></span>
             </div>
           </button>
         ))}

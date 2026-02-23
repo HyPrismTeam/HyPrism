@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, User, Palette, FolderOpen, Info, Cpu } from 'lucide-react';
+import { Globe, User, Palette, Info, Cpu } from 'lucide-react';
 import { ipc } from '@/lib/ipc';
 import { openUrl } from '@/utils/openUrl';
 import { useAccentColor } from '@/contexts/AccentColorContext';
 import { Language } from '@/constants/enums';
 import { backgroundImages } from '@/constants/backgrounds';
+import { generateRandomNick } from '@/utils/randomNick';
 import type { Contributor } from './useSettings';
 
 // ============================================================================
@@ -18,8 +19,8 @@ export interface GpuAdapter {
   type: string;
 }
 
-export type OnboardingPhase = 'splash' | 'auth' | 'setup';
-export type OnboardingStep = 'language' | 'profile' | 'hardware' | 'visual' | 'location' | 'about';
+export type OnboardingPhase = 'splash' | 'auth' | 'warning' | 'setup';
+export type OnboardingStep = 'language' | 'profile' | 'hardware' | 'visual' | 'about';
 
 export interface OnboardingState {
   phase: OnboardingPhase;
@@ -67,8 +68,7 @@ async function SetHasCompletedOnboarding(v: boolean): Promise<void> {
 }
 
 async function GetRandomUsername(): Promise<string> { 
-  console.warn('[IPC] GetRandomUsername: stub'); 
-  return 'HyPrism' + Math.floor(Math.random() * 9999); 
+  return generateRandomNick();
 }
 
 async function GetLauncherVersion(): Promise<string> { 
@@ -126,6 +126,10 @@ export function useOnboarding(options: UseOnboardingOptions) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authErrorType, setAuthErrorType] = useState<'warning' | 'error'>('error');
   const [authenticatedUsername, setAuthenticatedUsername] = useState<string | null>(null);
+
+  // When user chooses to continue without Hytale auth, we show a mirror notice.
+  // null = not checked yet (or not applicable), number = enabled mirror count.
+  const [skipAuthEnabledMirrorCount, setSkipAuthEnabledMirrorCount] = useState<number | null>(null);
 
   // ============================================================================
   // Form State
@@ -188,7 +192,6 @@ export function useOnboarding(options: UseOnboardingOptions) {
 
     allSteps.push(
       { id: 'visual', label: t('onboarding.visual'), icon: Palette },
-      { id: 'location', label: t('onboarding.location'), icon: FolderOpen },
       { id: 'about', label: t('onboarding.about'), icon: Info }
     );
 
@@ -445,10 +448,28 @@ export function useOnboarding(options: UseOnboardingOptions) {
     }
   }, [t]);
 
-  const handleSkipAuth = useCallback(() => {
+  const handleSkipAuth = useCallback(async () => {
     setIsAuthenticated(false);
+    setSkipAuthEnabledMirrorCount(null);
+
+    try {
+      const sources = await ipc.settings.hasDownloadSources();
+      setSkipAuthEnabledMirrorCount(typeof sources.enabledMirrorCount === 'number' ? sources.enabledMirrorCount : 0);
+    } catch (err) {
+      console.warn('[Onboarding] Failed to check mirror count:', err);
+      setSkipAuthEnabledMirrorCount(0);
+    }
+
+    setPhase('warning');
+  }, []);
+
+  const handleContinueWithoutAuth = useCallback(() => {
     setPhase('setup');
     setCurrentStep('language');
+  }, []);
+
+  const handleBackToAuth = useCallback(() => {
+    setPhase('auth');
   }, []);
 
   // ============================================================================
@@ -486,7 +507,7 @@ export function useOnboarding(options: UseOnboardingOptions) {
     setIsLoading(true);
     try {
       if (!isAuthenticated) {
-        const randomName = username.trim() || `HyPrism${Math.floor(Math.random() * 9999)}`;
+        const randomName = username.trim() || generateRandomNick();
         const uuid = crypto.randomUUID();
         await ipc.profile.create({
           name: randomName,
@@ -604,6 +625,10 @@ export function useOnboarding(options: UseOnboardingOptions) {
     handleGpuPreferenceChange,
     handleLogin,
     handleSkipAuth,
+    handleContinueWithoutAuth,
+    handleBackToAuth,
+
+    skipAuthEnabledMirrorCount,
     handleComplete,
     handleSkip,
     openGitHub,

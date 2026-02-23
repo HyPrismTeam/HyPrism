@@ -166,6 +166,33 @@
       "dualAuth": "DualAuth (Deneysel)",
       "dualAuthHint": "Statik JAR yaması yerine sunucu kimlik doğrulaması için çalışma zamanı Java Ajanı kullanır. Çökmelere veya bağlantı sorunlarına neden olabilir."
     },
+    "downloads": {
+      "title": "İndirmeler",
+      "howDownloadsWork": "İndirmeler nasıl çalışır",
+      "howDownloadsWorkDescription": "HyPrism, oyun dosyalarını indirmek için en hızlı kaynağı otomatik olarak seçer. Bağlantınızı kontrol etmek için \"Hızı Test Et\" düğmesine basın.",
+      "launchAfterDownload": "İndirmeden sonra oyunu başlat",
+      "launchAfterDownloadHint": "Etkinleştirildiğinde, başlatıcı seçilen örneği yükledikten sonra oyunu otomatik olarak başlatır.",
+      "officialSource": "Resmi Kaynak",
+      "officialSourceHint": "Resmi Hytale sunucularından indir",
+      "mirrors": "Topluluk Aynaları",
+      "mirrorsHint": "Topluluktan alternatif kaynaklar",
+      "unavailable": "Kullanılamıyor",
+      "testing": "Test ediliyor...",
+      "testSpeed": "Hızı Test Et",
+      "communityMirrors": "Topluluk Aynaları",
+      "mirrorsDescription": "Oyun dosyaları için alternatif indirme kaynakları",
+      "addMirror": "Ayna Ekle",
+      "refreshMirrors": "Aynaları yenile",
+      "addMirrorBtn": "Ayna Ekle",
+      "headersPlaceholder": "Özel başlıklar (isteğe bağlı): Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "Format: header=değer veya header=\"boşluklu değer\". Resmi User-Agent için {hytaleAgent} kullanın.",
+      "mirrorUrlHint": "Hytale aynasının temel URL'sini girin. Başlatıcı yapılandırmayı otomatik olarak algılamaya çalışacaktır.",
+      "noMirrors": "Ayna yapılandırılmadı",
+      "noMirrorsHint": "Resmi hesap olmadan oyun dosyalarını indirmek için bir ayna ekleyin",
+      "disable": "Devre Dışı Bırak",
+      "enable": "Etkinleştir",
+      "deleteMirror": "Aynayı sil"
+    },
     "javaSettings": {
       "javaRuntime": "Java Runtime",
       "javaRuntimeHint": "Tek oyunculu sunucuyu çalıştırmak için hangi Java yürütülebilir dosyasının kullanılacağını seçin",
@@ -286,7 +313,7 @@
       "launchBranch": "Başlatma dalı",
       "userData": "Kullanıcı verileri",
       "empty": "Görünüşe göre henüz hiçbir şey indirmediniz",
-      "dropZipImport": "Örnek içe aktarmak için ZIP bırakın",
+      "dropZipImport": "Örnek içe aktarmak için ZIP veya PWR bırakın",
       "noInstances": "Yüklü örnek yok",
       "installHytale": "Örnek oluşturmak için Hytale'ı yükleyin",
       "notPlayed": "Oynanmadı",
@@ -307,8 +334,16 @@
       "version": "Sürüm {0}",
       "description": "Hytale için modern bir başlatıcı",
       "unofficial": "Resmi Olmayan Hytale Başlatıcısı",
+      "coreTeam": "Çekirdek Ekip",
+      "coreTeamDescription": "HyPrism geliştirmesinin arkasındaki ekip",
+      "contributors": "Katkıda Bulunanlar",
+      "creatorRole": "Proje Oluşturucusu",
+      "authRole": "Kimlik Doğrulama Sunucusu Oluşturucusu",
+      "codevRole": "Başlatıcı Eş Lideri",
+      "cicdRole": "CI/CD Dağıtıcısı",
+      "testerRole": "Baş Test Uzmanı",
+      "installerRole": "Yükleyici Oluşturucusu",
       "maintainerRole": "Sürdürücü & Geliştirici",
-      "authRole": "Kimlik Doğrulama Sunucusu Oluşturucusu ve Sürdürücüsü",
       "contributorRole": "Katılımcı",
       "others": "Ve diğerleri",
       "contributorsDescription": "Bu başlatıcının oluşturulmasına yardım eden harika insanlar",
@@ -457,11 +492,11 @@
       "authError": "Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.",
       "noHytaleProfile": "Hytale hesabınızda henüz oyun profili yok. Oyuna ilk eriştiğinizde bir profil oluşturulacak.",
       "nameTitle": "Takma Ad Seçin",
-      "nameDesc": "Çevrimdışı profiliniz için bir ad seçin (3-13 karakter, İngilizce harfler, rakamlar, - ve _)",
+      "nameDesc": "Çevrimdışı profiliniz için bir ad seçin (3-16 karakter, İngilizce harfler, rakamlar, - ve _)",
       "namePlaceholder": "Takma ad girin...",
       "characters": "karakter",
       "nickRules": "Sadece A-Z, 0-9, - ve _",
-      "nickInvalid": "Takma ad 3-13 karakter olmalıdır: İngilizce harfler, rakamlar, tire veya alt çizgi.",
+      "nickInvalid": "Takma ad 3-16 karakter olmalıdır: İngilizce harfler, rakamlar, tire veya alt çizgi.",
       "create": "Profil Oluştur",
       "createFailed": "Profil oluşturulamadı. Lütfen tekrar deneyin.",
       "createError": "Profil oluşturulurken bir hata oluştu."
@@ -587,7 +622,9 @@
     "copyError": "Hatayı Kopyala",
     "reportIssue": "Sorun Bildir",
     "ok": "Tamam",
-    "dismiss": "Kapat"
+    "dismiss": "Kapat",
+    "somethingWrong": "Bir şeyler ters gitti",
+    "noLogEntries": "Günlük girdisi yok"
   },
   "update": {
     "downloading": "İndiriliyor...",
@@ -599,7 +636,9 @@
   "updateOverlay": {
     "title": "BAŞLATICI GÜNCELLENİYOR",
     "message": "HyPrism'in en son sürümü indiriliyor ve kuruluyor, lütfen bekleyin.",
-    "autoRestart": "Güncelleme tamamlandığında başlatıcı otomatik olarak yeniden başlayacak."
+    "autoRestart": "Güncelleme tamamlandığında başlatıcı otomatik olarak yeniden başlayacak.",
+    "failed": "Güncelleme başarısız oldu",
+    "installing": "Kuruluyor"
   },
   "modManager": {
     "title": "Mod Yöneticisi",
@@ -713,6 +752,7 @@
     "installedCount": "{{count}} mod kuruldu",
     "installFailed": "Modlar kurulamadı. Lütfen tekrar deneyin.",
     "importFailed": "Modlar içe aktarılamadı",
+    "openCurseforge": "CurseForge sayfasını aç",
     "releaseType": {
       "release": "Kararlı",
       "beta": "Beta",
@@ -832,5 +872,28 @@
     "unmute": "Sesi Aç",
     "mute": "Sesi Kapat",
     "on": "Müzik"
+  },
+  "wrapper": {
+    "description": "Sarıcı modu — HyPrism'in tam sürümünü indirin ve başlatın",
+    "installed": "Kurulu:",
+    "none": "yok",
+    "latest": "En son:",
+    "updateAvailable": "Güncelleme mevcut",
+    "upToDate": "Güncel",
+    "checkForUpdates": "Güncellemeleri kontrol et",
+    "downloadInstall": "İndir ve Kur",
+    "launch": "Başlat",
+    "installFailed": "Kurulum başarısız - günlükleri kontrol edin",
+    "launchFailed": "HyPrism başlatılamadı",
+    "loadingNews": "Haberler yükleniyor…"
+  },
+  "accessibility": {
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "segmentedControl": "Bölümlü kontrol"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

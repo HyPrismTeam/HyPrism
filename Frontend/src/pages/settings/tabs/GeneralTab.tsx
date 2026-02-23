@@ -70,9 +70,12 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             className={`w-full h-12 px-4 rounded-xl ${gc} flex items-center justify-between text-white transition-colors hover:border-white/[0.12]`}
             style={{ borderColor: isLanguageOpen ? `${accentColor}50` : undefined }}
           >
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{currentLangConfig.nativeName}</span>
-              <span className="text-white/50 text-sm">({currentLangConfig.name})</span>
+            <div className="flex items-center gap-3">
+              <span className={`fi fi-${currentLangConfig.flagCode} text-lg rounded-sm`}></span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{currentLangConfig.nativeName}</span>
+                <span className="text-white/50 text-sm">({currentLangConfig.name})</span>
+              </div>
             </div>
             <ChevronDown size={16} className={`text-white/40 transition-transform ${isLanguageOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -90,14 +93,15 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
                   <button
                     key={lang.code}
                     onClick={() => handleLanguageSelect(lang.code)}
-                    className={`w-full px-4 py-3 flex items-center gap-2 text-sm ${i18n.language === lang.code
+                    className={`w-full px-4 py-3 flex items-center gap-3 text-sm ${i18n.language === lang.code
                       ? 'text-white'
                       : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }`}
                     style={i18n.language === lang.code ? { backgroundColor: `${accentColor}20`, color: accentColor } : {}}
                   >
                     {i18n.language === lang.code && <Check size={14} style={{ color: accentColor }} strokeWidth={3} />}
-                    <div className={`flex flex-col items-start ${i18n.language === lang.code ? '' : 'ml-[22px]'}`}>
+                    <span className={`fi fi-${lang.flagCode} text-lg rounded-sm ${i18n.language === lang.code ? '' : 'ml-[22px]'}`}></span>
+                    <div className="flex flex-col items-start">
                       <span className="font-medium">{lang.nativeName}</span>
                       <span className="text-xs opacity-50">{lang.name}</span>
                     </div>

@@ -452,6 +452,9 @@ public class JsonMirrorSource : IVersionSource
                 case "html-autoindex":
                     versions = await DiscoverVersionsHtmlAsync(os, arch, branch, ct);
                     break;
+                case "manifest":
+                    versions = await DiscoverVersionsManifestAsync(os, arch, branch, ct);
+                    break;
                 case "static-list":
                     versions = discovery.StaticVersions?.OrderByDescending(v => v).ToList() ?? new List<int>();
                     break;
@@ -535,6 +538,95 @@ public class JsonMirrorSource : IVersionSource
 
         var html = await response.Content.ReadAsStringAsync(cts.Token);
         return ParseVersionsFromHtml(html, discovery.HtmlPattern, discovery.MinFileSizeBytes);
+    }
+
+    /// <summary>
+    /// Discovers versions from a manifest.json file.
+    /// Expects: { "files": { "{os}/{arch}/{branch}/{from}_to_{to}.pwr": { "size": N }, ... } }
+    /// </summary>
+    private async Task<List<int>> DiscoverVersionsManifestAsync(
+        string os, string arch, string branch, CancellationToken ct)
+    {
+        var discovery = _meta.Pattern!.VersionDiscovery;
+        if (string.IsNullOrEmpty(discovery.Url)) return new List<int>();
+
+        var url = discovery.Url; // Manifest URL is absolute, no placeholders
+        Logger.Info($"Mirror:{SourceId}", $"Fetching manifest from {url}...");
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(15));
+
+        var response = await GetWithHeadersAsync(url, cts.Token);
+        if (!response.IsSuccessStatusCode)
+        {
+            Logger.Warning($"Mirror:{SourceId}", $"Manifest returned {response.StatusCode}");
+            return new List<int>();
+        }
+
+        var json = await response.Content.ReadAsStringAsync(cts.Token);
+        return ParseVersionsFromManifest(json, os, arch, branch);
+    }
+
+    /// <summary>
+    /// Parses version numbers from manifest.json.
+    /// File paths: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+    /// Returns list of available 'to' versions (targets) for the given os/arch/branch.
+    /// </summary>
+    private List<int> ParseVersionsFromManifest(string json, string os, string arch, string branch)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("files", out var filesNode) ||
+                filesNode.ValueKind != JsonValueKind.Object)
+            {
+                Logger.Warning($"Mirror:{SourceId}", "Manifest missing 'files' object");
+                return new List<int>();
+            }
+
+            // Apply OS/arch mappings to match manifest paths
+            var mappedOs = ApplyMapping(_meta.Pattern?.OsMapping, os);
+            var mappedArch = ApplyMapping(_meta.Pattern?.ArchMapping, arch);
+
+            // Pattern: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+            var prefix = $"{mappedOs}/{mappedArch}/{branch}/";
+            var patchPattern = new System.Text.RegularExpressions.Regex(
+                @"(\d+)_to_(\d+)\.pwr$", 
+                System.Text.RegularExpressions.RegexOptions.Compiled);
+
+            var versions = new HashSet<int>();
+
+            foreach (var file in filesNode.EnumerateObject())
+            {
+                if (!file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var match = patchPattern.Match(file.Name);
+                if (match.Success)
+                {
+                    // Add target version (to)
+                    if (int.TryParse(match.Groups[2].Value, out var toVersion))
+                    {
+                        versions.Add(toVersion);
+                    }
+                }
+            }
+
+            Logger.Debug($"Mirror:{SourceId}", $"Manifest: found {versions.Count} versions for {mappedOs}/{mappedArch}/{branch}");
+            return versions.OrderByDescending(v => v).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Mirror:{SourceId}", $"Failed to parse manifest: {ex.Message}");
+            return new List<int>();
+        }
+    }
+
+    private static string ApplyMapping(Dictionary<string, string>? mapping, string value)
+    {
+        if (mapping != null && mapping.TryGetValue(value, out var mapped))
+            return mapped;
+        return value;
     }
 
     /// <summary>

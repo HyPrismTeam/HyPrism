@@ -384,7 +384,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
                         <LinkButton
                           onClick={(e) => handleOpenModPage(e, mod)}
                           className="!text-white font-medium truncate text-left underline-offset-2"
-                          title="Open CurseForge page"
+                          title={t('modManager.openCurseforge')}
                         >
                           {mod.name}
                         </LinkButton>
@@ -448,7 +448,7 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
                 <LinkButton
                   onClick={(e) => handleOpenModPage(e, selectedMod)}
                   className="!text-white font-bold text-lg truncate flex-1 text-left underline-offset-2"
-                  title="Open CurseForge page"
+                  title={t('modManager.openCurseforge')}
                 >
                   {selectedMod.name}
                 </LinkButton>

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
+using HyPrism.Services.Core.Integration;
 
 namespace HyPrism.Services.Game.Sources;
 
@@ -13,10 +14,46 @@ public class MirrorDiscoveryService
 {
     private readonly HttpClient _httpClient;
     private const int TimeoutSeconds = 10;
+    
+    // Custom headers to use for all discovery requests
+    private Dictionary<string, string>? _customHeaders;
+    private string? _hytaleAgent;
 
     public MirrorDiscoveryService(HttpClient httpClient)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
+
+    /// <summary>
+    /// Sends a GET request with custom headers applied.
+    /// Expands {hytaleAgent} variable to the official Hytale launcher User-Agent.
+    /// </summary>
+    private async Task<HttpResponseMessage> GetWithHeadersAsync(string url, CancellationToken ct)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        
+        if (_customHeaders != null && _customHeaders.Count > 0)
+        {
+            foreach (var (headerName, headerValue) in _customHeaders)
+            {
+                var expandedValue = headerValue;
+                
+                // Expand {hytaleAgent} variable
+                if (expandedValue.Contains("{hytaleAgent}", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_hytaleAgent == null)
+                    {
+                        var launcherVersion = await HytaleLauncherHeaderHelper.GetLauncherVersionAsync(_httpClient, ct);
+                        _hytaleAgent = $"hytale-launcher/{launcherVersion}";
+                    }
+                    expandedValue = expandedValue.Replace("{hytaleAgent}", _hytaleAgent, StringComparison.OrdinalIgnoreCase);
+                }
+                
+                request.Headers.TryAddWithoutValidation(headerName, expandedValue);
+            }
+        }
+        
+        return await _httpClient.SendAsync(request, ct);
     }
 
     /// <summary>
@@ -34,8 +71,15 @@ public class MirrorDiscoveryService
     /// Attempts to discover mirror configuration from a URL.
     /// Tries multiple detection strategies with extensive endpoint probing.
     /// </summary>
-    public async Task<DiscoveryResult> DiscoverMirrorAsync(string url, CancellationToken ct = default)
+    /// <param name="url">The mirror URL to discover</param>
+    /// <param name="headers">Optional custom headers to use for discovery requests (supports {hytaleAgent} variable)</param>
+    /// <param name="ct">Cancellation token</param>
+    public async Task<DiscoveryResult> DiscoverMirrorAsync(string url, Dictionary<string, string>? headers = null, CancellationToken ct = default)
     {
+        // Store headers for use in all discovery requests
+        _customHeaders = headers;
+        _hytaleAgent = null; // Reset cached agent for fresh expansion
+        
         if (string.IsNullOrWhiteSpace(url))
         {
             return new DiscoveryResult { Success = false, Error = "URL is required" };
@@ -118,6 +162,7 @@ public class MirrorDiscoveryService
         var strategies = new (string Name, Func<Uri, CancellationToken, Task<DiscoveryResult>> Strategy)[]
         {
             ("Pattern: Infos API", TryInfosApiPatternAsync),
+            ("Pattern: Manifest JSON", TryManifestDiscoveryAsync),
             ("HTML Autoindex", TryHtmlAutoindexDiscoveryAsync),
             ("Pattern: Static Files", TryStaticFilesPatternAsync),
             ("JSON Index API", TryJsonIndexDiscoveryAsync),
@@ -163,7 +208,7 @@ public class MirrorDiscoveryService
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
             
-            using var response = await _httpClient.GetAsync(infosUrl, linkedCts.Token);
+            using var response = await GetWithHeadersAsync(infosUrl, linkedCts.Token);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -228,7 +273,7 @@ public class MirrorDiscoveryService
             {
                 using var latestCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
                 using var latestLinkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, latestCts.Token);
-                using var latestResponse = await _httpClient.GetAsync(latestUrl, latestLinkedCts.Token);
+                using var latestResponse = await GetWithHeadersAsync(latestUrl, latestLinkedCts.Token);
                 Logger.Debug("MirrorDiscovery", $"/latest endpoint: {latestResponse.StatusCode}");
             }
             catch (Exception ex)
@@ -321,6 +366,191 @@ public class MirrorDiscoveryService
     }
 
     /// <summary>
+    /// Try detection for mirrors using manifest.json format.
+    /// Manifest contains files object with paths like: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+    /// </summary>
+    private async Task<DiscoveryResult> TryManifestDiscoveryAsync(Uri baseUri, CancellationToken ct)
+    {
+        // Build manifest URLs relative to the provided baseUri
+        var inputUrl = baseUri.ToString().TrimEnd('/');
+        
+        // Try manifest.json at various locations relative to the provided URL
+        var manifestUrls = new List<string>
+        {
+            // If URL ends with manifest.json, use it directly
+            inputUrl.EndsWith("manifest.json", StringComparison.OrdinalIgnoreCase) 
+                ? inputUrl 
+                : null!,
+            // Try manifest.json in current directory
+            $"{inputUrl}/manifest.json",
+            // Try in patches subdirectory
+            $"{inputUrl}/patches/manifest.json",
+            // Try in hytale/patches subdirectory  
+            $"{inputUrl}/hytale/patches/manifest.json"
+        };
+        
+        // Remove nulls and duplicates
+        manifestUrls = manifestUrls.Where(u => u != null).Distinct().ToList();
+
+        foreach (var manifestUrl in manifestUrls)
+        {
+            Logger.Debug("MirrorDiscovery", $"Testing manifest endpoint: {manifestUrl}");
+
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
+
+                using var response = await GetWithHeadersAsync(manifestUrl, linkedCts.Token);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.Debug("MirrorDiscovery", $"Manifest returned {response.StatusCode}");
+                    continue;
+                }
+
+                // Check Content-Type
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+                if (!contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Debug("MirrorDiscovery", $"Manifest returned non-JSON: {contentType}");
+                    continue;
+                }
+
+                var content = await response.Content.ReadAsStringAsync(linkedCts.Token);
+                if (string.IsNullOrWhiteSpace(content)) continue;
+
+                using var doc = JsonDocument.Parse(content);
+                var root = doc.RootElement;
+
+                // Must have "files" property
+                if (!root.TryGetProperty("files", out var filesNode) ||
+                    filesNode.ValueKind != JsonValueKind.Object)
+                {
+                    Logger.Debug("MirrorDiscovery", "Manifest missing 'files' object");
+                    continue;
+                }
+
+                // Parse files to detect structure: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+                var patchPattern = new Regex(@"^([^/]+)/([^/]+)/([^/]+)/(\d+)_to_(\d+)\.pwr$", RegexOptions.Compiled);
+                var detectedPlatforms = new HashSet<string>();
+                var detectedBranches = new HashSet<string>();
+                var maxVersions = new Dictionary<string, int>();
+
+                foreach (var file in filesNode.EnumerateObject())
+                {
+                    var match = patchPattern.Match(file.Name);
+                    if (match.Success)
+                    {
+                        var os = match.Groups[1].Value;
+                        var arch = match.Groups[2].Value;
+                        var branch = match.Groups[3].Value;
+                        var toVersion = int.Parse(match.Groups[5].Value);
+
+                        detectedPlatforms.Add($"{os}/{arch}");
+                        detectedBranches.Add(branch);
+
+                        var key = $"{os}/{arch}/{branch}";
+                        if (!maxVersions.TryGetValue(key, out var current) || toVersion > current)
+                        {
+                            maxVersions[key] = toVersion;
+                        }
+                    }
+                }
+
+                if (detectedPlatforms.Count == 0)
+                {
+                    Logger.Debug("MirrorDiscovery", "No valid patch files found in manifest");
+                    continue;
+                }
+
+                Logger.Debug("MirrorDiscovery", $"Manifest detected! Platforms: {string.Join(", ", detectedPlatforms)}, Branches: {string.Join(", ", detectedBranches)}");
+
+                // Build base URL (directory containing manifest.json)
+                var baseUrl = manifestUrl.Substring(0, manifestUrl.LastIndexOf('/'));
+
+                var mirrorId = GenerateMirrorId(baseUri);
+                var mirror = CreateManifestPatternMirror(baseUri, mirrorId, baseUrl, manifestUrl, detectedBranches);
+
+                return new DiscoveryResult
+                {
+                    Success = true,
+                    Mirror = mirror,
+                    DetectedType = "Pattern: Manifest"
+                };
+            }
+            catch (JsonException je)
+            {
+                Logger.Debug("MirrorDiscovery", $"Manifest JSON parse error: {je.Message}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Debug("MirrorDiscovery", $"Manifest check failed: {ex.Message}");
+            }
+        }
+
+        return new DiscoveryResult { Success = false };
+    }
+
+    /// <summary>
+    /// Create a MirrorMeta for manifest.json pattern.
+    /// Uses URL pattern: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+    /// </summary>
+    private static MirrorMeta CreateManifestPatternMirror(Uri baseUri, string mirrorId, string baseUrl, string manifestUrl, HashSet<string> branches)
+    {
+        return new MirrorMeta
+        {
+            SchemaVersion = 1,
+            Id = mirrorId,
+            Name = ExtractMirrorName(baseUri),
+            Description = $"Auto-discovered mirror from {baseUri.Host}",
+            Priority = 100,
+            Enabled = true,
+            SourceType = "pattern",
+            Pattern = new MirrorPatternConfig
+            {
+                // Files are stored as: {os}/{arch}/{branch}/{from}_to_{to}.pwr
+                // Full build: 0_to_{version}.pwr
+                FullBuildUrl = "{base}/{os}/{arch}/{branch}/0_to_{version}.pwr",
+                DiffPatchUrl = "{base}/{os}/{arch}/{branch}/{from}_to_{to}.pwr",
+                BaseUrl = baseUrl,
+                VersionDiscovery = new VersionDiscoveryConfig
+                {
+                    // Use manifest method to parse manifest.json
+                    Method = "manifest",
+                    Url = manifestUrl
+                },
+                // Map internal names to manifest names
+                OsMapping = new Dictionary<string, string>
+                {
+                    ["linux"] = "linux",
+                    ["windows"] = "windows",
+                    ["macos"] = "darwin"
+                },
+                ArchMapping = new Dictionary<string, string>
+                {
+                    ["x64"] = "amd64",
+                    ["amd64"] = "amd64",
+                    ["arm64"] = "arm64"
+                },
+                BranchMapping = new Dictionary<string, string>(),
+                // All branches use diff-based patching in manifest format
+                DiffBasedBranches = branches.ToList()
+            },
+            SpeedTest = new MirrorSpeedTestConfig
+            {
+                PingUrl = manifestUrl,
+                PingTimeoutSeconds = 5
+            },
+            Cache = new MirrorCacheConfig
+            {
+                IndexTtlMinutes = 30,
+                SpeedTestTtlMinutes = 60
+            }
+        };
+    }
+
+    /// <summary>
     /// Try detection for mirrors using /launcher/patches API pattern.
     /// Pattern: /launcher/patches/{branch}/versions?os_name={os}&arch={arch}
     /// Note: The API may return 422 UnprocessableEntity if parameters are wrong,
@@ -336,7 +566,7 @@ public class MirrorDiscoveryService
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
-            using var healthResponse = await _httpClient.GetAsync(healthUrl, linkedCts.Token);
+            using var healthResponse = await GetWithHeadersAsync(healthUrl, linkedCts.Token);
             hasHealthEndpoint = healthResponse.IsSuccessStatusCode;
             Logger.Debug("MirrorDiscovery", $"/health endpoint: {(hasHealthEndpoint ? "OK" : healthResponse.StatusCode.ToString())}");
         }
@@ -365,7 +595,7 @@ public class MirrorDiscoveryService
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
                 
-                using var response = await _httpClient.GetAsync(testUrl, linkedCts.Token);
+                using var response = await GetWithHeadersAsync(testUrl, linkedCts.Token);
                 var statusCode = (int)response.StatusCode;
                 
                 // Check Content-Type - must be JSON, not HTML error pages
@@ -488,7 +718,7 @@ public class MirrorDiscoveryService
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
                     
-                    using var response = await _httpClient.GetAsync(testUrl, linkedCts.Token);
+                    using var response = await GetWithHeadersAsync(testUrl, linkedCts.Token);
                     if (!response.IsSuccessStatusCode) continue;
 
                     var content = await response.Content.ReadAsStringAsync(linkedCts.Token);
@@ -594,7 +824,7 @@ public class MirrorDiscoveryService
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
                 
-                using var response = await _httpClient.GetAsync(apiUrl, linkedCts.Token);
+                using var response = await GetWithHeadersAsync(apiUrl, linkedCts.Token);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -710,7 +940,7 @@ public class MirrorDiscoveryService
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
                 
-                using var response = await _httpClient.GetAsync(apiUrl, linkedCts.Token);
+                using var response = await GetWithHeadersAsync(apiUrl, linkedCts.Token);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -839,7 +1069,7 @@ public class MirrorDiscoveryService
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
                 
-                using var response = await _httpClient.GetAsync(testUrl, linkedCts.Token);
+                using var response = await GetWithHeadersAsync(testUrl, linkedCts.Token);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -930,7 +1160,7 @@ public class MirrorDiscoveryService
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
             
-            using var response = await _httpClient.GetAsync(url, linkedCts.Token);
+            using var response = await GetWithHeadersAsync(url, linkedCts.Token);
             
             if (!response.IsSuccessStatusCode)
             {

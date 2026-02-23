@@ -166,6 +166,33 @@
       "dualAuth": "DualAuth (Expérimental)",
       "dualAuthHint": "Utilise un agent Java pour l'authentification serveur au lieu du patch statique du JAR. Peut provoquer des plantages ou des problèmes de connexion."
     },
+    "downloads": {
+      "title": "Téléchargements",
+      "howDownloadsWork": "Comment fonctionnent les téléchargements",
+      "howDownloadsWorkDescription": "HyPrism sélectionne automatiquement la source la plus rapide disponible pour télécharger les fichiers du jeu. Appuyez sur \"Test Vitesse\" pour vérifier votre connexion.",
+      "launchAfterDownload": "Lancer le jeu après téléchargement",
+      "launchAfterDownloadHint": "Lorsqu'activé, le lanceur démarrera automatiquement le jeu après avoir installé l'instance sélectionnée.",
+      "officialSource": "Source Officielle",
+      "officialSourceHint": "Télécharger depuis les serveurs officiels Hytale",
+      "mirrors": "Miroirs Communautaires",
+      "mirrorsHint": "Sources alternatives de la communauté",
+      "unavailable": "Indisponible",
+      "testing": "Test en cours...",
+      "testSpeed": "Test Vitesse",
+      "communityMirrors": "Miroirs Communautaires",
+      "mirrorsDescription": "Sources de téléchargement alternatives pour les fichiers du jeu",
+      "addMirror": "Ajouter Miroir",
+      "refreshMirrors": "Actualiser les miroirs",
+      "addMirrorBtn": "Ajouter Miroir",
+      "headersPlaceholder": "En-têtes personnalisés (optionnel): Authorization=\"Bearer token\" User-Agent=\"{hytaleAgent}\"",
+      "headersHint": "Format: header=valeur ou header=\"valeur avec espaces\". Utilisez {hytaleAgent} pour le User-Agent officiel.",
+      "mirrorUrlHint": "Entrez l'URL de base d'un miroir Hytale. Le lanceur tentera de détecter automatiquement la configuration.",
+      "noMirrors": "Aucun miroir configuré",
+      "noMirrorsHint": "Ajoutez un miroir pour télécharger les fichiers du jeu sans compte officiel",
+      "disable": "Désactiver",
+      "enable": "Activer",
+      "deleteMirror": "Supprimer miroir"
+    },
     "javaSettings": {
       "javaRuntime": "Java Runtime",
       "javaRuntimeHint": "Choisis quel exécutable Java utiliser pour le serveur solo",
@@ -286,7 +313,7 @@
       "launchBranch": "Branche de Lancement",
       "userData": "Données Utilisateur",
       "empty": "On dirait que tu n'as encore rien téléchargé",
-      "dropZipImport": "Dépose un ZIP pour importer une instance",
+      "dropZipImport": "Dépose un ZIP ou PWR pour importer une instance",
       "noInstances": "Aucune instance installée",
       "installHytale": "Installe Hytale pour créer une instance",
       "notPlayed": "Non joué",
@@ -307,8 +334,16 @@
       "version": "Version {0}",
       "description": "Un lanceur moderne pour Hytale",
       "unofficial": "Lanceur Hytale Non Officiel",
+      "coreTeam": "Équipe Principale",
+      "coreTeamDescription": "Les personnes derrière le développement de HyPrism",
+      "contributors": "Contributeurs",
+      "creatorRole": "Créateur du Projet",
+      "authRole": "Créateur du Serveur d'Auth",
+      "codevRole": "Co-Leader du Lanceur",
+      "cicdRole": "Déployeur CI/CD",
+      "testerRole": "Testeur Principal",
+      "installerRole": "Créateur de l'Installateur",
       "maintainerRole": "Mainteneur et Développeur",
-      "authRole": "Créateur et Mainteneur du Serveur d'Auth",
       "contributorRole": "Contributeur",
       "others": "Et d'autres",
       "contributorsDescription": "Des personnes formidables qui ont aidé à la création de ce lanceur",
@@ -457,11 +492,11 @@
       "authError": "Une erreur s'est produite lors de la connexion. Réessaie.",
       "noHytaleProfile": "Ton compte Hytale n'a pas encore de profils de jeu. Un profil de jeu sera créé lorsque tu accéderas au jeu pour la première fois.",
       "nameTitle": "Choisis un Pseudo",
-      "nameDesc": "Choisis un nom pour ton profil hors ligne (3-13 caractères, lettres anglaises, chiffres, - et _)",
+      "nameDesc": "Choisis un nom pour ton profil hors ligne (3-16 caractères, lettres anglaises, chiffres, - et _)",
       "namePlaceholder": "Entre un pseudo...",
       "characters": "caractères",
       "nickRules": "A-Z, 0-9, - et _ uniquement",
-      "nickInvalid": "Le pseudo doit contenir 3-13 caractères : lettres anglaises, chiffres, tiret ou underscore.",
+      "nickInvalid": "Le pseudo doit contenir 3-16 caractères : lettres anglaises, chiffres, tiret ou underscore.",
       "create": "Créer le Profil",
       "createFailed": "Échec de la création du profil. Réessaie.",
       "createError": "Une erreur s'est produite lors de la création du profil."
@@ -587,7 +622,9 @@
     "copyError": "Copier l'Erreur",
     "reportIssue": "Signaler un Problème",
     "ok": "OK",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "somethingWrong": "Une erreur s'est produite",
+    "noLogEntries": "Aucune entrée de journal"
   },
   "update": {
     "downloading": "Téléchargement...",
@@ -599,7 +636,9 @@
   "updateOverlay": {
     "title": "MISE À JOUR DU LANCEUR",
     "message": "Patiente pendant que nous téléchargeons et installons la dernière version de HyPrism.",
-    "autoRestart": "Le lanceur redémarrera automatiquement une fois la mise à jour terminée."
+    "autoRestart": "Le lanceur redémarrera automatiquement une fois la mise à jour terminée.",
+    "failed": "Échec de la mise à jour",
+    "installing": "Installation"
   },
   "modManager": {
     "title": "Gestionnaire de Mods",
@@ -713,6 +752,7 @@
     "installedCount": "{{count}} mod(s) installé(s)",
     "installFailed": "Échec de l'installation des mods. Réessaie.",
     "importFailed": "Échec de l'importation des mods",
+    "openCurseforge": "Ouvrir la page CurseForge",
     "releaseType": {
       "release": "Stable",
       "beta": "Bêta",
@@ -832,5 +872,28 @@
     "unmute": "Activer le son",
     "mute": "Couper le son",
     "on": "Musique"
+  },
+  "wrapper": {
+    "description": "Mode wrapper — télécharger et lancer la version complète de HyPrism",
+    "installed": "Installé :",
+    "none": "aucun",
+    "latest": "Dernière :",
+    "updateAvailable": "Mise à jour disponible",
+    "upToDate": "À jour",
+    "checkForUpdates": "Vérifier les mises à jour",
+    "downloadInstall": "Télécharger & Installer",
+    "launch": "Lancer",
+    "installFailed": "Échec de l'installation - vérifie les logs",
+    "launchFailed": "Échec du lancement de HyPrism",
+    "loadingNews": "Chargement des actualités…"
+  },
+  "accessibility": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "segmentedControl": "Contrôle segmenté"
+  },
+  "social": {
+    "github": "GitHub",
+    "discord": "Discord"
   }
 }

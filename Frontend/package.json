@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "flag-icons": "^7.5.0",
     "framer-motion": "^11.0.0",
     "i18next": "^25.7.4",
     "lucide-react": "^0.300.0",

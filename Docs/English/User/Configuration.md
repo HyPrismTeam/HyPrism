@@ -74,6 +74,7 @@ Access settings through the **Settings** page (gear icon in sidebar).
 - If official download is unavailable, launcher automatically tests available mirrors and uses the best reachable one.
 - Mirror choice is not persisted as a user setting.
 - Mirrors are defined by JSON meta files in the `Mirrors/` folder (see [Custom Mirrors](#custom-mirrors) below).
+- If no download sources are available, the Dashboard will show a **No Download Sources** warning when you click **Download** or **Play**.
 
 ## Custom Mirrors
 

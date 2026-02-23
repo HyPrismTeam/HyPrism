@@ -55,25 +55,24 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
           return;
         }
 
-        // Track whether download sources are available
-        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
+        // Filter out version 0 (latest placeholder) and keep only real versions
+        const versions = (response.versions || []).filter(v => v.version !== 0);
 
-        const versions = response.versions || [];
-        // Add "Latest" entry at the beginning if not already present
-        const hasLatest = versions.some(v => v.version === 0);
-        if (!hasLatest && versions.length > 0) {
-          const latestSource = response.officialSourceAvailable && response.hasOfficialAccount ? 'Official' : 'Mirror';
-          versions.unshift({ version: 0, source: latestSource as 'Official' | 'Mirror', isLatest: true });
-        }
+        // Track whether download sources are available (mirrors via versions list, or official account)
+        setHasDownloadSources(!!response.hasOfficialAccount || versions.length > 0);
         setAvailableVersions(versions);
-        // Default to "Latest" (version 0) when changing branches
-        setSelectedVersion(0);
+        // Default to the first (highest) version
+        if (versions.length > 0) {
+          setSelectedVersion(versions[0].version);
+        } else {
+          setSelectedVersion(0);
+        }
       } catch (err) {
         if (requestId !== versionsRequestIdRef.current || !isOpen) {
           return;
         }
         console.error('Failed to load versions:', err);
-        setAvailableVersions([{ version: 0, source: 'Mirror', isLatest: true }]);
+        setAvailableVersions([]);
         setHasDownloadSources(false);
       } finally {
         if (requestId === versionsRequestIdRef.current && isOpen) {
@@ -89,9 +88,9 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
 
   // Generate default name when branch/version changes (only if not manually edited)
   useEffect(() => {
-    if (!isNameLocked) {
+    if (!isNameLocked && selectedVersion > 0) {
       const branchLabel = selectedBranch === GameBranch.RELEASE ? 'Release' : 'Pre-Release';
-      const versionLabel = selectedVersion === 0 ? 'Latest' : `v${selectedVersion}`;
+      const versionLabel = `v${selectedVersion}`;
       setCustomName(`${branchLabel} ${versionLabel}`);
     }
   }, [selectedBranch, selectedVersion, isNameLocked]);
@@ -114,7 +113,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSelectedBranch(GameBranch.RELEASE);
-      setSelectedVersion(0);
+      // selectedVersion will be set by loadVersions effect
       setIsNameLocked(false);
       setIconFile(null);
       setIconPreview(null);
@@ -136,17 +135,14 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
   };
 
   const handleCreate = async () => {
-    if (isCreating) return;
+    if (isCreating || selectedVersion <= 0) return;
     setIsCreating(true);
 
     try {
-      // Resolve the version (0 = latest)
-      const resolvedVersion = selectedVersion === 0 ? await getLatestVersion(selectedBranch) : selectedVersion;
-
       // Create the instance (directory + metadata only, no download)
       const createResult = await ipc.instance.create({
         branch: selectedBranch,
-        version: resolvedVersion,
+        version: selectedVersion,
         customName: customName?.trim() || undefined,
       });
 
@@ -164,21 +160,12 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
       }
 
       // Notify parent (refresh instance list)
-      onCreateStart?.(selectedBranch, resolvedVersion, customName);
+      onCreateStart?.(selectedBranch, selectedVersion, customName);
 
       onClose();
     } catch (err) {
       console.error('Failed to create instance:', err);
       setIsCreating(false);
-    }
-  };
-
-  const getLatestVersion = async (branch: string): Promise<number> => {
-    try {
-      const versions = await ipc.game.versions({ branch });
-      return versions.find(v => v !== 0) || 1;
-    } catch {
-      return 1;
     }
   };
 
@@ -376,10 +363,10 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
                     <span className="font-medium">
                       {isLoadingVersions ? (
                         <Loader2 size={14} className="animate-spin" />
-                      ) : selectedVersion === 0 ? (
-                        t('main.latest')
-                      ) : (
+                      ) : selectedVersion > 0 ? (
                         `v${selectedVersion}`
+                      ) : (
+                        t('common.selectVersion', 'Select version')
                       )}
                     </span>
                     <ChevronDown 
@@ -414,7 +401,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
                             <div className="flex items-center gap-2">
                               {selectedVersion === versionInfo.version && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
                               <span className={selectedVersion === versionInfo.version ? '' : 'ml-[18px]'}>
-                                {versionInfo.version === 0 ? t('main.latest') : `v${versionInfo.version}`}
+                                v{versionInfo.version}
                               </span>
                             </div>
                             <span className="text-[10px] text-white/30 uppercase tracking-wider">
@@ -439,7 +426,7 @@ export const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({
             <Button
               variant="primary"
               onClick={handleCreate}
-              disabled={isCreating || !customName.trim() || !hasDownloadSources}
+              disabled={isCreating || !customName.trim() || !hasDownloadSources || selectedVersion <= 0}
             >
               {isCreating ? (
                 <>

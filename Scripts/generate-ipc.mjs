@@ -111,13 +111,15 @@ L.push(``);
 L.push(`export function invoke<T = unknown>(channel: string, data?: unknown, timeout = 10000): Promise<T> {`);
 L.push(`  return new Promise((resolve, reject) => {`);
 L.push('    const replyChannel = `${channel}:reply`;');
-L.push(`    const timer = setTimeout(() => {`);
+L.push(``);
+L.push(`    // timeout = 0 means no timeout (wait indefinitely)`);
+L.push(`    const timer = timeout > 0 ? setTimeout(() => {`);
 L.push(`      cleanup();`);
 L.push('      reject(new Error(`IPC timeout on ${channel}`));');
-L.push(`    }, timeout);`);
+L.push(`    }, timeout) : null;`);
 L.push(``);
 L.push(`    const cleanup = on(replyChannel, (response) => {`);
-L.push(`      clearTimeout(timer);`);
+L.push(`      if (timer) clearTimeout(timer);`);
 L.push(`      cleanup();`);
 L.push(`      try {`);
 L.push(`        const parsed = typeof response === 'string' ? JSON.parse(response) : response;`);
@@ -173,9 +175,9 @@ for (const [domain, chs] of Object.entries(domains)) {
 
     if (ch.type === 'invoke') {
       const noData = ['get', 'current', 'list', 'instances', 'languages', 'gpuAdapters'].includes(action);
-      const timeoutArg = ch.timeout ? `, ${ch.timeout}` : '';
+      const timeoutArg = ch.timeout !== undefined ? `, ${ch.timeout}` : '';
       if (noData) {
-        const undefinedData = ch.timeout ? ', undefined' : '';
+        const undefinedData = ch.timeout !== undefined ? ', undefined' : '';
         L.push(`  ${action}: () => invoke<${resp}>('${ch.channel}'${undefinedData}${timeoutArg}),`);
       } else {
         L.push(`  ${action}: (data?: unknown) => invoke<${resp}>('${ch.channel}', data${timeoutArg}),`);

@@ -5,6 +5,7 @@ import { AccentColorProvider } from './contexts/AccentColorContext';
 
 import { initI18n } from './i18n';
 import './index.css';
+import 'flag-icons/css/flag-icons.min.css';
 
 // Error boundary to catch crashes
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {

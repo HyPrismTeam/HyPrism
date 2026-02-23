@@ -77,11 +77,21 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
         const response = await ipc.game.versionsWithSources({ branch: selectedBranch });
         if (requestId !== versionsRequestIdRef.current || !isOpen) return;
 
-        // Track whether download sources are available
-        setHasDownloadSources(response.hasDownloadSources ?? (response.hasOfficialAccount || (response.versions?.length > 0)));
+        // Track whether download sources are available (mirrors via versions list, or official account)
+        setHasDownloadSources(!!response.hasOfficialAccount || (response.versions?.length ?? 0) > 0);
 
-        const versions = response.versions || [];
+        // Filter out version 0 ("latest" placeholder) and keep only real versions.
+        const versions = (response.versions || []).filter(v => v.version !== 0);
         setAvailableVersions(versions);
+
+        // If current selection is "latest" (0) or no longer exists in this branch, select the newest real version.
+        if (versions.length > 0) {
+          setSelectedVersion((prev) => {
+            if (prev === 0) return versions[0].version;
+            if (!versions.some(v => v.version === prev)) return versions[0].version;
+            return prev;
+          });
+        }
       } catch (err) {
         if (requestId !== versionsRequestIdRef.current || !isOpen) return;
         console.error('Failed to load versions:', err);
@@ -394,7 +404,7 @@ export const EditInstanceModal: React.FC<EditInstanceModalProps> = ({
                             <div className="flex items-center gap-2">
                               {selectedVersion === versionInfo.version && <Check size={12} style={{ color: accentColor }} strokeWidth={3} />}
                               <span className={selectedVersion === versionInfo.version ? '' : 'ml-[18px]'}>
-                                {versionInfo.version === 0 ? t('main.latest') : `v${versionInfo.version}`}
+                                v{versionInfo.version}
                               </span>
                             </div>
                             <span className="text-[10px] text-white/30 uppercase tracking-wider">

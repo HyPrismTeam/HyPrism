@@ -382,10 +382,16 @@ public class ProfileManagementService : IProfileManagementService
             config.ActiveProfileIndex = index;
 
             // If user switched to an official profile, force official auth server.
+            // Otherwise, clear auth domain to allow custom auth server usage.
             if (profile.IsOfficial)
             {
-                config.AuthDomain = "sessionserver.hytale.com";
-                Logger.Info("Profile", "Official profile selected: auth domain switched to sessionserver.hytale.com");
+                config.AuthDomain = "sessions.hytale.com";
+                Logger.Info("Profile", "Official profile selected: auth domain switched to sessions.hytale.com");
+            }
+            else if (config.AuthDomain == "sessions.hytale.com")
+            {
+                config.AuthDomain = "";
+                Logger.Info("Profile", "Non-official profile selected: cleared official auth domain");
             }
             
             // Ensure mods stay in the active instance folder (no profile symlink/junction)

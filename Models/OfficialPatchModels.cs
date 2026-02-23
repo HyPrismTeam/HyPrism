@@ -187,9 +187,14 @@ public class MirrorSourceCache
 public class VersionsCacheSnapshot
 {
     /// <summary>
-    /// When the cache was last updated.
+    /// When the cache was last updated (legacy, kept for backwards compatibility).
     /// </summary>
     public DateTime FetchedAtUtc { get; set; }
+
+    /// <summary>
+    /// Per-branch fetch timestamps. Key is normalized branch name (release, pre-release, alpha).
+    /// </summary>
+    public Dictionary<string, DateTime> BranchFetchedAt { get; set; } = new();
 
     /// <summary>
     /// Operating system this cache is for.
