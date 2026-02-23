@@ -81,6 +81,7 @@ Properties/linux/flatpak/bundle
 repo
 build-dir
 flathub-bundle.tar.gz
+
 # Generated Flathub manifest (do not commit a static copy)
 Properties/linux/flathub/io.github.HyPrismTeam.HyPrism.yml
 
@@ -92,6 +93,15 @@ artifacts/
 dist/
 dmg-arm64/Applications
 scripts/build-linux-all-ubuntu.sh
+
+# Tauri wrapper artifacts
+TauriWrapper/node_modules/
+TauriWrapper/src-tauri/target/
+TauriWrapper/src-tauri/gen/
+TauriWrapper/src-tauri/.cargo/
+TauriWrapper/src-tauri/bin/hyprism-bridge*
+.tauri-sidecar/
+
 # Python debug scripts
 *.py
 __pycache__/

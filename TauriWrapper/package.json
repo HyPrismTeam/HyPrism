@@ -1,0 +1,13 @@
+{
+  "name": "hyprism-tauri-wrapper",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "tauri:dev": "cargo tauri dev --manifest-path src-tauri/Cargo.toml",
+    "tauri:build": "cargo tauri build --manifest-path src-tauri/Cargo.toml"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.0"
+  }
+}

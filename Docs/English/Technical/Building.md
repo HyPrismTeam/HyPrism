@@ -30,6 +30,44 @@ dotnet run
 
 Starts the .NET Console app → spawns Electron → opens the window.
 
+Runtime host can now be selected explicitly:
+
+```bash
+dotnet run -- --runtime electron
+dotnet run -- --runtime tauri
+```
+
+`electron` is the current default runtime host.
+`tauri` starts the experimental stdin/stdout bridge loop used by the Tauri wrapper sidecar runtime.
+
+### Tauri Wrapper (Rust)
+
+The Rust wrapper lives under [TauriWrapper/src-tauri](TauriWrapper/src-tauri).
+
+- Wrapper entry point: [TauriWrapper/src-tauri/src/main.rs](TauriWrapper/src-tauri/src/main.rs)
+- Tauri config: [TauriWrapper/src-tauri/tauri.conf.json](TauriWrapper/src-tauri/tauri.conf.json)
+- Capabilities: [TauriWrapper/src-tauri/capabilities/default.json](TauriWrapper/src-tauri/capabilities/default.json)
+
+Use the orchestration script to prepare and run/build it:
+
+```bash
+./Scripts/tauri-wrapper.sh dev
+./Scripts/tauri-wrapper.sh build
+```
+
+Linux note: Tauri (wry/webkit2gtk) requires system GTK/WebKit development libraries. A typical Debian/Ubuntu setup is:
+
+```bash
+sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev pkg-config
+```
+
+What the script does:
+
+1. Builds frontend assets (`wwwroot/`)
+2. Publishes .NET bridge binary (`HyPrism`) for the current RID
+3. Copies/renames it as Tauri sidecar (`src-tauri/bin/hyprism-bridge-$TARGET_TRIPLE`)
+4. Runs `cargo tauri dev` or `cargo tauri build`
+
 ### Frontend-Only Dev
 
 ```bash

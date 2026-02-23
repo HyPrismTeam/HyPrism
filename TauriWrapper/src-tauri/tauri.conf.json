@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HyPrism",
+  "version": "3.0.1",
+  "identifier": "io.github.HyPrismTeam.HyPrism.tauri",
+  "build": {
+    "frontendDist": "../../wwwroot"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "HyPrism",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 700,
+        "resizable": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "../../Frontend/public/icon.png"
+    ],
+    "externalBin": [
+      "bin/hyprism-bridge"
+    ]
+  }
+}

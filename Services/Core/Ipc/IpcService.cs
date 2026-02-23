@@ -13,6 +13,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
+using HyPrism.Services.Core.Ipc.Runtime;
 using HyPrism.Services.Core.App;
 using HyPrism.Services.Core.Integration;
 using HyPrism.Services.Core.Platform;
@@ -72,6 +73,7 @@ namespace HyPrism.Services.Core.Ipc;
 public class IpcService
 {
     private readonly IServiceProvider _services;
+    private readonly IIpcRuntimeBridge Electron;
 
     private static int _hasRegisteredAll;
 
@@ -85,9 +87,10 @@ public class IpcService
     public IpcService(IServiceProvider services)
     {
         _services = services;
+        Electron = IpcRuntimeBridgeFactory.Create();
     }
 
-    private static BrowserWindow? GetMainWindow()
+    private IRuntimeWindow? GetMainWindow()
     {
         return Electron.WindowManager.BrowserWindows.FirstOrDefault();
     }
@@ -124,18 +127,14 @@ public class IpcService
         return raw;
     }
 
-    private static void Reply(string channel, object? data)
+    private void Reply(string channel, object? data)
     {
-        var win = GetMainWindow();
-        if (win == null) return;
-        Electron.IpcMain.Send(win, channel, JsonSerializer.Serialize(data, JsonOpts));
+        Electron.SendToMainWindow(channel, JsonSerializer.Serialize(data, JsonOpts));
     }
 
-    private static void ReplyRaw(string channel, string raw)
+    private void ReplyRaw(string channel, string raw)
     {
-        var win = GetMainWindow();
-        if (win == null) return;
-        Electron.IpcMain.Send(win, channel, raw);
+        Electron.SendToMainWindow(channel, raw);
     }
 
     private static int GetSystemMemoryMb()

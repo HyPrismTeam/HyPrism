@@ -76,6 +76,15 @@ return services.BuildServiceProvider();
 
 `IpcService` receives all other services through constructor injection and acts as the central bridge between React and .NET.
 
+## Runtime-Aware IPC Bridge
+
+`IpcService` now resolves a runtime bridge via a small factory (`IpcRuntimeBridgeFactory`) and registers channels through that bridge instead of hard-wiring transport internals. This keeps one shared controller set while allowing different desktop hosts (Electron now, Tauri bridge next) to provide runtime-specific IPC transport adapters.
+
+Current adapters:
+
+- `ElectronIpcRuntimeBridge` — active implementation
+- `TauriIpcRuntimeBridge` — temporary stub for staged migration
+
 ## Log Interception
 
 Electron.NET emits unstructured messages to stdout/stderr (e.g. `[StartCore]:`, `|| ...`). HyPrism intercepts these via `ElectronLogInterceptor` (a custom `TextWriter` installed on `Console.Out`/`Console.Error`) and routes them through the structured `Logger`:
