@@ -225,6 +225,20 @@ class Program
                 },
                 new()
                 {
+                    Label = "Edit",
+                    Submenu = new[]
+                    {
+                        new MenuItem { Role = MenuRole.undo },
+                        new MenuItem { Role = MenuRole.redo },
+                        new MenuItem { Type = MenuType.separator },
+                        new MenuItem { Role = MenuRole.cut },
+                        new MenuItem { Role = MenuRole.copy },
+                        new MenuItem { Role = MenuRole.paste },
+                        new MenuItem { Role = MenuRole.selectAll }
+                    }
+                },
+                new()
+                {
                     Label = "Window",
                     Submenu = new[]
                     {
