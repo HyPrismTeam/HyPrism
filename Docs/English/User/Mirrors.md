@@ -87,7 +87,7 @@ The auto-detection system tries multiple strategies:
 
 | Platform | Path |
 |----------|------|
-| **Windows** | `%APPDATA%\HyPrism\` |
+| **Windows** | `%APPDATA%\Local\HyPrism\` |
 | **Linux** | `~/.local/share/HyPrism/` |
 | **macOS** | `~/Library/Application Support/HyPrism/` |
 
