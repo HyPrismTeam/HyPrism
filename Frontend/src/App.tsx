@@ -245,7 +245,8 @@ const App: React.FC = () => {
   // Throttled progress flush refs
   const latestProgressRef = useRef<any>(null);
   const lastFlushedDownloadedRef = useRef<number>(0);
-  const lastFlushedAtRef = useRef<number>(0);
+  // Note: we use a fixed flush interval to simplify timing and avoid Date.now() drift
+  const FLUSH_INTERVAL_MS = 1000;
   const flushIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -576,17 +577,11 @@ const App: React.FC = () => {
 
         // Compute smoothed speed using last flushed sample
         try {
-          const now = Date.now();
           const prev = lastFlushedDownloadedRef.current || 0;
-          const prevAt = lastFlushedAtRef.current || 0;
-          if (prevAt > 0 && now > prevAt) {
-            const deltaBytes = Math.max(0, newDownloaded - prev);
-            const deltaMs = Math.max(1, now - prevAt);
-            const instSpeed = deltaBytes / (deltaMs / 1000); // bytes/sec
-            setSpeed((s) => Math.round((s * 0.7 + instSpeed * 0.3) * 100) / 100);
-          }
+          const deltaBytes = Math.max(0, newDownloaded - prev);
+          const instSpeed = deltaBytes / (FLUSH_INTERVAL_MS / 1000); // bytes/sec based on known interval
+          setSpeed((s) => Math.round((s * 0.7 + instSpeed * 0.3) * 100) / 100);
           lastFlushedDownloadedRef.current = newDownloaded;
-          lastFlushedAtRef.current = now;
         } catch {
           setSpeed(0);
         }

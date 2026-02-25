@@ -143,13 +143,16 @@ public class DownloadService : IDownloadService
         Logger.Warning("Download", $"Transient download error on attempt {attempt}/{MaxDownloadAttempts}: {ex.Message}. Retrying in {delayMs}ms...");
         await Task.Delay(delayMs, cancellationToken);
       }
-      catch
+      catch (Exception ex)
       {
+        // Log final error for diagnostics and rethrow to let caller decide how to present it.
+        Logger.Error("Download", $"Download error on attempt {attempt}/{MaxDownloadAttempts}: {ex.Message}");
         throw;
       }
     }
 
-    throw new Exception("Download failed after maximum retry attempts.");
+    Logger.Error("Download", "Download failed after maximum retry attempts.");
+    throw new IOException("Download failed after maximum retry attempts.");
   }
 
   private static bool IsRetryableDownloadException(Exception ex)
@@ -204,8 +207,9 @@ public class DownloadService : IDownloadService
 
       return response.Content.Headers.ContentLength ?? -1;
     }
-    catch
+    catch (Exception ex)
     {
+      Logger.Warning("Download", $"GetFileSizeAsync failed for {url}: {ex.Message}");
       return -1;
     }
   }
@@ -230,8 +234,9 @@ public class DownloadService : IDownloadService
       using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
       return response.IsSuccessStatusCode;
     }
-    catch
+    catch (Exception ex)
     {
+      Logger.Warning("Download", $"FileExistsAsync failed for {url}: {ex.Message}");
       return false;
     }
   }
