@@ -2,7 +2,7 @@
 
 ## Обзор
 
-HyPrism следует архитектурному паттерну **Console + IPC + React SPA**:
+HyPrism следует архитектурному паттерну **Console + IPC + Preact SPA** с использованием [Sciter](https://sciter.com/) в качестве встроенного веб-движка:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -10,14 +10,14 @@ HyPrism следует архитектурному паттерну **Console +
 │  ├── Bootstrapper.cs (DI-контейнер)                 │
 │  ├── Services/ (бизнес-логика)                      │
 │  └── IpcService.cs (реестр IPC-каналов)             │
-│         ↕ Сокетный мост Electron.NET                │
+│         ↕ SciterIpcBridge (xcall / eval)            │
 │  ┌─────────────────────────────────────────────┐    │
-│  │  Electron Main Process                      │    │
-│  │  └── BrowserWindow (без рамки)              │    │
-│  │       └── preload.js (contextBridge)        │    │
-│  │            ↕ ipcRenderer                    │    │
+│  │  SciterAPIHost (EmptyFlow.SciterAPI)         │    │
+│  │  └── Window (нативное окно ОС)              │    │
+│  │       └── SciterIpcWindowHandler            │    │
+│  │            ↕ xcall / __hyprismReceive       │    │
 │  │       ┌─────────────────────────────┐       │    │
-│  │       │  React SPA                  │       │    │
+│  │       │  Preact SPA                 │       │    │
 │  │       │  ├── App.tsx (маршрутизация)│       │    │
 │  │       │  ├── pages/ (представления) │       │    │
 │  │       │  ├── components/ (общие)    │       │    │
@@ -30,12 +30,13 @@ HyPrism следует архитектурному паттерну **Console +
 ## Процесс запуска
 
 1. `Program.Main()` инициализирует логгер Serilog
-2. Устанавливает `ElectronLogInterceptor` на `Console.Out`/`Console.Error`
-3. `Bootstrapper.Initialize()` создаёт DI-контейнер
-4. `ElectronNetRuntime.RuntimeController.Start()` создаёт процесс Electron
-5. `ElectronBootstrap()` создаёт безрамочный `BrowserWindow`, загружающий `file://wwwroot/index.html`
+2. `Bootstrapper.Initialize()` создаёт DI-контейнер
+3. `SciterBootstrap()` создаёт `SciterAPIHost` (загружает нативную библиотеку Sciter)
+4. `host.CreateMainWindow()` открывает нативное окно ОС
+5. `bridge.Attach(host, window)` регистрирует обработчик IPC-событий на окне
 6. `IpcService.RegisterAll()` регистрирует все обработчики IPC-каналов
-7. React SPA монтируется, получает данные через типизированные IPC-вызовы
+7. `host.LoadFile("file://...wwwroot/index.html")` загружает Preact SPA
+8. `host.Process()` блокирует выполнение — запускает нативный цикл обработки сообщений до закрытия окна
 
 ## Модель коммуникации
 
@@ -52,15 +53,32 @@ HyPrism следует архитектурному паттерну **Console +
 
 | Тип | Направление | Паттерн |
 |-----|-------------|---------|
-| **send** | React → .NET (без ожидания ответа) | `send(channel, data)` |
-| **invoke** | React → .NET → React (запрос/ответ) | `invoke(channel, data)` → ожидает `:reply` |
-| **event** | .NET → React (push) | `on(channel, callback)` |
+| **send** | Preact → .NET (без ожидания ответа) | `send(channel, data)` |
+| **invoke** | Preact → .NET → Preact (запрос/ответ) | `invoke(channel, data)` → ожидает `:reply` |
+| **event** | .NET → Preact (push) | `on(channel, callback)` |
 
-### Модель безопасности
+### Транспорт: JS → C\#
 
-- `contextIsolation: true` — рендерер не имеет доступа к Node.js
-- `nodeIntegration: false` — нет `require()` в рендерере
-- `preload.js` предоставляет только `window.electron.ipcRenderer` через `contextBridge`
+Фронтенд вызывает C#-бэкенд через механизм `xcall` Sciter:
+
+```typescript
+// генерируется ipc.ts — потребитель не вызывает это напрямую
+Window.this.xcall('hyprismCall', channel, JSON.stringify(data));
+```
+
+`SciterIpcWindowHandler.ScriptMethodCall()` получает вызов и диспетчеризует его зарегистрированному обработчику.
+
+### Транспорт: C\# → JS
+
+Бэкенд отправляет события на фронтенд через вычисление глобальной JavaScript-функции:
+
+```csharp
+host.ExecuteWindowEval(window,
+    $"typeof __hyprismReceive === 'function' && __hyprismReceive({channelJson},{json})",
+    out _);
+```
+
+`__hyprismReceive` определяется генерируемым `ipc.ts` и диспетчеризует зарегистрированным слушателям `on()`.
 
 ## Внедрение зависимостей
 
@@ -68,19 +86,11 @@ HyPrism следует архитектурному паттерну **Console +
 
 ```csharp
 var services = new ServiceCollection();
-services.AddSingleton<ConfigService>();
+services.AddSingleton<SciterIpcBridge>();
+services.AddSingleton<ISciterIpcBridge>(sp => sp.GetRequiredService<SciterIpcBridge>());
 services.AddSingleton<IpcService>();
 // ... и так далее
 return services.BuildServiceProvider();
 ```
 
-`IpcService` получает все остальные сервисы через внедрение через конструктор и выступает центральным мостом между React и .NET.
-
-## Перехват логов
-
-Electron.NET выводит неструктурированные сообщения в stdout/stderr (например, `[StartCore]:`, `|| ...`). HyPrism перехватывает их через `ElectronLogInterceptor` (кастомный `TextWriter`, установленный на `Console.Out`/`Console.Error`) и направляет их через структурированный `Logger`:
-
-- Сообщения фреймворка → `Logger.Info("Electron", ...)`
-- Отладочные сообщения (`[StartCore]`, `BridgeConnector`) → `Logger.Debug("Electron", ...)`
-- Паттерны ошибок (`ERROR:`, `crash`) → `Logger.Warning("Electron", ...)`
-- Шумовые паттерны (`GetVSyncParametersIfAvailable`) → подавляются
+`IpcService` получает все остальные сервисы через внедрение через конструктор и выступает центральным мостом между Preact и .NET.

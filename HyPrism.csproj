@@ -20,9 +20,9 @@
     <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
   </PropertyGroup>
 
-  <!-- Electron.NET application metadata -->
-  <PropertyGroup Label="ElectronNetCommon">
-    <ElectronPackageId>io.github.HyPrismTeam.HyPrism</ElectronPackageId>
+  <!-- Application metadata -->
+  <PropertyGroup Label="AppMetadata">
+    <PackageId>io.github.HyPrismTeam.HyPrism</PackageId>
     <Title>HyPrism</Title>
     <Version>3.0.1</Version>
     <Description>Cross-platform Hytale launcher</Description>
@@ -30,8 +30,6 @@
     <Copyright>Copyright © 2026 HyPrism Team</Copyright>
     <License>GPL-3.0-only</License>
     <ProjectUrl>https://github.com/HyPrismTeam/HyPrism</ProjectUrl>
-    <ElectronVersion>34.2.0</ElectronVersion>
-    <ElectronSkipMigrationChecks>true</ElectronSkipMigrationChecks>
   </PropertyGroup>
 
   <!-- Windows-specific settings -->
@@ -67,9 +65,9 @@
     <EventSourceSupport>false</EventSourceSupport>
   </PropertyGroup>
 
-  <!-- Electron.NET + Core packages -->
+  <!-- Sciter + Core packages -->
   <ItemGroup>
-    <PackageReference Include="ElectronNET.Core" Version="0.4.0" />
+    <PackageReference Include="EmptyFlow.SciterAPI" Version="1.2.3" />
     <PackageReference Include="DiscordRichPresence" Version="1.143.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />

@@ -274,7 +274,12 @@ public static class Bootstrapper
 
             #region IPC Bridge
 
-            // IpcService needs all other services → receives IServiceProvider
+            // Sciter IPC bridge — transport layer between frontend and backend.
+            // Program.cs calls SciterIpcBridge.Attach() after window creation.
+            services.AddSingleton<SciterIpcBridge>();
+            services.AddSingleton<ISciterIpcBridge>(sp => sp.GetRequiredService<SciterIpcBridge>());
+
+            // IpcService needs all other services → receives IServiceProvider + bridge via DI
             services.AddSingleton<IpcService>();
 
             #endregion

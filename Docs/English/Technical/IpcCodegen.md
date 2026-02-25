@@ -1,6 +1,6 @@
 # IPC Code Generation
 
-HyPrism's IPC bridge between React and .NET is **100% auto-generated** from C# annotations. There are zero hand-written TypeScript IPC types or helpers.
+HyPrism's IPC bridge between Preact and .NET is **100% auto-generated** from C# annotations. There are zero hand-written TypeScript IPC types or helpers.
 
 ## How It Works
 
@@ -17,7 +17,7 @@ Placed on individual handler registrations as doc comments:
 
 ```csharp
 /// @ipc invoke hyprism:settings:get -> SettingsSnapshot
-Electron.IpcMain.On("hyprism:settings:get", async (args) => { ... });
+_bridge.On("hyprism:settings:get", async (args) => { ... });
 ```
 
 **Syntax:** `@ipc {type} {channel} [-> {ReturnType}]`
@@ -53,7 +53,7 @@ Placed in the class-level doc comment block:
 
 `Frontend/src/lib/ipc.ts` contains (in order):
 
-1. **Window type augmentation** — declares `window.electron.ipcRenderer`
+1. **Sciter transport bootstrap** — `Window.this.xcall` sender + `__hyprismReceive` listener registry
 2. **Core helpers** — `send()`, `on()`, `invoke<T>()`
 3. **TypeScript interfaces** — all `@type` definitions
 4. **Domain API objects** — typed methods per domain
@@ -98,7 +98,7 @@ MSBuild uses incremental build: if `IpcService.cs` hasn't changed, codegen is sk
 1. **Add handler** in `IpcService.cs` with `@ipc` annotation:
    ```csharp
    /// @ipc invoke hyprism:myDomain:myAction -> MyResult
-   Electron.IpcMain.On("hyprism:myDomain:myAction", async (args) => { ... });
+   _bridge.On("hyprism:myDomain:myAction", async (args) => { ... });
    ```
 
 2. **Add type** (if new) in the class doc comment:
@@ -108,7 +108,7 @@ MSBuild uses incremental build: if `IpcService.cs` hasn't changed, codegen is sk
 
 3. **Regenerate**: `node Scripts/generate-ipc.mjs` (or just `dotnet build`)
 
-4. **Use in React**:
+4. **Use in Preact**:
    ```typescript
    const result = await ipc.myDomain.myAction();
    ```

@@ -39,4 +39,4 @@ IPC-мост HyPrism на 100% автоматически генерируетс
 1. Добавьте обработчик и аннотацию `@ipc` в `IpcService.cs`
 2. Добавьте `@type` (при необходимости) в XML-комментарий класса
 3. Запустите `node Scripts/generate-ipc.mjs` или `dotnet build`
-4. Используйте в React: `const result = await ipc.myDomain.myAction();`
+4. Используйте в Preact: `const result = await ipc.myDomain.myAction();`

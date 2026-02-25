@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Runtime.InteropServices;
-using ElectronNET.API;
 using Microsoft.Extensions.DependencyInjection;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -72,6 +71,7 @@ namespace HyPrism.Services.Core.Ipc;
 public class IpcService
 {
     private readonly IServiceProvider _services;
+    private readonly ISciterIpcBridge _bridge;
 
     private static int _hasRegisteredAll;
 
@@ -82,14 +82,10 @@ public class IpcService
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public IpcService(IServiceProvider services)
+    public IpcService(IServiceProvider services, ISciterIpcBridge bridge)
     {
         _services = services;
-    }
-
-    private static BrowserWindow? GetMainWindow()
-    {
-        return Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        _bridge = bridge;
     }
 
     /// <summary>
@@ -124,18 +120,14 @@ public class IpcService
         return raw;
     }
 
-    private static void Reply(string channel, object? data)
+    private void Reply(string channel, object? data)
     {
-        var win = GetMainWindow();
-        if (win == null) return;
-        Electron.IpcMain.Send(win, channel, JsonSerializer.Serialize(data, JsonOpts));
+        _bridge.Send(channel, JsonSerializer.Serialize(data, JsonOpts));
     }
 
-    private static void ReplyRaw(string channel, string raw)
+    private void ReplyRaw(string channel, string raw)
     {
-        var win = GetMainWindow();
-        if (win == null) return;
-        Electron.IpcMain.Send(win, channel, raw);
+        _bridge.Send(channel, raw);
     }
 
     private static int GetSystemMemoryMb()
@@ -273,7 +265,7 @@ public class IpcService
         };
 
         // Explicit check (useful for manual refresh or debugging)
-        Electron.IpcMain.On("hyprism:update:check", async (_) =>
+        _bridge.On("hyprism:update:check", async (_) =>
         {
             try
             {
@@ -288,7 +280,7 @@ public class IpcService
         });
 
         // Install update (will usually terminate the current process after starting the replacement script)
-        Electron.IpcMain.On("hyprism:update:install", async (_) =>
+        _bridge.On("hyprism:update:install", async (_) =>
         {
             try
             {
@@ -301,7 +293,7 @@ public class IpcService
                     _ = Task.Run(async () =>
                     {
                         await Task.Delay(750);
-                        try { Electron.App.Exit(); } catch { Environment.Exit(0); }
+                        try { Environment.Exit(0); } catch { Environment.Exit(1); }
                     });
                 }
             }
@@ -323,12 +315,12 @@ public class IpcService
     {
         var config = _services.GetRequiredService<IConfigService>();
 
-        Electron.IpcMain.On("hyprism:config:get", (_) =>
+        _bridge.On("hyprism:config:get", (_) =>
         {
             Reply("hyprism:config:get:reply", config.Configuration);
         });
 
-        Electron.IpcMain.On("hyprism:config:save", (_) =>
+        _bridge.On("hyprism:config:save", (_) =>
         {
             try
             {
@@ -382,7 +374,7 @@ public class IpcService
             try { Reply("hyprism:game:error", new { type, message, technical }); } catch { /* swallow */ }
         };
 
-        Electron.IpcMain.On("hyprism:game:launch", async (args) =>
+        _bridge.On("hyprism:game:launch", async (args) =>
         {
             // First check if game is already running
             if (gameProcessService.IsGameRunning())
@@ -484,13 +476,13 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:game:cancel", (_) =>
+        _bridge.On("hyprism:game:cancel", (_) =>
         {
             Logger.Info("IPC", "Game download cancel requested");
             gameSession.CancelDownload();
         });
 
-        Electron.IpcMain.On("hyprism:game:stop", (_) =>
+        _bridge.On("hyprism:game:stop", (_) =>
         {
             try
             {
@@ -505,7 +497,7 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:game:instances", (_) =>
+        _bridge.On("hyprism:game:instances", (_) =>
         {
             try
             {
@@ -520,7 +512,7 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:game:isRunning", (_) =>
+        _bridge.On("hyprism:game:isRunning", (_) =>
         {
             try
             {
@@ -533,7 +525,7 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:game:versions", async (args) =>
+        _bridge.On("hyprism:game:versions", async (args) =>
         {
             try
             {
@@ -563,7 +555,7 @@ public class IpcService
 
         // Get versions with source information (official vs mirror)
         // @ipc invoke hyprism:game:versionsWithSources -> VersionListResponse
-        Electron.IpcMain.On("hyprism:game:versionsWithSources", async (args) =>
+        _bridge.On("hyprism:game:versionsWithSources", async (args) =>
         {
             try
             {
@@ -613,7 +605,7 @@ public class IpcService
         var fileService = _services.GetRequiredService<IFileService>();
 
         // Create an instance with generated ID
-        Electron.IpcMain.On("hyprism:instance:create", (args) =>
+        _bridge.On("hyprism:instance:create", (args) =>
         {
             try
             {
@@ -643,7 +635,7 @@ public class IpcService
         });
 
         // Select an instance by ID
-        Electron.IpcMain.On("hyprism:instance:select", (args) =>
+        _bridge.On("hyprism:instance:select", (args) =>
         {
             try
             {
@@ -669,7 +661,7 @@ public class IpcService
         });
 
         // Get selected instance
-        Electron.IpcMain.On("hyprism:instance:getSelected", (_) =>
+        _bridge.On("hyprism:instance:getSelected", (_) =>
         {
             try
             {
@@ -690,7 +682,7 @@ public class IpcService
         });
 
         // List all instances from config
-        Electron.IpcMain.On("hyprism:instance:list", (_) =>
+        _bridge.On("hyprism:instance:list", (_) =>
         {
             try
             {
@@ -723,7 +715,7 @@ public class IpcService
         });
 
         // Delete an instance
-        Electron.IpcMain.On("hyprism:instance:delete", (args) =>
+        _bridge.On("hyprism:instance:delete", (args) =>
         {
             try
             {
@@ -755,7 +747,7 @@ public class IpcService
         });
 
         // Open instance folder
-        Electron.IpcMain.On("hyprism:instance:openFolder", (args) =>
+        _bridge.On("hyprism:instance:openFolder", (args) =>
         {
             try
             {
@@ -787,7 +779,7 @@ public class IpcService
         });
 
         // Open mods folder
-        Electron.IpcMain.On("hyprism:instance:openModsFolder", (args) =>
+        _bridge.On("hyprism:instance:openModsFolder", (args) =>
         {
             try
             {
@@ -834,7 +826,7 @@ public class IpcService
         });
 
         // Export instance as zip
-        Electron.IpcMain.On("hyprism:instance:export", async (args) =>
+        _bridge.On("hyprism:instance:export", async (args) =>
         {
             try
             {
@@ -896,7 +888,7 @@ public class IpcService
         });
 
         // Import instance from zip or pwr file (using file dialog service)
-        Electron.IpcMain.On("hyprism:instance:import", async (_) =>
+        _bridge.On("hyprism:instance:import", async (_) =>
         {
             try
             {
@@ -937,7 +929,7 @@ public class IpcService
         });
 
         // Get saves for an instance
-        Electron.IpcMain.On("hyprism:instance:saves", (args) =>
+        _bridge.On("hyprism:instance:saves", (args) =>
         {
             try
             {
@@ -998,7 +990,7 @@ public class IpcService
         });
 
         // Open save folder
-        Electron.IpcMain.On("hyprism:instance:openSaveFolder", (args) =>
+        _bridge.On("hyprism:instance:openSaveFolder", (args) =>
         {
             try
             {
@@ -1033,7 +1025,7 @@ public class IpcService
         });
 
         // Delete save folder
-        Electron.IpcMain.On("hyprism:instance:deleteSave", (args) =>
+        _bridge.On("hyprism:instance:deleteSave", (args) =>
         {
             try
             {
@@ -1088,7 +1080,7 @@ public class IpcService
         });
 
         // Get instance icon
-        Electron.IpcMain.On("hyprism:instance:getIcon", (args) =>
+        _bridge.On("hyprism:instance:getIcon", (args) =>
         {
             try
             {
@@ -1133,7 +1125,7 @@ public class IpcService
         });
 
         // Set instance icon
-        Electron.IpcMain.On("hyprism:instance:setIcon", async (args) =>
+        _bridge.On("hyprism:instance:setIcon", async (args) =>
         {
             try
             {
@@ -1197,7 +1189,7 @@ public class IpcService
         });
 
         // Rename instance (set custom name)
-        Electron.IpcMain.On("hyprism:instance:rename", (args) =>
+        _bridge.On("hyprism:instance:rename", (args) =>
         {
             try
             {
@@ -1227,7 +1219,7 @@ public class IpcService
         // @ipc invoke hyprism:instance:changeVersion -> boolean
         // Change the version/branch of an existing instance.
         // Clears game client files, updates meta.json, marks non-latest.
-        Electron.IpcMain.On("hyprism:instance:changeVersion", (args) =>
+        _bridge.On("hyprism:instance:changeVersion", (args) =>
         {
             try
             {
@@ -1264,7 +1256,7 @@ public class IpcService
     {
         var newsService = _services.GetRequiredService<INewsService>();
 
-        Electron.IpcMain.On("hyprism:news:get", async (_) =>
+        _bridge.On("hyprism:news:get", async (_) =>
         {
             try
             {
@@ -1300,7 +1292,7 @@ public class IpcService
         var profileService = _services.GetRequiredService<IProfileService>();
         var profileMgmt = _services.GetRequiredService<IProfileManagementService>();
 
-        Electron.IpcMain.On("hyprism:profile:get", (_) =>
+        _bridge.On("hyprism:profile:get", (_) =>
         {
             Reply("hyprism:profile:get:reply", new
             {
@@ -1310,12 +1302,12 @@ public class IpcService
             });
         });
 
-        Electron.IpcMain.On("hyprism:profile:list", (_) =>
+        _bridge.On("hyprism:profile:list", (_) =>
         {
             Reply("hyprism:profile:list:reply", profileMgmt.GetProfiles());
         });
 
-        Electron.IpcMain.On("hyprism:profile:switch", (args) =>
+        _bridge.On("hyprism:profile:switch", (args) =>
         {
             try
             {
@@ -1340,21 +1332,21 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:profile:setNick", (args) =>
+        _bridge.On("hyprism:profile:setNick", (args) =>
         {
             var nick = ArgsToString(args);
             var success = profileService.SetNick(nick);
             Reply("hyprism:profile:setNick:reply", new { success });
         });
 
-        Electron.IpcMain.On("hyprism:profile:setUuid", (args) =>
+        _bridge.On("hyprism:profile:setUuid", (args) =>
         {
             var uuid = ArgsToString(args);
             var success = profileService.SetUUID(uuid);
             Reply("hyprism:profile:setUuid:reply", new { success });
         });
 
-        Electron.IpcMain.On("hyprism:profile:create", (args) =>
+        _bridge.On("hyprism:profile:create", (args) =>
         {
             try
             {
@@ -1386,37 +1378,37 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:profile:delete", (args) =>
+        _bridge.On("hyprism:profile:delete", (args) =>
         {
             var id = ArgsToString(args);
             var success = profileMgmt.DeleteProfile(id);
             Reply("hyprism:profile:delete:reply", new { success });
         });
 
-        Electron.IpcMain.On("hyprism:profile:activeIndex", (_) =>
+        _bridge.On("hyprism:profile:activeIndex", (_) =>
         {
             Reply("hyprism:profile:activeIndex:reply", profileMgmt.GetActiveProfileIndex());
         });
 
-        Electron.IpcMain.On("hyprism:profile:save", (_) =>
+        _bridge.On("hyprism:profile:save", (_) =>
         {
             var profile = profileMgmt.SaveCurrentAsProfile();
             Reply("hyprism:profile:save:reply", new { success = profile != null });
         });
 
-        Electron.IpcMain.On("hyprism:profile:duplicate", (args) =>
+        _bridge.On("hyprism:profile:duplicate", (args) =>
         {
             var id = ArgsToString(args);
             var profile = profileMgmt.DuplicateProfileWithoutData(id);
             Reply("hyprism:profile:duplicate:reply", profile != null ? (object)profile : new { error = "Failed to duplicate" });
         });
 
-        Electron.IpcMain.On("hyprism:profile:openFolder", (_) =>
+        _bridge.On("hyprism:profile:openFolder", (_) =>
         {
             profileMgmt.OpenCurrentProfileFolder();
         });
 
-        Electron.IpcMain.On("hyprism:profile:avatarForUuid", (args) =>
+        _bridge.On("hyprism:profile:avatarForUuid", (args) =>
         {
             var uuid = ArgsToString(args);
             var path = profileService.GetAvatarPreviewForUUID(uuid);
@@ -1435,12 +1427,12 @@ public class IpcService
     {
         var authService = _services.GetRequiredService<HytaleAuthService>();
 
-        Electron.IpcMain.On("hyprism:auth:status", (_) =>
+        _bridge.On("hyprism:auth:status", (_) =>
         {
             Reply("hyprism:auth:status:reply", authService.GetAuthStatus());
         });
 
-        Electron.IpcMain.On("hyprism:auth:login", async (_) =>
+        _bridge.On("hyprism:auth:login", async (_) =>
         {
             try
             {
@@ -1464,7 +1456,7 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:auth:logout", (_) =>
+        _bridge.On("hyprism:auth:logout", (_) =>
         {
             authService.Logout();
             Reply("hyprism:auth:logout:reply", new { success = true });
@@ -1483,7 +1475,7 @@ public class IpcService
         var appPath = _services.GetRequiredService<AppPathConfiguration>();
         var updateService = _services.GetRequiredService<IUpdateService>();
 
-        Electron.IpcMain.On("hyprism:settings:get", (_) =>
+        _bridge.On("hyprism:settings:get", (_) =>
         {
             var lang = settings.GetLanguage();
             Reply("hyprism:settings:get:reply", new
@@ -1517,7 +1509,7 @@ public class IpcService
             });
         });
 
-        Electron.IpcMain.On("hyprism:settings:update", (args) =>
+        _bridge.On("hyprism:settings:update", (args) =>
         {
             try
             {
@@ -1550,7 +1542,7 @@ public class IpcService
         });
         
         // @ipc invoke hyprism:settings:testMirrorSpeed -> MirrorSpeedTestResult
-        Electron.IpcMain.On("hyprism:settings:testMirrorSpeed", async (args) =>
+        _bridge.On("hyprism:settings:testMirrorSpeed", async (args) =>
         {
             try
             {
@@ -1580,7 +1572,7 @@ public class IpcService
         });
         
         // @ipc invoke hyprism:settings:testOfficialSpeed -> MirrorSpeedTestResult
-        Electron.IpcMain.On("hyprism:settings:testOfficialSpeed", async (args) =>
+        _bridge.On("hyprism:settings:testOfficialSpeed", async (args) =>
         {
             try
             {
@@ -1609,7 +1601,7 @@ public class IpcService
         });
 
         // @ipc invoke hyprism:settings:hasDownloadSources -> { hasDownloadSources: boolean; hasOfficialAccount: boolean; enabledMirrorCount: number; }
-        Electron.IpcMain.On("hyprism:settings:hasDownloadSources", async (_) =>
+        _bridge.On("hyprism:settings:hasDownloadSources", async (_) =>
         {
             await Task.CompletedTask;
             try
@@ -1633,7 +1625,7 @@ public class IpcService
         });
 
         // @ipc invoke hyprism:settings:getMirrors -> MirrorInfo[]
-        Electron.IpcMain.On("hyprism:settings:getMirrors", async (_) =>
+        _bridge.On("hyprism:settings:getMirrors", async (_) =>
         {
             await Task.CompletedTask;
             try
@@ -1659,7 +1651,7 @@ public class IpcService
         });
 
         // @ipc invoke hyprism:settings:addMirror -> { success: boolean; error?: string; mirror?: MirrorInfo; } 0
-        Electron.IpcMain.On("hyprism:settings:addMirror", async (args) =>
+        _bridge.On("hyprism:settings:addMirror", async (args) =>
         {
             try
             {
@@ -1743,7 +1735,7 @@ public class IpcService
         });
 
         // @ipc invoke hyprism:settings:deleteMirror -> { success: boolean; }
-        Electron.IpcMain.On("hyprism:settings:deleteMirror", async (args) =>
+        _bridge.On("hyprism:settings:deleteMirror", async (args) =>
         {
             await Task.CompletedTask;
             try
@@ -1779,7 +1771,7 @@ public class IpcService
         });
 
         // @ipc invoke hyprism:settings:toggleMirror -> { success: boolean; }
-        Electron.IpcMain.On("hyprism:settings:toggleMirror", async (args) =>
+        _bridge.On("hyprism:settings:toggleMirror", async (args) =>
         {
             await Task.CompletedTask;
             try
@@ -1816,7 +1808,7 @@ public class IpcService
         });
 
         // @ipc invoke hyprism:network:pingAuthServer -> AuthServerPingResult
-        Electron.IpcMain.On("hyprism:network:pingAuthServer", async (args) =>
+        _bridge.On("hyprism:network:pingAuthServer", async (args) =>
         {
             try
             {
@@ -1994,12 +1986,12 @@ public class IpcService
         var localization = _services.GetRequiredService<LocalizationService>();
         var settings = _services.GetRequiredService<ISettingsService>();
 
-        Electron.IpcMain.On("hyprism:i18n:current", (_) =>
+        _bridge.On("hyprism:i18n:current", (_) =>
         {
             Reply("hyprism:i18n:current:reply", localization.CurrentLanguage);
         });
 
-        Electron.IpcMain.On("hyprism:i18n:set", (args) =>
+        _bridge.On("hyprism:i18n:set", (args) =>
         {
             var lang = ArgsToString(args);
             if (string.IsNullOrEmpty(lang)) lang = "en-US";
@@ -2009,7 +2001,7 @@ public class IpcService
             Reply("hyprism:i18n:set:reply", new { success, language = success ? lang : localization.CurrentLanguage });
         });
 
-        Electron.IpcMain.On("hyprism:i18n:languages", (_) =>
+        _bridge.On("hyprism:i18n:languages", (_) =>
         {
             Reply("hyprism:i18n:languages:reply", LocalizationService.GetAvailableLanguages());
         });
@@ -2026,36 +2018,40 @@ public class IpcService
 
     private void RegisterWindowHandlers()
     {
-        Electron.IpcMain.On("hyprism:window:minimize", (_) => GetMainWindow()?.Minimize());
+        _bridge.On("hyprism:window:minimize", (_) => _bridge.MinimizeWindow());
 
-        Electron.IpcMain.On("hyprism:window:maximize", async (_) =>
-        {
-            var win = GetMainWindow();
-            if (win == null) return;
-            if (await win.IsMaximizedAsync()) win.Unmaximize();
-            else win.Maximize();
-        });
+        _bridge.On("hyprism:window:maximize", (_) => _bridge.ToggleMaximizeWindow());
 
-        Electron.IpcMain.On("hyprism:window:close", (_) => GetMainWindow()?.Close());
+        _bridge.On("hyprism:window:close", (_) => _bridge.CloseWindow());
 
-        Electron.IpcMain.On("hyprism:window:restart", (_) =>
+        _bridge.On("hyprism:window:restart", (_) =>
         {
             try
             {
-                Electron.App.Exit();
+                _bridge.CloseWindow();
+                Environment.Exit(0);
             }
             catch (Exception ex)
             {
                 Logger.Error("IPC", $"Failed to restart app: {ex.Message}");
-                GetMainWindow()?.Close();
+                Environment.Exit(1);
             }
         });
 
-        Electron.IpcMain.On("hyprism:browser:open", (args) =>
+        _bridge.On("hyprism:browser:open", (args) =>
         {
             var url = ArgsToString(args);
             if (!string.IsNullOrEmpty(url))
-                Electron.Shell.OpenExternalAsync(url);
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("IPC", $"Failed to open URL '{url}': {ex.Message}");
+                }
+            }
         });
     }
     
@@ -2111,7 +2107,7 @@ public class IpcService
             return null;
         }
 
-        Electron.IpcMain.On("hyprism:mods:list", (_) =>
+        _bridge.On("hyprism:mods:list", (_) =>
         {
             try
             {
@@ -2131,7 +2127,7 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:mods:search", async (args) =>
+        _bridge.On("hyprism:mods:search", async (args) =>
         {
             try
             {
@@ -2165,7 +2161,7 @@ public class IpcService
         });
 
         // Get installed mods for a specific instance (by branch and version)
-        Electron.IpcMain.On("hyprism:mods:installed", (args) =>
+        _bridge.On("hyprism:mods:installed", (args) =>
         {
             try
             {
@@ -2194,7 +2190,7 @@ public class IpcService
         });
 
         // Uninstall a mod from an instance
-        Electron.IpcMain.On("hyprism:mods:uninstall", async (args) =>
+        _bridge.On("hyprism:mods:uninstall", async (args) =>
         {
             try
             {
@@ -2331,7 +2327,7 @@ public class IpcService
         });
 
         // Check for mod updates (returns mods that have updates available)
-        Electron.IpcMain.On("hyprism:mods:checkUpdates", async (args) =>
+        _bridge.On("hyprism:mods:checkUpdates", async (args) =>
         {
             try
             {
@@ -2360,7 +2356,7 @@ public class IpcService
         });
         
         // Install a mod from CurseForge by modId and fileId
-        Electron.IpcMain.On("hyprism:mods:install", async (args) =>
+        _bridge.On("hyprism:mods:install", async (args) =>
         {
             try
             {
@@ -2392,7 +2388,7 @@ public class IpcService
         });
         
         // Get available files for a mod
-        Electron.IpcMain.On("hyprism:mods:files", async (args) =>
+        _bridge.On("hyprism:mods:files", async (args) =>
         {
             try
             {
@@ -2414,7 +2410,7 @@ public class IpcService
         });
 
         // Get single mod metadata (by numeric id or slug)
-        Electron.IpcMain.On("hyprism:mods:info", async (args) =>
+        _bridge.On("hyprism:mods:info", async (args) =>
         {
             try
             {
@@ -2434,7 +2430,7 @@ public class IpcService
         });
 
         // Get changelog for a mod file
-        Electron.IpcMain.On("hyprism:mods:changelog", async (args) =>
+        _bridge.On("hyprism:mods:changelog", async (args) =>
         {
             try
             {
@@ -2455,7 +2451,7 @@ public class IpcService
         });
         
         // Get mod categories
-        Electron.IpcMain.On("hyprism:mods:categories", async (_) =>
+        _bridge.On("hyprism:mods:categories", async (_) =>
         {
             try
             {
@@ -2470,7 +2466,7 @@ public class IpcService
         });
         
         // Install mod from local file path
-        Electron.IpcMain.On("hyprism:mods:installLocal", async (args) =>
+        _bridge.On("hyprism:mods:installLocal", async (args) =>
         {
             try
             {
@@ -2501,7 +2497,7 @@ public class IpcService
         });
         
         // Install mod from base64-encoded content
-        Electron.IpcMain.On("hyprism:mods:installBase64", async (args) =>
+        _bridge.On("hyprism:mods:installBase64", async (args) =>
         {
             try
             {
@@ -2533,7 +2529,7 @@ public class IpcService
         });
         
         // Open the mods folder for an instance
-        Electron.IpcMain.On("hyprism:mods:openFolder", (args) =>
+        _bridge.On("hyprism:mods:openFolder", (args) =>
         {
             try
             {
@@ -2553,7 +2549,7 @@ public class IpcService
                 
                 var modsPath = Path.Combine(instancePath, "UserData", "Mods");
                 ModService.EnsureModsDirectory(modsPath);
-                Electron.Shell.OpenPathAsync(modsPath);
+                try { Process.Start(new ProcessStartInfo { FileName = modsPath, UseShellExecute = true }); } catch { }
             }
             catch (Exception ex)
             {
@@ -2562,7 +2558,7 @@ public class IpcService
         });
         
         // Toggle mod enabled/disabled (renames .jar <-> .jar.disabled)
-        Electron.IpcMain.On("hyprism:mods:toggle", async (args) =>
+        _bridge.On("hyprism:mods:toggle", async (args) =>
         {
             try
             {
@@ -2706,7 +2702,7 @@ public class IpcService
     {
         var gpuService = _services.GetRequiredService<GpuDetectionService>();
 
-        Electron.IpcMain.On("hyprism:system:gpuAdapters", (_) =>
+        _bridge.On("hyprism:system:gpuAdapters", (_) =>
         {
             try
             {
@@ -2720,7 +2716,7 @@ public class IpcService
             }
         });
 
-        Electron.IpcMain.On("hyprism:system:platform", (_) =>
+        _bridge.On("hyprism:system:platform", (_) =>
         {
             var isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
             var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -2741,17 +2737,17 @@ public class IpcService
 
     private void RegisterConsoleHandlers()
     {
-        Electron.IpcMain.On("hyprism:console:log", (args) =>
+        _bridge.On("hyprism:console:log", (args) =>
             Logger.Info("Renderer", ArgsToString(args)));
 
-        Electron.IpcMain.On("hyprism:console:warn", (args) =>
+        _bridge.On("hyprism:console:warn", (args) =>
             Logger.Warning("Renderer", ArgsToString(args)));
 
-        Electron.IpcMain.On("hyprism:console:error", (args) =>
+        _bridge.On("hyprism:console:error", (args) =>
             Logger.Error("Renderer", ArgsToString(args)));
 
         // Get recent logs from in-memory buffer
-        Electron.IpcMain.On("hyprism:logs:get", (args) =>
+        _bridge.On("hyprism:logs:get", (args) =>
         {
             try
             {
@@ -2802,7 +2798,7 @@ public class IpcService
         var modService = _services.GetRequiredService<IModService>();
 
         // Browse mod files dialog (jar, zip, json)
-        Electron.IpcMain.On("hyprism:file:browseModFiles", async (_) =>
+        _bridge.On("hyprism:file:browseModFiles", async (_) =>
         {
             try
             {
@@ -2817,7 +2813,7 @@ public class IpcService
         });
 
         // Browse Java executable
-        Electron.IpcMain.On("hyprism:file:browseJavaExecutable", async (_) =>
+        _bridge.On("hyprism:file:browseJavaExecutable", async (_) =>
         {
             try
             {
@@ -2832,7 +2828,7 @@ public class IpcService
         });
 
         // Check file existence
-        Electron.IpcMain.On("hyprism:file:exists", (args) =>
+        _bridge.On("hyprism:file:exists", (args) =>
         {
             try
             {
@@ -2848,7 +2844,7 @@ public class IpcService
         });
 
         // Export mods to folder (modlist JSON or zip)
-        Electron.IpcMain.On("hyprism:mods:exportToFolder", async (args) =>
+        _bridge.On("hyprism:mods:exportToFolder", async (args) =>
         {
             try
             {
@@ -2931,7 +2927,7 @@ public class IpcService
         });
 
         // Import mod list from JSON file
-        Electron.IpcMain.On("hyprism:mods:importList", async (args) =>
+        _bridge.On("hyprism:mods:importList", async (args) =>
         {
             try
             {
@@ -2979,7 +2975,7 @@ public class IpcService
         });
 
         // Browse folder dialog
-        Electron.IpcMain.On("hyprism:file:browseFolder", async (args) =>
+        _bridge.On("hyprism:file:browseFolder", async (args) =>
         {
             try
             {
@@ -2995,20 +2991,20 @@ public class IpcService
         });
 
         // Get launcher folder path (app data path)
-        Electron.IpcMain.On("hyprism:settings:launcherPath", (_) =>
+        _bridge.On("hyprism:settings:launcherPath", (_) =>
         {
             Reply("hyprism:settings:launcherPath:reply", appPath.AppDir);
         });
 
         // Get default instance directory
-        Electron.IpcMain.On("hyprism:settings:defaultInstanceDir", (_) =>
+        _bridge.On("hyprism:settings:defaultInstanceDir", (_) =>
         {
             var defaultDir = Path.Combine(appPath.AppDir, "Instances");
             Reply("hyprism:settings:defaultInstanceDir:reply", defaultDir);
         });
         
         // Set instance directory - moves all instances to new location
-        Electron.IpcMain.On("hyprism:settings:setInstanceDir", async (args) =>
+        _bridge.On("hyprism:settings:setInstanceDir", async (args) =>
         {
             try
             {

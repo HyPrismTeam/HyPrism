@@ -28,16 +28,16 @@ This single command runs the entire MSBuild pipeline:
 dotnet run
 ```
 
-Starts the .NET Console app → spawns Electron → opens the window.
+Starts the .NET Console app → creates a Sciter native window → loads `wwwroot/index.html`.
 
 ### Frontend-Only Dev
 
 ```bash
 cd Frontend
-npm run dev    # Vite dev server on localhost:5173
+npm run dev    # Vite dev server on localhost:34115
 ```
 
-Useful for iterating on UI without restarting the full app. Note: IPC calls will not work in standalone mode (no Electron bridge).
+Useful for iterating on UI without restarting the full app. Note: IPC calls (`Window.this.xcall`) will not work in standalone Vite mode — there is no Sciter runtime in the browser. You can mock `Window.this.xcall` in `ipc.ts` during development.
 
 ### Regenerate IPC
 
