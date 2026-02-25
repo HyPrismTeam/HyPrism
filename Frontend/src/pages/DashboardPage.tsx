@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Play, Download, Loader2, X, RefreshCw, User, ShieldAlert, Info, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Play, Download, Loader2, X, RefreshCw, User, ShieldAlert, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useAccentColor } from '../contexts/AccentColorContext';
 
 import { ipc, InstanceInfo } from '@/lib/ipc';
@@ -36,6 +36,7 @@ interface DashboardPageProps {
   total: number;
   launchState: string;
   launchDetail: string;
+  speed?: number;
   // Instance-based
   selectedInstance: InstanceInfo | null;
   instances: InstanceInfo[];
@@ -51,7 +52,7 @@ interface DashboardPageProps {
   onUpdate: () => void;
   onCancelDownload: () => void;
   onNavigateToInstances: () => void;
-  // Official server state  
+  // Official server state
   officialServerBlocked: boolean;
   isOfficialProfile: boolean;
   isOfficialServerMode: boolean;
@@ -220,10 +221,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           onMouseLeave={() => setShowCancelButton(false)}
           onClick={() => showCancelButton && props.canCancel && props.onCancelDownload()}
         >
-          <div
-            className="absolute inset-0 transition-all duration-300"
-            style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: `${accentColor}40` }}
-          />
+          {props.total > 0 && (
+            <div
+              className="absolute inset-0 transition-all duration-300"
+              style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: `${accentColor}40` }}
+            />
+          )}
           {showCancelButton && props.canCancel ? (
             <div className="relative z-10 flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
               <X size={16} />
@@ -446,7 +449,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
             </div>
             <div className="flex items-center gap-2">
               {props.updateAvailable && props.launcherUpdateInfo?.releaseUrl ? (
-                <LinkButton 
+                <LinkButton
                   onClick={() => ipc.browser.open(props.launcherUpdateInfo!.releaseUrl!)}
                   className="text-xs font-medium hover:underline cursor-pointer"
                   style={{ color: accentColor }}
@@ -458,13 +461,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                 <span className="text-xs text-white/30">HyPrism {props.launcherVersion}</span>
               )}
               {props.updateAvailable && (
-                <LinkButton 
+                <LinkButton
                   onClick={() => {
                     if (props.launcherUpdateInfo?.releaseUrl) {
                       ipc.browser.open(props.launcherUpdateInfo.releaseUrl);
                     }
                   }}
-                  className="text-[10px] font-medium" 
+                  className="text-[10px] font-medium"
                   style={{ color: accentColor }}
                   title={t('main.clickToOpenRelease', 'Click to view release on GitHub')}
                 >
@@ -474,13 +477,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
             </div>
 
             {props.updateAvailable && props.launcherUpdateInfo?.latestVersion && (
-              <LinkButton 
+              <LinkButton
                 onClick={() => {
                   if (props.launcherUpdateInfo?.releaseUrl) {
                     ipc.browser.open(props.launcherUpdateInfo.releaseUrl);
                   }
                 }}
-                className="mt-0.5 flex items-center gap-1 text-[10px] animate-rgb cursor-pointer hover:underline" 
+                className="mt-0.5 flex items-center gap-1 text-[10px] animate-rgb cursor-pointer hover:underline"
                 style={{ color: accentColor }}
                 title={t('main.clickToOpenRelease', 'Click to view release on GitHub')}
               >
@@ -531,9 +534,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
           className="flex flex-col items-center gap-3"
         >
           <div className="flex flex-col items-center select-none">
-            <img 
-              src={previewLogo} 
-              alt="HyPrism" 
+            <img
+              src={previewLogo}
+              alt="HyPrism"
               className="h-24 drop-shadow-xl select-none"
               draggable={false}
             />
@@ -615,27 +618,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = memo((props) => {
                   className="absolute top-full mt-2 w-[350px] left-1/2"
                 >
                   <div className={`bg-[#1a1a1a]/95 rounded-xl px-3 py-2 border border-white/5`}>
-                    {/* Progress bar container */}
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: accentColor }}
-                      />
-                    </div>
-                    {/* Info row: launchDetail on left, bytes on right */}
-                    <div className="flex justify-between items-center mt-1.5 text-[10px]">
-                      <span className="text-white/60 truncate max-w-[250px]">
-                        {props.launchDetail ? (t(props.launchDetail) !== props.launchDetail 
-                        ? t(props.launchDetail).replace('{0}', `${Math.min(Math.round(props.progress), 100)}`) : props.launchDetail) 
-                        : getLaunchStateLabel()}
-                      </span>
-                      <span className="text-white/50 font-mono">
-                        {props.total > 0
-                          ? `${formatBytes(props.downloaded)} / ${formatBytes(props.total)}`
-                          : `${Math.min(Math.round(props.progress), 100)}%`
-                        }
-                      </span>
-                    </div>
+                    {/* If total is known show full progress bar with percent and bytes. Otherwise show only downloaded bytes (no bar / percent). */}
+                    {props.total > 0 ? (
+                      <>
+                        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(props.progress, 100)}%`, backgroundColor: accentColor }}
+                          />
+                        </div>
+                        <div className="flex justify-between items-center mt-1.5 text-[10px]">
+                          <span className="text-white/60 truncate max-w-[250px]">
+                            {props.launchDetail ? (t(props.launchDetail) !== props.launchDetail ? t(props.launchDetail).replace('{0}', `${Math.min(Math.round(props.progress), 100)}`) : props.launchDetail) : getLaunchStateLabel()}
+                          </span>
+                          <span className="text-white/50 font-mono">
+                            {`${formatBytes(props.downloaded)} / ${formatBytes(props.total)}`}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-between text-[10px]">
+                        <div className="flex items-center gap-2">
+                          <Loader2 size={12} className="animate-spin text-white/70" />
+                          <span className="text-white/60">{getLaunchStateLabel()}</span>
+                        </div>
+                        <span className="text-white/50 font-mono">{props.speed && props.speed > 0 ? `${formatBytes(props.downloaded)} • ${formatBytes(props.speed)}/s` : `${formatBytes(props.downloaded)}`}</span>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
