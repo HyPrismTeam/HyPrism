@@ -157,6 +157,7 @@ const App: React.FC = () => {
   const [runningVersion, setRunningVersion] = useState<number | undefined>(undefined);
   const [downloaded, setDownloaded] = useState<number>(0);
   const [total, setTotal] = useState<number>(0);
+  const [speed, setSpeed] = useState<number>(0);
   const [launchState, setLaunchState] = useState<string>('');
   const [launchDetail, setLaunchDetail] = useState<string>('');
 
@@ -224,7 +225,7 @@ const App: React.FC = () => {
   // Initialize as null to prevent flash — don't render background until config is loaded
   const [backgroundMode, setBackgroundMode] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  
+
   const handleToggleMute = useCallback(() => {
      setIsMuted(prev => {
        const newState = !prev;
@@ -237,6 +238,16 @@ const App: React.FC = () => {
   useEffect(() => {
     selectedInstanceRef.current = selectedInstance;
   }, [selectedInstance]);
+
+  // Refs for speed calculation
+  const lastDownloadedRef = useRef<number>(0);
+  const lastDownloadedAtRef = useRef<number>(0);
+  // Throttled progress flush refs
+  const latestProgressRef = useRef<any>(null);
+  const lastFlushedDownloadedRef = useRef<number>(0);
+  // Note: we use a fixed flush interval to simplify timing and avoid Date.now() drift
+  const FLUSH_INTERVAL_MS = 1000;
+  const flushIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handleMenuNavigate = (evt: Event) => {
@@ -531,66 +542,98 @@ const App: React.FC = () => {
         return;
       }
 
-      // Handle cancellation first
+      // Handle cancellation immediately
       if (data.state === 'cancelled') {
         console.log('Download cancelled event received');
         clearDownloadState();
         setProgress(0);
         setDownloaded(0);
         setTotal(0);
+        setSpeed(0);
+        lastDownloadedRef.current = 0;
+        lastDownloadedAtRef.current = 0;
+        lastFlushedDownloadedRef.current = 0;
+        lastFlushedAtRef.current = 0;
+        latestProgressRef.current = null;
         setLaunchState('');
         setLaunchDetail('');
         setDownloadState('downloading');
         return;
       }
 
-      setProgress(data.progress ?? 0);
-      setDownloaded(data.downloadedBytes ?? 0);
-      setTotal(data.totalBytes ?? 0);
-      setLaunchState(data.state ?? '');
-      
-      // Build launch detail from messageKey and args
-      const key = data.messageKey || '';
-      const args = Array.isArray(data.args) ? data.args : [];
-      // Simple interpolation: replace {0}, {1}, etc. with args (use regex for global replace)
-      let detail = key;
-      args.forEach((arg: any, i: number) => {
-        detail = detail.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg));
-      });
-      setLaunchDetail(detail);
-
-      // Update download state based on state field
-      if (data.state === 'download' || data.state === 'update') {
-        setDownloadState('downloading');
-      } else if (data.state === 'install') {
-        setDownloadState('extracting');
-      } else if (data.state === 'complete') {
-        console.log('[App] Progress complete state received, waiting for game-state event');
-        setDownloadState('launching');
-        // Refresh instances after download completes
-        if (data.progress >= 100) {
-          refreshInstances();
-        }
-      } else if (data.state === 'launch' || data.state === 'launching') {
-        // Game is launching - set running immediately for better UX
-        console.log('[App] Launch/launching state received, setting isGameRunning=true');
-        setIsGameRunning(true);
-        clearDownloadState();
-        setProgress(0);
-        setLaunchState('');
-        setLaunchDetail('');
-      } else {
-        // Fallback to progress-based detection
-        if (data.progress >= 0 && data.progress < 70) {
-          setDownloadState('downloading');
-        } else if (data.progress >= 70 && data.progress < 100) {
-          setDownloadState('extracting');
-        } else if (data.progress >= 100) {
-          setDownloadState('launching');
-        }
-      }
+      // For all other progress updates, just cache the latest payload
+      latestProgressRef.current = data;
     });
-    
+
+    // Start flush interval (1s) to update UI at most once per second
+    if (flushIntervalRef.current == null) {
+      flushIntervalRef.current = window.setInterval(() => {
+        const data = latestProgressRef.current;
+        if (!data) return;
+
+        const newDownloaded = data.downloadedBytes ?? 0;
+        const newTotal = data.totalBytes ?? 0;
+        const newProgress = data.progress ?? 0;
+
+        // Compute smoothed speed using last flushed sample
+        try {
+          const prev = lastFlushedDownloadedRef.current || 0;
+          const deltaBytes = Math.max(0, newDownloaded - prev);
+          const instSpeed = deltaBytes / (FLUSH_INTERVAL_MS / 1000); // bytes/sec based on known interval
+          setSpeed((s) => Math.round((s * 0.7 + instSpeed * 0.3) * 100) / 100);
+          lastFlushedDownloadedRef.current = newDownloaded;
+        } catch {
+          setSpeed(0);
+        }
+
+        // Apply flushed values to UI
+        setProgress(newProgress);
+        setDownloaded(newDownloaded);
+        setTotal(newTotal);
+        setLaunchState(data.state ?? '');
+
+        // Build launch detail from messageKey and args
+        const key = data.messageKey || '';
+        const args = Array.isArray(data.args) ? data.args : [];
+        let detail = key;
+        args.forEach((arg: any, i: number) => {
+          detail = detail.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg));
+        });
+        setLaunchDetail(detail);
+
+        // Update download state based on state field (immediate mapping)
+        if (data.state === 'download' || data.state === 'update') {
+          setDownloadState('downloading');
+        } else if (data.state === 'install') {
+          setDownloadState('extracting');
+        } else if (data.state === 'complete') {
+          console.log('[App] Progress complete state received, waiting for game-state event');
+          setDownloadState('launching');
+          if (data.progress >= 100) {
+            refreshInstances();
+          }
+        } else if (data.state === 'launch' || data.state === 'launching') {
+          console.log('[App] Launch/launching state received, setting isGameRunning=true');
+          setIsGameRunning(true);
+          clearDownloadState();
+          setProgress(0);
+          setLaunchState('');
+          setLaunchDetail('');
+        } else {
+          if (data.progress >= 0 && data.progress < 70) {
+            setDownloadState('downloading');
+          } else if (data.progress >= 70 && data.progress < 100) {
+            setDownloadState('extracting');
+          } else if (data.progress >= 100) {
+            setDownloadState('launching');
+          }
+        }
+
+        // Clear cached latest to avoid reprocessing same snapshot
+        latestProgressRef.current = null;
+      }, 1000);
+    }
+
     // Game state event listener
     const unsubGameState = EventsOn('game-state', async (data: any) => {
       console.log('[App] Game state event received:', data);
@@ -623,7 +666,7 @@ const App: React.FC = () => {
         setProgress(0);
         setLaunchState('');
         setLaunchDetail('');
-        
+
         // Check if close after launch is enabled
         try {
           const closeAfterLaunch = await GetCloseAfterLaunch();
@@ -696,6 +739,11 @@ const App: React.FC = () => {
       unsubGameState();
       unsubUpdate();
       unsubError();
+      // Clear flush interval
+      if (flushIntervalRef.current != null) {
+        clearInterval(flushIntervalRef.current);
+        flushIntervalRef.current = null;
+      }
     };
   }, []);
 
@@ -1023,6 +1071,7 @@ const App: React.FC = () => {
               progress={progress}
               downloaded={downloaded}
               total={total}
+              speed={speed}
               launchState={launchState}
               launchDetail={launchDetail}
               selectedInstance={selectedInstance}
@@ -1075,6 +1124,7 @@ const App: React.FC = () => {
               progress={progress}
               downloaded={downloaded}
               total={total}
+              speed={speed}
               launchState={launchState}
               launchDetail={launchDetail}
               canCancel={isDownloading && !isGameRunning}
@@ -1110,16 +1160,16 @@ const App: React.FC = () => {
 
       {/* Floating Dock Menu - hide during data migration */}
       {!isMovingData && (
-        <DockMenu 
-          activePage={currentPage} 
-          onPageChange={setCurrentPage} 
+        <DockMenu
+          activePage={currentPage}
+          onPageChange={setCurrentPage}
           isMuted={isMuted}
           onToggleMute={handleToggleMute}
         />
       )}
 
       {/* Modals - only essential overlays */}
-      
+
       <Suspense fallback={<ModalFallback />}>
         {showDelete && selectedInstance && (
           <DeleteConfirmationModal
@@ -1145,7 +1195,7 @@ const App: React.FC = () => {
             error={{
               type: 'LAUNCH_FAILED',
               message: launchTimeoutError.message,
-              technical: launchTimeoutError.logs.length > 0 
+              technical: launchTimeoutError.logs.length > 0
                 ? launchTimeoutError.logs.join('\n')
                 : t('error.noLogEntries'),
               timestamp: new Date().toISOString(),
