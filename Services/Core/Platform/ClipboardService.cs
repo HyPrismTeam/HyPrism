@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using HyPrism.Services.Core.Infrastructure;
 
 namespace HyPrism.Services.Core.Platform;
 
@@ -46,7 +47,7 @@ public class ClipboardService : IClipboardService
             else
             {
                 // Linux: try wl-copy (Wayland) then xclip (X11) then xsel
-                await TryLinuxClipboardWrite(text, "wl-copy", "")
+                _ = await TryLinuxClipboardWrite(text, "wl-copy", "")
                     || await TryLinuxClipboardWrite(text, "xclip", "-selection clipboard")
                     || await TryLinuxClipboardWrite(text, "xsel", "--clipboard --input");
             }

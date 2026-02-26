@@ -17,7 +17,7 @@ class ErrorBoundary extends Component<{ children: ComponentChildren }, { hasErro
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: { componentStack: string | null }) {
+  componentDidCatch(error: Error, errorInfo: { componentStack?: string }) {
     console.error('Preact Error Boundary caught:', error, errorInfo);
   }
 

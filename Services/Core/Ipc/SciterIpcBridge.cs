@@ -169,8 +169,11 @@ internal sealed class SciterIpcWindowHandler : WindowEventHandler
         if (args.Count == 0)
             return (Host.CreateValue(false), true);
 
-        var channel = Host.GetValueString(ref args[0]);
-        var jsonArgs = args.Count > 1 ? Host.GetValueString(ref args[1]) : "null";
+        var a0 = args[0];
+        var channel = Host.GetValueString(ref a0);
+        string jsonArgs;
+        if (args.Count > 1) { var a1 = args[1]; jsonArgs = Host.GetValueString(ref a1); }
+        else { jsonArgs = "null"; }
 
         // Dispatch asynchronously so the UI thread is never blocked
         _ = Task.Run(() => _bridge.DispatchCall(channel, jsonArgs));
