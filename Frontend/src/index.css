@@ -116,10 +116,26 @@ code, pre {
      SciterAPIHost WindowsFlags or a dedicated behavior on the C# side. */
 }
 
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.titlebar-brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 .titlebar-title {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
 }
 
 .titlebar-controls {
@@ -153,33 +169,69 @@ code, pre {
 
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 .sidebar {
-  width: 60px;
-  background: rgba(0,0,0,0.4);
+  width: 160px;
+  background: #0b0b0b;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 12px 0;
-  gap: 4px;
-  border-right: 1px solid rgba(255,255,255,0.04);
+  padding: 8px 0 12px;
+  border-right: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
 }
 
-.sidebar-item {
-  width: 44px;
-  height: 44px;
+/* Logo tile at top of sidebar */
+.sidebar-logo {
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius);
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 8px auto 14px;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-glyph {
+  font-size: 17px;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  padding: 0 8px;
+}
+
+.sidebar-item {
+  width: 100%;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
   cursor: pointer;
   color: var(--text-muted);
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.12s, color 0.12s;
   border: none;
   background: transparent;
-  font-size: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  position: relative;
+  overflow: visible;
 }
-.sidebar-item:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+.sidebar-item:hover { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
 .sidebar-item.active { background: var(--accent-dim); color: var(--accent); }
+
+.sidebar-label {
+  flex: 1;
+  line-height: 1;
+}
 
 /* ── Content pane ───────────────────────────────────────────────────────── */
 .content-pane {
@@ -236,6 +288,7 @@ code, pre {
 .btn-primary {
   background: var(--accent);
   color: #000;
+  font-weight: 600;
 }
 .btn-secondary {
   background: rgba(255,255,255,0.08);
@@ -244,6 +297,11 @@ code, pre {
 .btn-danger {
   background: #c0392b;
   color: white;
+}
+.btn-lg {
+  padding: 12px 32px;
+  font-size: 14px;
+  border-radius: var(--radius);
 }
 
 /* ── Surface / card ─────────────────────────────────────────────────────── */
@@ -274,3 +332,52 @@ code, pre {
 
 .page-placeholder h2 { color: var(--text-secondary); font-size: 18px; }
 .page-placeholder p  { font-size: 13px; }
+
+/* ── Dashboard ───────────────────────────────────────────────────────────────────── */
+.dashboard-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 24px 32px;
+}
+
+.dashboard-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  box-shadow: 0 8px 32px #FFA84540;
+}
+
+.dashboard-logo-letter {
+  font-size: 34px;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
+}
+
+.dashboard-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.dashboard-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: -4px;
+}
+
+.dashboard-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 8px;
+}

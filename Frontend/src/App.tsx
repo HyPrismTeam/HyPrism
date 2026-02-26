@@ -1,18 +1,26 @@
-import { h } from 'preact';
+import { h, ComponentType } from 'preact';
 import { useState } from 'preact/hooks';
 import { ipc } from './lib/ipc';
+import {
+  IconHome,
+  IconNews,
+  IconProfiles,
+  IconInstances,
+  IconSettings,
+  IconLogs,
+} from './components/Icons';
 
 // ─── Page IDs ────────────────────────────────────────────────────────────────
 type PageId = 'dashboard' | 'news' | 'profiles' | 'instances' | 'settings' | 'logs';
 
 // ─── Sidebar navigation entries ──────────────────────────────────────────────
-const NAV_ITEMS: Array<{ id: PageId; label: string; icon: string }> = [
-  { id: 'dashboard',  label: 'Dashboard',  icon: '⊞' },
-  { id: 'news',       label: 'News',        icon: '◈' },
-  { id: 'profiles',   label: 'Profiles',    icon: '◉' },
-  { id: 'instances',  label: 'Instances',   icon: '⬡' },
-  { id: 'settings',   label: 'Settings',    icon: '⚙' },
-  { id: 'logs',       label: 'Logs',        icon: '≡' },
+const NAV_ITEMS: Array<{ id: PageId; label: string; Icon: ComponentType<{ size?: number }> }> = [
+  { id: 'dashboard',  label: 'Dashboard',  Icon: IconHome },
+  { id: 'news',       label: 'News',       Icon: IconNews },
+  { id: 'profiles',   label: 'Profiles',   Icon: IconProfiles },
+  { id: 'instances',  label: 'Instances',  Icon: IconInstances },
+  { id: 'settings',   label: 'Settings',   Icon: IconSettings },
+  { id: 'logs',       label: 'Logs',       Icon: IconLogs },
 ];
 
 // ─── Placeholder page component ──────────────────────────────────────────────
@@ -27,19 +35,19 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
-// ─── Dashboard page (first to be implemented) ────────────────────────────────
+// ─── Dashboard page ──────────────────────────────────────────────────────────
 function DashboardPage() {
   return (
     <div class="page">
-      <div class="card" style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: '40px 24px' }}>
-        <h2 style={{ fontSize: 24, marginBottom: 12, color: 'var(--accent)' }}>HyPrism</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-          Launcher is ready. Connect the backend to continue.
-        </p>
-        <button
-          class="btn btn-primary"
-          onClick={() => ipc.game.launch()}
-        >
+      <div class="dashboard-hero">
+        <div class="dashboard-logo">
+          <span class="dashboard-logo-letter">H</span>
+        </div>
+        <h1 class="dashboard-title">HyPrism</h1>
+        <p class="dashboard-subtitle">Hytale Launcher</p>
+      </div>
+      <div class="dashboard-actions">
+        <button class="btn btn-primary btn-lg" onClick={() => ipc.game.launch()}>
           Launch Game
         </button>
       </div>
@@ -64,7 +72,10 @@ function renderPage(page: PageId) {
 function Titlebar() {
   return (
     <div class="titlebar">
-      <span class="titlebar-title">HyPrism</span>
+      <div class="titlebar-brand">
+        <span class="titlebar-brand-dot"/>
+        <span class="titlebar-title">HyPrism</span>
+      </div>
       <div class="titlebar-controls">
         <button
           class="titlebar-btn"
@@ -101,16 +112,22 @@ interface SidebarProps {
 function Sidebar({ current, onNavigate }: SidebarProps) {
   return (
     <nav class="sidebar">
-      {NAV_ITEMS.map(({ id, label, icon }) => (
-        <button
-          key={id}
-          class={`sidebar-item${current === id ? ' active' : ''}`}
-          title={label}
-          onClick={() => onNavigate(id)}
-        >
-          {icon}
-        </button>
-      ))}
+      <div class="sidebar-logo" title="HyPrism">
+        <span class="sidebar-logo-glyph">H</span>
+      </div>
+      <div class="sidebar-nav">
+        {NAV_ITEMS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            class={`sidebar-item${current === id ? ' active' : ''}`}
+            title={label}
+            onClick={() => onNavigate(id)}
+          >
+            <Icon size={18} />
+            <span class="sidebar-label">{label}</span>
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }
