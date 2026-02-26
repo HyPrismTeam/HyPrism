@@ -2,14 +2,14 @@
 
 ```
 HyPrism/
-├── Program.cs                  # Entry point: Console → Electron bootstrap
+├── Program.cs                  # Entry point: Console → Sciter bootstrap
 ├── Bootstrapper.cs             # DI container setup
 ├── HyPrism.csproj              # Project file with MSBuild pipeline
 ├── HyPrism.sln                 # Solution file
 │
-├── Frontend/                   # React SPA (Vite + TypeScript)
+├── Frontend/                   # Preact SPA (Vite + TypeScript)
 │   ├── src/
-│   │   ├── components/         # Reusable React components
+│   │   ├── components/         # Reusable Preact components
 │   │   │   ├── modals/         # Modal dialogs (Settings, OnboardingModal, etc.)
 │   │   │   ├── ProfileEditor.tsx  # Profile management UI
 │   │   │   └── ...
@@ -18,7 +18,7 @@ HyPrism/
 │   │   │   ├── NewsPage.tsx       # News feed page
 │   │   │   ├── InstancesPage.tsx  # Game instances manager
 │   │   │   └── ModsPage.tsx       # Mod browser/manager
-│   │   ├── contexts/           # React Context providers
+│   │   ├── contexts/           # Preact Context providers
 │   │   │   └── AccentColorContext.tsx  # Theme accent color
 │   │   ├── lib/                # Utilities
 │   │   │   └── ipc.ts          # AUTO-GENERATED IPC bridge (do not edit)
@@ -27,7 +27,7 @@ HyPrism/
 │   │   │   ├── images/         # Images and icons
 │   │   │   └── backgrounds/    # Dashboard backgrounds
 │   │   ├── App.tsx             # Root component with routing
-│   │   ├── main.tsx            # React entry point
+│   │   ├── main.tsx            # Preact entry point
 │   │   └── index.css           # Global styles + Tailwind
 │   ├── index.html              # Vite entry HTML
 │   ├── vite.config.ts          # Vite config (Tailwind, base: './')

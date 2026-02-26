@@ -1,11 +1,7 @@
 #!/bin/sh
 #
-# Launcher wrapper for Flatpak — prefers zypak when available to support chrome-sandbox.
-# When zypak is present the wrapper runs the Electron binary via `zypak-wrapper` and
-# sets `ZYPAK_SANDBOX_FILENAME=chrome-sandbox` if the bundled sandbox binary exists.
-# If zypak is not available the wrapper falls back to running the binary with
-# `--no-sandbox` for maximum compatibility. Use `ZYPAK_DEBUG=1` or `ZYPAK_STRACE=all`
-# for troubleshooting.
+# Launcher wrapper for Flatpak — HyPrism is a self-contained .NET + Sciter binary;
+# no chrome-sandbox or zypak is required.
 #
 # HyPrism Flatpak launcher wrapper —
 # - if a user‑installed copy exists in $XDG_DATA_HOME/HyPrism, run it

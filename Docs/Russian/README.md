@@ -1,6 +1,6 @@
 # Документация HyPrism
 
-> Кроссплатформенный лаунчер Hytale — .NET 10 + Electron.NET + React
+> Кроссплатформенный лаунчер Hytale — .NET 10 + Sciter + Preact
 
 ## Разделы
 
@@ -9,7 +9,7 @@
 - [Функции](General/Features.md) — Список возможностей
 
 ### Техническое
-- [Архитектура](Technical/Architecture.md) — Консольное приложение + IPC + React SPA архитектура
+- [Архитектура](Technical/Architecture.md) — Консольное приложение + IPC + Preact SPA архитектура
 - [Структура проекта](Technical/ProjectStructure.md) — Организация файлов и папок
 - [Генерация IPC кода](Technical/IpcCodegen.md) — Автоматическая генерация типизированного IPC-моста
 - [Справочник сервисов](Technical/ServicesReference.md) — Слой сервисов .NET
@@ -18,7 +18,7 @@
 
 ### Разработка
 - [Стандарты кода](Development/CodingStandards.md) — Соглашения C# и TypeScript
-- [Руководство по фронтенду](Development/FrontendGuide.md) — React компоненты, темы, маршрутизация
+- [Руководство по фронтенду](Development/FrontendGuide.md) — Preact компоненты, темы, маршрутизация
 - [Вклад в проект](Development/Contributing.md) — Руководство для контрибьюторов
 - [Добавление зеркала](Development/AddingMirror.md) — Как добавить встроенное зеркало сообщества
 

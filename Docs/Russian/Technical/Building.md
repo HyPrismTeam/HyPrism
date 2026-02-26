@@ -74,7 +74,7 @@ dotnet publish -c Release -r linux-x64
 ./Scripts/publish.sh flatpak --arch x64
 ```
 
-Упаковка Flatpak теперь генерируется через `Scripts/publish.sh` и Electron Builder.
+Упаковка Flatpak теперь генерируется через `Scripts/publish.sh` с использованием нативного `flatpak-builder`.
 Linux-иконки генерируются из `Frontend/public/icon.png` в `Build/icons/` во время публикации.
 Источник AppStream-метаданных остаётся `Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml`.
 

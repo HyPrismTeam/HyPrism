@@ -2,31 +2,31 @@
 
 ## Project Overview
 
-**HyPrism** is a cross-platform launcher for the game Hytale, built with .NET 10 and Electron.NET. It provides mod management, multi-instance support, and an alternative to the official launcher.
+**HyPrism** is a cross-platform launcher for the game Hytale, built with .NET 10 and Sciter (EmptyFlow.SciterAPI). It provides mod management, multi-instance support, and an alternative to the official launcher.
 
 ### Architecture
 
-The application follows a **Console + IPC + React SPA** pattern:
+The application follows a **Console + IPC + Preact SPA** pattern:
 
 - **Backend**: .NET 10 console application with dependency injection
-- **Frontend**: React 18 + TypeScript SPA rendered in Electron
-- **Communication**: IPC bridge via Electron.NET socket (named channels: `hyprism:{domain}:{action}`)
-- **Logging**: Serilog with custom `ElectronLogInterceptor` for Electron.NET framework messages
+- **Frontend**: Preact 10 + TypeScript SPA rendered in a Sciter native window
+- **Communication**: IPC via Sciter `xcall('hyprismCall', channel, json)` and `__hyprismReceive` global (named channels: `hyprism:{domain}:{action}`)
+- **Logging**: Serilog
 
 ### Key Technologies
 
 | Layer | Technology |
 |-------|------------|
-| Backend | .NET 10, ElectronNET.Core, Serilog, DiscordRichPresence |
-| Frontend | React 18, TypeScript, Vite, TailwindCSS, Framer Motion, i18next |
-| IPC | Electron.NET bridge with context isolation |
+| Backend | .NET 10, EmptyFlow.SciterAPI, Serilog, DiscordRichPresence |
+| Frontend | Preact 10, TypeScript, Vite, TailwindCSS, Framer Motion, i18next |
+| IPC | Sciter xcall / __hyprismReceive (in-process, no socket) |
 | DI | Microsoft.Extensions.DependencyInjection |
 
 ### Project Structure
 
 ```
 HyPrism/
-├── Program.cs              # Entry point, Electron bootstrap
+├── Program.cs              # Entry point, Sciter bootstrap
 ├── Bootstrapper.cs         # DI container setup
 ├── HyPrism.csproj          # .NET project file
 ├── Frontend/               # React SPA source
@@ -117,7 +117,7 @@ Examples:
 
 | File | Purpose | Caution |
 |------|---------|---------|
-| `Program.cs` | App entry point, Electron bootstrap | Changes affect entire startup |
+| `Program.cs` | App entry point, Sciter bootstrap | Changes affect entire startup |
 | `Bootstrapper.cs` | DI container setup | Breaking changes affect all services |
 | `IpcService.cs` | IPC bridge between backend/frontend | Must stay in sync with frontend |
 | `ClientPatcher.cs` | Game integrity | Never modify without explicit instruction |

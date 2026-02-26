@@ -2,16 +2,16 @@
 
 ## Обзор
 
-Фронтенд — это React 19 SPA, собранный с помощью Vite 7 и TypeScript 5.9. Он запускается внутри Electron BrowserWindow, загружаемого из `file://wwwroot/index.html`.
+Фронтенд — это Preact 10 SPA, собранный с помощью Vite и TypeScript. Он запускается внутри нативного окна Sciter, загружаемого из `wwwroot/index.html`.
 
 ## Стек
 
 | Библиотека | Назначение |
 |------------|-----------|
-| React 19 | UI-фреймворк |
-| TypeScript 5.9 | Типобезопасность |
-| Vite 7 | Инструмент сборки |
-| TailwindCSS v4 | Утилитарный CSS |
+| Preact 10 | UI-фреймворк |
+| TypeScript | Типобезопасность |
+| Vite | Инструмент сборки |
+| TailwindCSS v3 | Утилитарный CSS |
 | GSAP 3 + @gsap/react | Анимации |
 | Lucide React | Иконки |
 | React Router DOM | Клиентская маршрутизация |

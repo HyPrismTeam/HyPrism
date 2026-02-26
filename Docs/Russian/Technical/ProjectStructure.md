@@ -2,14 +2,14 @@
 
 ```
 HyPrism/
-├── Program.cs                  # Точка входа: Console → Electron bootstrap
+├── Program.cs                  # Точка входа: Console → Sciter bootstrap
 ├── Bootstrapper.cs             # Настройка DI-контейнера
 ├── HyPrism.csproj              # Файл проекта с конвейером MSBuild
 ├── HyPrism.sln                 # Файл решения
 │
-├── Frontend/                   # React SPA (Vite + TypeScript)
+├── Frontend/                   # Preact SPA (Vite + TypeScript)
 │   ├── src/
-│   │   ├── components/         # Переиспользуемые React-компоненты
+│   │   ├── components/         # Переиспользуемые Preact-компоненты
 │   │   │   ├── modals/         # Модальные диалоги (Settings, OnboardingModal и др.)
 │   │   │   ├── ProfileEditor.tsx  # UI управления профилем
 │   │   │   └── ...
@@ -18,7 +18,7 @@ HyPrism/
 │   │   │   ├── NewsPage.tsx       # Страница ленты новостей
 │   │   │   ├── InstancesPage.tsx  # Менеджер экземпляров игры
 │   │   │   └── ModsPage.tsx       # Браузер/менеджер модов
-│   │   ├── contexts/           # Провайдеры React Context
+│   │   ├── contexts/           # Провайдеры Preact Context
 │   │   │   └── AccentColorContext.tsx  # Акцентный цвет темы
 │   │   ├── lib/                # Утилиты
 │   │   │   └── ipc.ts          # АВТОГЕНЕРИРУЕМЫЙ IPC-мост (не редактировать)
@@ -27,7 +27,7 @@ HyPrism/
 │   │   │   ├── images/         # Изображения и иконки
 │   │   │   └── backgrounds/    # Фоны панели управления
 │   │   ├── App.tsx             # Корневой компонент с маршрутизацией
-│   │   ├── main.tsx            # Точка входа React
+│   │   ├── main.tsx            # Точка входа Preact
 │   │   └── index.css           # Глобальные стили + Tailwind
 │   ├── index.html              # Входной HTML для Vite
 │   ├── vite.config.ts          # Конфигурация Vite (Tailwind, base: './')

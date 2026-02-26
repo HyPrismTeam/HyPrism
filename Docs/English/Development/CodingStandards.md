@@ -81,7 +81,7 @@ var text = File.ReadAllText("assets/game-lang/en.lang");
 ```
 
 ```tsx
-// ❌ Direct Node.js / Electron API in renderer
+// ❌ window.require() or Node.js globals in frontend
 const fs = require('fs');
 
 // ❌ Hardcoded colors instead of theme tokens

@@ -81,7 +81,7 @@ var text = File.ReadAllText("assets/game-lang/en.lang");
 ```
 
 ```tsx
-// ❌ Прямой доступ к Node.js / Electron API в рендерере
+// ❌ window.require() или глобальные Node.js во фронтенде
 const fs = require('fs');
 
 // ❌ Захардкоженные цвета вместо токенов темы

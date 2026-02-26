@@ -24,7 +24,7 @@
 - Linux package app ID is `io.github.HyPrismTeam.HyPrism`.
 - AppStream metadata is injected for Linux packaging from `Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml`.
 - RPM repack step intentionally strips `/usr/lib/.build-id` payload and does not own system directories (`/`, `/usr`, `/usr/lib`) to avoid install conflicts on Fedora.
-- Flatpak packaging uses runtime/base `25.08`; CI prepares Flathub remotes at system and user levels so flatpak-builder can install deps, then installs `org.freedesktop.Platform`, `org.freedesktop.Sdk`, and `org.electronjs.Electron2.BaseApp` at system level before build.
+- Flatpak packaging uses runtime/base `25.08`; CI prepares Flathub remotes at system and user levels so flatpak-builder can install deps, then installs `org.freedesktop.Platform` and `org.freedesktop.Sdk` at system level before build.
 - Linux CI prints Flatpak remotes/runtimes diagnostics to simplify troubleshooting when flatpak-bundler fails.
 
 ## Adding a New Feature
@@ -36,7 +36,7 @@
 3. Add IPC handler + `@ipc` annotation in `IpcService.cs`
 4. Add `@type` annotation if new TypeScript type is needed
 5. Regenerate: `node Scripts/generate-ipc.mjs` (or `dotnet build`)
-6. Create React component/page in `Frontend/src/`
+6. Create Preact component/page in `Frontend/src/`
 7. Add route in `App.tsx` if new page
 8. Update documentation in `Docs/`
 9. Verify: `dotnet build` passes with 0 errors

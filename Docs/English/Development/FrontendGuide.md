@@ -2,16 +2,16 @@
 
 ## Overview
 
-The frontend is a React 19 SPA built with Vite 7 and TypeScript 5.9. It runs inside an Electron BrowserWindow loaded from `file://wwwroot/index.html`.
+The frontend is a Preact 10 SPA built with Vite and TypeScript. It runs inside a Sciter native window loaded from `wwwroot/index.html`.
 
 ## Stack
 
 | Library | Purpose |
 |---------|---------|
-| React 19 | UI framework |
-| TypeScript 5.9 | Type safety |
-| Vite 7 | Build tool |
-| TailwindCSS v4 | Utility-first CSS |
+| Preact 10 | UI framework |
+| TypeScript | Type safety |
+| Vite | Build tool |
+| TailwindCSS v3 | Utility-first CSS |
 | GSAP 3 + @gsap/react | Animations |
 | Lucide React | Icons |
 | React Router DOM | Client-side routing |

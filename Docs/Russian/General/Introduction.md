@@ -7,37 +7,37 @@
 | Уровень | Технология |
 |---------|-----------|
 | Backend | .NET 10, C# 13 |
-| Оболочка | Electron.NET (Electron 34) |
-| Frontend | React 19 + TypeScript 5.9 + Vite 7 |
-| Анимации | Framer Motion |
-| Стилизация | TailwindCSS v4 |
-| Иконки | Lucide React |
-| Маршрутизация | React Router DOM |
+| Оболочка | Sciter (EmptyFlow.SciterAPI 1.2.3) |
+| Frontend | Preact 10 + TypeScript + Vite |
+| Анимации | Framer Motion (через preact/compat) |
+| Стилизация | TailwindCSS v3 |
+| Иконки | Lucide React (через preact/compat) |
+| Маршрутизация | React Router DOM (через preact/compat) |
 | DI | Microsoft.Extensions.DependencyInjection |
 | Логирование | Serilog |
 | Локализация | i18next (12 языков) |
 
 ## Принцип работы
 
-HyPrism запускается как **консольное приложение .NET**, которое создаёт процесс **Electron**. Окно Electron загружает React SPA из локальной файловой системы. Всё взаимодействие между React-фронтендом и .NET-бэкендом происходит через **IPC-каналы** (Inter-Process Communication — межпроцессное взаимодействие).
+HyPrism запускается как **консольное приложение .NET**, которое создаёт нативное **окно Sciter**. Sciter загружает Preact SPA напрямую из локальной файловой системы. Всё взаимодействие между Preact-фронтендом и .NET-бэкендом происходит через **IPC-каналы**.
 
 ```
-Консольное приложение .NET → создаёт процесс Electron
-  ├── Electron Main Process
-  │     └── BrowserWindow (без рамки, contextIsolation)
-  │           └── preload.js (contextBridge → ipcRenderer)
-  └── React SPA (загружается из file://wwwroot/index.html)
-        └── ipc.ts → IPC-каналы → IpcService.cs → .NET сервисы
+Консольное приложение .NET → создаёт нативное окно Sciter
+  ├── SciterAPIHost
+  │     └── Безрамочное нативное окно
+  │           └── SciterIpcBridge (WindowEventHandler)
+  └── Preact SPA (загружается из wwwroot/index.html)
+        └── ipc.ts → xcall(‘hyprismCall’) → IpcService.cs → .NET сервисы
 ```
 
-Это **НЕ** веб-сервер — здесь нет ASP.NET, HTTP или REST. Фронтенд взаимодействует с бэкендом исключительно через именованные IPC-каналы посредством сокетного моста Electron.
+Это **НЕ** веб-сервер — здесь нет ASP.NET, HTTP или REST. Фронтенд вызывает бэкенд через `xcall('hyprismCall', channel, json)` и получает push-события через глобальный `__hyprismReceive` — всё внутри одного процесса, без сокетов.
 
 ## Ключевые принципы
 
 1. **Единый источник истины** — C#-аннотации в `IpcService.cs` определяют все IPC-каналы и TypeScript-типы; IPC-клиент для фронтенда полностью генерируется автоматически
-2. **Изоляция контекста** — `contextIsolation: true`, `nodeIntegration: false`; все API Electron доступны через `preload.js`
+2. **Инпроцессная изоляция** — Фронтенд работает внутри скриптингового движка Sciter; весь доступ к нативным API проходит исключительно через `SciterIpcBridge`, без глобальных Node.js и require()
 3. **DI повсюду** — Все .NET-сервисы регистрируются в `Bootstrapper.cs` через внедрение через конструктор
-4. **Кроссплатформенность** — Поддержка Windows, Linux, macOS благодаря .NET 10 + Electron
+4. **Кроссплатформенность** — Поддержка Windows, Linux, macOS благодаря .NET 10 + Sciter
 5. **Экземплярная модель** — Каждая установка игры изолирована в собственной папке на основе GUID
 
 ## Поддерживаемые платформы

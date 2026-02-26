@@ -95,26 +95,3 @@ return services.BuildServiceProvider();
 
 `IpcService` receives all other services through constructor injection and acts as the central bridge between Preact and .NET.
 
-
-## Dependency Injection
-
-All services are registered as singletons in `Bootstrapper.cs`:
-
-```csharp
-var services = new ServiceCollection();
-services.AddSingleton<ConfigService>();
-services.AddSingleton<IpcService>();
-// ... etc
-return services.BuildServiceProvider();
-```
-
-`IpcService` receives all other services through constructor injection and acts as the central bridge between React and .NET.
-
-## Log Interception
-
-Electron.NET emits unstructured messages to stdout/stderr (e.g. `[StartCore]:`, `|| ...`). HyPrism intercepts these via `ElectronLogInterceptor` (a custom `TextWriter` installed on `Console.Out`/`Console.Error`) and routes them through the structured `Logger`:
-
-- Framework messages → `Logger.Info("Electron", ...)`
-- Debug messages (`[StartCore]`, `BridgeConnector`) → `Logger.Debug("Electron", ...)`
-- Error patterns (`ERROR:`, `crash`) → `Logger.Warning("Electron", ...)`
-- Noise patterns (`GetVSyncParametersIfAvailable`) → suppressed

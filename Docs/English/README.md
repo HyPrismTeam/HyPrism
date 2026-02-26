@@ -1,6 +1,6 @@
 # HyPrism Documentation
 
-> Cross-platform Hytale launcher — .NET 10 + Electron.NET + React
+> Cross-platform Hytale launcher — .NET 10 + Sciter + Preact
 
 ## Sections
 
@@ -9,7 +9,7 @@
 - [Features](General/Features.md) — Feature list
 
 ### Technical
-- [Architecture](Technical/Architecture.md) — Console + IPC + React SPA architecture
+- [Architecture](Technical/Architecture.md) — Console + IPC + Preact SPA architecture
 - [Project Structure](Technical/ProjectStructure.md) — File and folder layout
 - [IPC Code Generation](Technical/IpcCodegen.md) — Auto-generated typed IPC bridge
 - [Services Reference](Technical/ServicesReference.md) — .NET service layer
@@ -18,7 +18,7 @@
 
 ### Development
 - [Coding Standards](Development/CodingStandards.md) — C# and TypeScript conventions
-- [Frontend Guide](Development/FrontendGuide.md) — React components, theming, routing
+- [Frontend Guide](Development/FrontendGuide.md) — Preact components, theming, routing
 - [Contributing](Development/Contributing.md) — Contribution guidelines
 - [Adding a Mirror](Development/AddingMirror.md) — How to add a built-in community mirror
 

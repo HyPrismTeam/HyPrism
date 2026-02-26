@@ -24,7 +24,7 @@
 - Linux package app ID: `io.github.HyPrismTeam.HyPrism`.
 - AppStream-метаданные для Linux-пакетов берутся из `Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml`.
 - На этапе repack для RPM намеренно удаляется payload `/usr/lib/.build-id`, а системные директории (`/`, `/usr`, `/usr/lib`) не добавляются как владельцы пакета — это предотвращает конфликты установки на Fedora.
-- Для Flatpak используется runtime/base `25.08`; в CI remotes Flathub добавляются на system и user уровнях, чтобы flatpak-builder мог ставить зависимости, после чего `org.freedesktop.Platform`, `org.freedesktop.Sdk` и `org.electronjs.Electron2.BaseApp` устанавливаются на system-уровень.
+- Для Flatpak используется runtime/base `25.08`; в CI remotes Flathub добавляются на system и user уровнях, чтобы flatpak-builder мог ставить зависимости, после чего `org.freedesktop.Platform` и `org.freedesktop.Sdk` устанавливаются на system-уровень.
 - Linux CI выводит диагностику remotes/runtimes Flatpak, чтобы быстрее разбирать сбои flatpak-bundler.
 
 ## Добавление новой функции
@@ -36,7 +36,7 @@
 3. Добавьте IPC-обработчик и аннотацию `@ipc` в `IpcService.cs`
 4. Добавьте аннотацию `@type`, если нужен новый TypeScript-тип
 5. Перегенерируйте: `node Scripts/generate-ipc.mjs` (или `dotnet build`)
-6. Создайте React-компонент/страницу в `Frontend/src/`
+6. Создайте Preact-компонент/страницу в `Frontend/src/`
 7. Добавьте маршрут в `App.tsx`, если это новая страница
 8. Обновите документацию в `Docs/`
 9. Убедитесь: `dotnet build` проходит без ошибок
