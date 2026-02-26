@@ -1,5 +1,4 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { Component, render, type ComponentChildren } from 'preact';
 import App from './App';
 import { AccentColorProvider } from './contexts/AccentColorContext';
 
@@ -8,8 +7,8 @@ import './index.css';
 import 'flag-icons/css/flag-icons.min.css';
 
 // Error boundary to catch crashes
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
-  constructor(props: { children: React.ReactNode }) {
+class ErrorBoundary extends Component<{ children: ComponentChildren }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: ComponentChildren }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -18,8 +17,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('React Error Boundary caught:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: { componentStack: string | null }) {
+    console.error('Preact Error Boundary caught:', error, errorInfo);
   }
 
   render() {
@@ -40,13 +39,12 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 initI18n().catch((err) => {
   console.warn('[i18n] init failed, rendering with fallback keys:', err);
 }).finally(() => {
-  ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <AccentColorProvider>
-            <App />
-        </AccentColorProvider>
-      </ErrorBoundary>
-    </React.StrictMode>
+  render(
+    <ErrorBoundary>
+      <AccentColorProvider>
+        <App />
+      </AccentColorProvider>
+    </ErrorBoundary>,
+    document.getElementById('root')!
   );
 });

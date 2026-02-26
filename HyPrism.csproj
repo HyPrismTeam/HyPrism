@@ -49,7 +49,7 @@
     <!-- ReadyToRun AOT compilation for faster startup -->
     <PublishReadyToRun>true</PublishReadyToRun>
     <!-- Disable static asset compression (brotli/gzip) - prevents file duplication
-         and unnecessary decompression for local Electron apps -->
+         and unnecessary decompression for local Sciter apps -->
     <CompressionEnabled>false</CompressionEnabled>
   </PropertyGroup>
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 # HyPrism Publish Script
-# Packages the Electron.NET application for distribution.
+# Packages the Sciter-based application for distribution.
 #
 # Usage:
 #   ./Scripts/publish.sh <target> [<target>...] [--arch x64|arm64]
@@ -17,18 +17,14 @@
 #   tar        Linux .tar.xz archive
 #   flatpak    Linux .flatpak bundle
 #   dmg        macOS .dmg disk image
-#   zip        Windows portable .zip
+#   zip        Windows / Linux portable .zip
 #   exe        Windows installer .exe (NSIS)
 #   clean      Remove dist/ and intermediate publish dirs
 #
 # Options:
 #   --arch <arch>   Build only for specific architecture (x64 or arm64)
-#                   Note: Not all arches are valid for all platforms
-#                   - Windows: x64 only
-#                   - Linux: x64 and arm64
-#                   - macOS: arm64 only (Apple Silicon)
 #
-# Platform restrictions (enforced by Electron.NET):
+# Platform restrictions:
 #   Linux targets  → must build on Linux
 #   Windows targets → must build on Windows
 #   macOS targets   → must build on macOS
@@ -45,8 +41,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
-EB_CONFIG="$PROJECT_ROOT/Properties/electron-builder.json"
 LINUX_APP_ID="io.github.HyPrismTeam.HyPrism"
+APP_NAME="HyPrism"
+APP_BINARY="HyPrism"
+MAINTAINER="HyPrism Team <whoisfreak@icloud.com>"
+DESCRIPTION="Cross-platform Hytale launcher"
+LONG_DESCRIPTION="HyPrism is a cross-platform Hytale launcher with instance and mod management."
+CATEGORIES="Game;Utility;"
 
 # ─── Colors ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -63,29 +64,26 @@ log_warn()    { echo -e "${YELLOW}⚠${NC} $*"; }
 log_error()   { echo -e "${RED}✗${NC} $*"; }
 log_section() { echo -e "\n${BOLD}${CYAN}═══ $* ═══${NC}"; }
 
-# ─── Detect current OS ──────────────────────────────────────────────────────
+# ─── Detect current OS ───────────────────────────────────────────────────────
 detect_os() {
     case "$(uname -s)" in
-        Linux*)  echo "linux" ;;
-        Darwin*) echo "mac" ;;
+        Linux*)             echo "linux" ;;
+        Darwin*)            echo "mac" ;;
         MINGW*|MSYS*|CYGWIN*) echo "win" ;;
-        *)       echo "unknown" ;;
+        *)                  echo "unknown" ;;
     esac
 }
 
 CURRENT_OS="$(detect_os)"
 
-# ─── Parse arguments ────────────────────────────────────────────────────────
+# ─── Parse arguments ─────────────────────────────────────────────────────────
 TARGETS=()
 ARCH_FILTER=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --arch)
-            if [[ -z "${2:-}" ]]; then
-                log_error "--arch requires an argument (x64 or arm64)"
-                exit 1
-            fi
+            [[ -z "${2:-}" ]] && { log_error "--arch requires an argument (x64 or arm64)"; exit 1; }
             ARCH_FILTER="$2"
             shift 2
             ;;
@@ -102,50 +100,27 @@ done
 
 if [[ ${#TARGETS[@]} -eq 0 ]]; then
     log_error "No targets specified."
-    echo ""
     echo "Usage: $0 <target> [<target>...] [--arch x64|arm64]"
-    echo ""
     echo "Targets: all linux win mac appimage deb rpm tar flatpak dmg zip exe clean"
-    echo ""
-    echo "Examples:"
-    echo "  $0 all                  # All formats, both arches"
-    echo "  $0 appimage --arch x64  # AppImage x64 only"
-    echo "  $0 deb rpm              # deb + rpm, both arches"
     exit 1
 fi
 
-# ─── Global variables ────────────────────────────────────────────────────────
+# ─── Counters ────────────────────────────────────────────────────────────────
 BUILD_COUNT=0
 FAIL_COUNT=0
 SKIP_COUNT=0
 
-# ─── Determine architectures to build ────────────────────────────────────────
-# Platform restrictions:
-#   - Windows: x64 only
-#   - Linux: x64 and arm64
-#   - macOS: arm64 only (Apple Silicon)
+# ─── Architecture helpers ────────────────────────────────────────────────────
 get_arches() {
     local platform="$1"
     local arches=""
-
     case "$platform" in
-        win)
-            arches="x64"
-            ;;
-        linux)
-            arches="x64 arm64"
-            ;;
-        mac)
-            arches="arm64"
-            ;;
-        *)
-            arches="x64"
-            ;;
+        win)   arches="x64" ;;
+        linux) arches="x64 arm64" ;;
+        mac)   arches="arm64" ;;
+        *)     arches="x64" ;;
     esac
-
-    # Apply user filter if specified
     if [[ -n "$ARCH_FILTER" ]]; then
-        # Only return the arch if it's in the allowed list for the platform
         if [[ " $arches " == *" $ARCH_FILTER "* ]]; then
             echo "$ARCH_FILTER"
         else
@@ -157,29 +132,8 @@ get_arches() {
     fi
 }
 
-# ─── Check platform compatibility ────────────────────────────────────────────
-# Returns 0 if compatible, 1 if not
-check_platform() {
-    local target_platform="$1"
-    if [[ "$CURRENT_OS" != "$target_platform" ]]; then
-        return 1
-    fi
-    return 0
-}
-
-platform_name() {
-    case "$1" in
-        linux) echo "Linux" ;;
-        win)   echo "Windows" ;;
-        mac)   echo "macOS" ;;
-        *)     echo "$1" ;;
-    esac
-}
-
-# ─── Map platform+arch to .NET RuntimeIdentifier ─────────────────────────────
 get_rid() {
-    local platform="$1"
-    local arch="$2"
+    local platform="$1" arch="$2"
     case "${platform}-${arch}" in
         linux-x64)   echo "linux-x64" ;;
         linux-arm64) echo "linux-arm64" ;;
@@ -187,557 +141,638 @@ get_rid() {
         win-arm64)   echo "win-arm64" ;;
         mac-x64)     echo "osx-x64" ;;
         mac-arm64)   echo "osx-arm64" ;;
-        *) log_error "Unknown platform-arch: ${platform}-${arch}"; return 1 ;;
+        *) log_error "Unknown platform-arch: ${platform}-${arch}"; exit 1 ;;
     esac
 }
 
-# ─── Sync mac icon assets from Frontend/public/icon.png ─────────────────────
+arch_to_deb_arch() {
+    case "$1" in x64) echo "amd64" ;; arm64) echo "arm64" ;; *) echo "$1" ;; esac
+}
+arch_to_rpm_arch() {
+    case "$1" in x64) echo "x86_64" ;; arm64) echo "aarch64" ;; *) echo "$1" ;; esac
+}
+arch_to_flatpak_arch() {
+    case "$1" in x64) echo "x86_64" ;; arm64) echo "aarch64" ;; *) echo "$1" ;; esac
+}
+
+check_platform() { [[ "$CURRENT_OS" == "$1" ]]; }
+
+platform_name() {
+    case "$1" in linux) echo "Linux" ;; win) echo "Windows" ;; mac) echo "macOS" ;; *) echo "$1" ;; esac
+}
+
+# ─── Version ─────────────────────────────────────────────────────────────────
+get_version() {
+    grep -oP '<Version>\K[^<]+' "$PROJECT_ROOT/HyPrism.csproj" 2>/dev/null || echo "0.0.0"
+}
+
+# ─── Icon helpers ─────────────────────────────────────────────────────────────
+get_icon_png() {
+    local src="$PROJECT_ROOT/Frontend/public/icon.png"
+    [[ -f "$src" ]] && echo "$src" && return
+    local fb="$PROJECT_ROOT/Build/icon.png"
+    [[ -f "$fb" ]] && echo "$fb" && return
+    echo ""
+}
+
+prepare_linux_icons() {
+    local icon_src
+    icon_src="$(get_icon_png)"
+    [[ -z "$icon_src" ]] && { log_warn "No source icon found"; return 0; }
+
+    local iconset_root="$PROJECT_ROOT/Build/icons"
+    mkdir -p "$PROJECT_ROOT/Build"
+    cp "$icon_src" "$PROJECT_ROOT/Build/icon.png"
+    rm -rf "$iconset_root" && mkdir -p "$iconset_root"
+
+    for size in 16 24 32 48 64 128 256 512; do
+        local hicolor="$iconset_root/hicolor/${size}x${size}/apps"
+        mkdir -p "$hicolor"
+        if command -v magick >/dev/null 2>&1; then
+            magick "$icon_src" -resize "${size}x${size}" "$iconset_root/${size}x${size}.png" 2>/dev/null || cp "$icon_src" "$iconset_root/${size}x${size}.png"
+        elif command -v convert >/dev/null 2>&1; then
+            convert "$icon_src" -resize "${size}x${size}" "$iconset_root/${size}x${size}.png" 2>/dev/null || cp "$icon_src" "$iconset_root/${size}x${size}.png"
+        else
+            cp "$icon_src" "$iconset_root/${size}x${size}.png"
+        fi
+        cp "$iconset_root/${size}x${size}.png" "$hicolor/${LINUX_APP_ID}.png"
+    done
+    cp "$icon_src" "$iconset_root/icon.png"
+    log_ok "Prepared Linux icon set in Build/icons"
+}
+
 prepare_macos_icon() {
-    local source_png="$PROJECT_ROOT/Frontend/public/icon.png"
-    local fallback_png="$PROJECT_ROOT/Build/icon.png"
-    local target_png="$PROJECT_ROOT/Build/icon.png"
-    local target_icns="$PROJECT_ROOT/Build/icon.icns"
-
-    local icon_source=""
-    if [[ -f "$source_png" ]]; then
-        icon_source="$source_png"
-    elif [[ -f "$fallback_png" ]]; then
-        icon_source="$fallback_png"
-    else
-        log_warn "No source icon found (expected Frontend/public/icon.png or Build/icon.png)"
-        return 0
-    fi
-
-    cp "$icon_source" "$target_png"
+    local icon_src
+    icon_src="$(get_icon_png)"
+    [[ -z "$icon_src" ]] && { log_warn "No source icon; skipping macOS icns generation"; return 0; }
+    mkdir -p "$PROJECT_ROOT/Build"
+    cp "$icon_src" "$PROJECT_ROOT/Build/icon.png"
 
     if ! command -v iconutil >/dev/null 2>&1 || ! command -v sips >/dev/null 2>&1; then
-        log_warn "iconutil/sips not available; keeping existing Build/icon.icns"
+        log_warn "iconutil/sips not available; skipping icns generation"
         return 0
     fi
 
-    local iconset_dir="$PROJECT_ROOT/Build/icon.iconset"
-    rm -rf "$iconset_dir"
-    mkdir -p "$iconset_dir"
-
-    # Generate Apple iconset sizes
-    sips -z 16 16     "$target_png" --out "$iconset_dir/icon_16x16.png" >/dev/null 2>&1
-    sips -z 32 32     "$target_png" --out "$iconset_dir/icon_16x16@2x.png" >/dev/null 2>&1
-    sips -z 32 32     "$target_png" --out "$iconset_dir/icon_32x32.png" >/dev/null 2>&1
-    sips -z 64 64     "$target_png" --out "$iconset_dir/icon_32x32@2x.png" >/dev/null 2>&1
-    sips -z 128 128   "$target_png" --out "$iconset_dir/icon_128x128.png" >/dev/null 2>&1
-    sips -z 256 256   "$target_png" --out "$iconset_dir/icon_128x128@2x.png" >/dev/null 2>&1
-    sips -z 256 256   "$target_png" --out "$iconset_dir/icon_256x256.png" >/dev/null 2>&1
-    sips -z 512 512   "$target_png" --out "$iconset_dir/icon_256x256@2x.png" >/dev/null 2>&1
-    sips -z 512 512   "$target_png" --out "$iconset_dir/icon_512x512.png" >/dev/null 2>&1
-    sips -z 1024 1024 "$target_png" --out "$iconset_dir/icon_512x512@2x.png" >/dev/null 2>&1
-
-    if iconutil -c icns "$iconset_dir" -o "$target_icns" >/dev/null 2>&1; then
-        log_ok "Prepared mac icon: Build/icon.icns (from $(basename "$icon_source"))"
-    else
-        log_warn "Failed to regenerate Build/icon.icns; keeping previous file"
-    fi
-
-    rm -rf "$iconset_dir"
-}
-
-# ─── Prepare Linux icon set for desktop environments ───────────────────────
-prepare_linux_icon_set() {
-    local source_png="$PROJECT_ROOT/Frontend/public/icon.png"
-    local fallback_png="$PROJECT_ROOT/Build/icon.png"
-    local iconset_root="$PROJECT_ROOT/Build/icons"
-
-    local icon_source=""
-    if [[ -f "$source_png" ]]; then
-        icon_source="$source_png"
-    elif [[ -f "$fallback_png" ]]; then
-        icon_source="$fallback_png"
-    else
-        log_warn "No source icon found (expected Frontend/public/icon.png or Build/icon.png)"
-        return 0
-    fi
-
-    mkdir -p "$PROJECT_ROOT/Build"
-    cp "$icon_source" "$PROJECT_ROOT/Build/icon.png"
-
-    rm -rf "$iconset_root"
-    mkdir -p "$iconset_root"
-
-    local sizes=(16 24 32 48 64 128 256 512)
-    for size in "${sizes[@]}"; do
-        local target="$iconset_root/${size}x${size}.png"
-        local hicolor_dir="$iconset_root/hicolor/${size}x${size}/apps"
-        mkdir -p "$hicolor_dir"
-
-        if command -v convert >/dev/null 2>&1; then
-            convert "$PROJECT_ROOT/Build/icon.png" -resize "${size}x${size}" "$target" >/dev/null 2>&1 || cp "$PROJECT_ROOT/Build/icon.png" "$target"
-        else
-            cp "$PROJECT_ROOT/Build/icon.png" "$target"
-        fi
-
-        cp "$target" "$hicolor_dir/${LINUX_APP_ID}.png"
-        cp "$target" "$hicolor_dir/HyPrism.png"
+    local iconset="$PROJECT_ROOT/Build/icon.iconset"
+    rm -rf "$iconset" && mkdir -p "$iconset"
+    local sizes=(16 32 32 64 128 256 256 512 512 1024)
+    local names=(icon_16x16 icon_16x16@2x icon_32x32 icon_32x32@2x icon_128x128 icon_128x128@2x icon_256x256 icon_256x256@2x icon_512x512 icon_512x512@2x)
+    for i in "${!sizes[@]}"; do
+        sips -z "${sizes[$i]}" "${sizes[$i]}" "$icon_src" --out "$iconset/${names[$i]}.png" >/dev/null 2>&1 || true
     done
-
-    # Keep fallbacks at the icon root as well
-    cp "$PROJECT_ROOT/Build/icon.png" "$iconset_root/icon.png"
-    cp "$PROJECT_ROOT/Build/icon.png" "$iconset_root/${LINUX_APP_ID}.png"
-    cp "$PROJECT_ROOT/Build/icon.png" "$iconset_root/HyPrism.png"
-
-    log_ok "Prepared Linux icon set in Build/icons (hicolor + app-id icons, source: $(basename "$icon_source"))"
+    iconutil -c icns "$iconset" -o "$PROJECT_ROOT/Build/icon.icns" 2>/dev/null && log_ok "Prepared Build/icon.icns" || log_warn "icns generation failed"
+    rm -rf "$iconset"
 }
 
-# ─── Inject AppStream metadata into .deb artifact ───────────────────────────
-inject_deb_appstream() {
-    local deb_path="$1"
-    local metainfo_src="$PROJECT_ROOT/Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
-
-    if [[ ! -f "$metainfo_src" ]]; then
-        log_warn "AppStream metadata not found: Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
-        return 0
-    fi
-
-    if ! command -v dpkg-deb >/dev/null 2>&1; then
-        log_warn "dpkg-deb is not available; skipping AppStream injection for $(basename "$deb_path")"
-        return 0
-    fi
-
-    local tmp_dir
-    tmp_dir=$(mktemp -d)
-
-    if ! dpkg-deb -R "$deb_path" "$tmp_dir" >/dev/null 2>&1; then
-        log_warn "Failed to unpack $(basename "$deb_path") for AppStream injection"
-        rm -rf "$tmp_dir"
-        return 0
-    fi
-
-    if [[ -f "$tmp_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml" ]]; then
-        rm -rf "$tmp_dir"
-        return 0
-    fi
-
-    mkdir -p "$tmp_dir/usr/share/metainfo"
-    cp "$metainfo_src" "$tmp_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml"
-
-    if dpkg-deb -b "$tmp_dir" "$deb_path" >/dev/null 2>&1; then
-        log_ok "Injected AppStream metainfo into $(basename "$deb_path")"
-    else
-        log_warn "Failed to repack $(basename "$deb_path") after AppStream injection"
-    fi
-
-    rm -rf "$tmp_dir"
-}
-
-# ─── Inject AppStream metadata into .rpm artifact ───────────────────────────
-inject_rpm_appstream() {
-    local rpm_path="$1"
-    local metainfo_src="$PROJECT_ROOT/Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
-
-    if [[ ! -f "$metainfo_src" ]]; then
-        log_warn "AppStream metadata not found: Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
-        return 0
-    fi
-
-    if ! command -v rpm2cpio >/dev/null 2>&1 || ! command -v cpio >/dev/null 2>&1 || ! command -v rpmbuild >/dev/null 2>&1; then
-        log_warn "rpm2cpio/cpio/rpmbuild is not available; skipping AppStream injection for $(basename "$rpm_path")"
-        return 0
-    fi
-
-    local tmp_dir root_dir
-    tmp_dir=$(mktemp -d)
-    root_dir="$tmp_dir/root"
-
-    mkdir -p "$root_dir" "$tmp_dir"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
-
-    if ! rpm2cpio "$rpm_path" | (cd "$root_dir" && cpio -idmu --quiet); then
-        log_warn "Failed to unpack $(basename "$rpm_path") for AppStream injection"
-        rm -rf "$tmp_dir"
-        return 0
-    fi
-
-    if [[ -f "$root_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml" ]]; then
-        rm -rf "$tmp_dir"
-        return 0
-    fi
-
-    mkdir -p "$root_dir/usr/share/metainfo"
-    cp "$metainfo_src" "$root_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml"
-
-    # Remove build-id symlink tree if present (can conflict with filesystem package on Fedora)
-    rm -rf "$root_dir/usr/lib/.build-id"
-
-    # Generate file list with payload files only (avoid owning system directories like /usr or /usr/lib)
-    local files_manifest
-    files_manifest="$tmp_dir/files.list"
-    (
-        cd "$root_dir"
-        find . -mindepth 1 \( -type f -o -type l \) | LC_ALL=C sort | sed 's#^\.##'
-    ) > "$files_manifest"
-
-    local pkg_name pkg_version pkg_release pkg_arch pkg_summary pkg_license
-    pkg_name=$(rpm -qp --qf '%{NAME}' "$rpm_path" 2>/dev/null || echo "io.github.HyPrismTeam.HyPrism")
-    pkg_version=$(rpm -qp --qf '%{VERSION}' "$rpm_path" 2>/dev/null || echo "3.0.0")
-    pkg_release=$(rpm -qp --qf '%{RELEASE}' "$rpm_path" 2>/dev/null || echo "1")
-    pkg_arch=$(rpm -qp --qf '%{ARCH}' "$rpm_path" 2>/dev/null || echo "x86_64")
-    pkg_summary=$(rpm -qp --qf '%{SUMMARY}' "$rpm_path" 2>/dev/null || echo "Cross-platform Hytale launcher")
-    pkg_license=$(rpm -qp --qf '%{LICENSE}' "$rpm_path" 2>/dev/null || echo "GPL-3.0-only")
-
-    cat > "$tmp_dir/SPECS/repack.spec" <<EOF
-Name: $pkg_name
-Version: $pkg_version
-Release: $pkg_release
-Summary: $pkg_summary
-License: $pkg_license
-BuildArch: $pkg_arch
-AutoReqProv: no
-
-%description
-HyPrism is a cross-platform Hytale launcher with instance and mod management.
-
-%prep
-%build
-%install
-mkdir -p %{buildroot}
-cp -a $root_dir/. %{buildroot}/
-
-%files -f %{_topdir}/files.list
-EOF
-
-    if ! rpmbuild --define "_topdir $tmp_dir" -bb "$tmp_dir/SPECS/repack.spec" >/dev/null 2>&1; then
-        log_warn "Failed to repack $(basename "$rpm_path") after AppStream injection"
-        rm -rf "$tmp_dir"
-        return 0
-    fi
-
-    local rebuilt_rpm
-    rebuilt_rpm=$(find "$tmp_dir/RPMS" -type f -name '*.rpm' | head -n1)
-    if [[ -n "$rebuilt_rpm" && -f "$rebuilt_rpm" ]]; then
-        cp "$rebuilt_rpm" "$rpm_path"
-        log_ok "Injected AppStream metainfo into $(basename "$rpm_path")"
-    else
-        log_warn "Repacked rpm not found for $(basename "$rpm_path")"
-    fi
-
-    rm -rf "$tmp_dir"
-}
-
-# ─── Write temporary electron-builder config ──────────────────────────────────
-write_config() {
-    local platform="$1"
-    local targets_json="$2"
-
-    local platform_block=""
-    case "$platform" in
-        linux)
-            platform_block=$(cat <<'INNER'
-  "linux": {
-    "target": TARGETS_PLACEHOLDER,
-    "executableArgs": ["--no-sandbox"],
-    "category": "Game",
-    "icon": "LINUX_ICONSET_PLACEHOLDER",
-        "maintainer": "HyPrism Team <eivordoudo2021@gmail.com>",
-        "synopsis": "Cross-platform Hytale launcher",
-        "description": "HyPrism is a cross-platform Hytale launcher with instance and mod management.",
-    "desktop": {
-        "entry": {
-            "Name": "HyPrism",
-            "Comment": "Cross-platform Hytale launcher",
-            "Categories": "Game;Utility;"
-        }
-    }
-  }
-INNER
-)
-            ;;
-        win)
-            platform_block=$(cat <<'INNER'
-  "win": {
-    "target": TARGETS_PLACEHOLDER,
-        "icon": "icon.ico"
-  }
-INNER
-)
-            ;;
-        mac)
-            platform_block=$(cat <<'INNER'
-  "mac": {
-    "target": TARGETS_PLACEHOLDER,
-    "category": "public.app-category.games",
-        "icon": "icon.icns"
-  }
-INNER
-)
-            ;;
-    esac
-
-    platform_block="${platform_block//TARGETS_PLACEHOLDER/$targets_json}"
-    platform_block="${platform_block//LINUX_ICONSET_PLACEHOLDER/$PROJECT_ROOT\/Build\/icons}"
-
-    # Add flatpak-specific config when building flatpak target
-    local flatpak_block=""
-    if [[ "$targets_json" == *'"flatpak"'* ]]; then
-        flatpak_block=$(cat <<'FLATPAK'
-,
-  "flatpak": {
-        "runtimeVersion": "24.08",
-        "baseVersion": "24.08",
-    "useWaylandFlags": true
-  }
-FLATPAK
-)
-    fi
-
-    cat > "$EB_CONFIG" <<EOF
-{
-  "\$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/refs/heads/master/packages/app-builder-lib/scheme.json",
-  "compression": "store",
-  "artifactName": "\${productName}-\${os}-\${arch}-\${version}.\${ext}",
-    "directories": {
-        "buildResources": "$PROJECT_ROOT/Build",
-        "output": "dist"
-    },
-$platform_block$flatpak_block
-}
-EOF
-}
-
-# ─── Run dotnet publish for one RID and collect artifacts ─────────────────────
-do_publish() {
+# ─── dotnet publish ───────────────────────────────────────────────────────────
+do_dotnet_publish() {
     local rid="$1"
-    local label="$2"
-    local start_time=$SECONDS
-
-    log_info "Publishing ${BOLD}$label${NC} (${rid})..."
-
-    # Clean previous intermediate build for this RID
-    rm -rf "$PROJECT_ROOT/obj/Release/net10.0/$rid/PubTmp" 2>/dev/null || true
-
+    log_info "dotnet publish (RID: $rid)..."
     cd "$PROJECT_ROOT"
-    local exit_code=0
-    # Use -p: instead of /p: for cross-platform compatibility (MSYS/Git Bash on Windows converts /p: to a path)
-    dotnet publish -c Release -p:RuntimeIdentifier="$rid" || exit_code=$?
-
-    if [[ $exit_code -ne 0 ]]; then
-        log_error "Build failed for $label ($rid) — exit code $exit_code"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        return 1
-    fi
-
-    local publish_dir="$PROJECT_ROOT/bin/Release/net10.0/$rid/publish"
-
-    if [[ ! -d "$publish_dir" ]]; then
-        log_error "No output directory: $publish_dir"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        return 1
-    fi
-
-    # Collect distributable artifacts (exclude unpacked dirs and metadata)
-    local count=0
-    while IFS= read -r -d '' artifact; do
-        if [[ "$artifact" == *.deb ]]; then
-            inject_deb_appstream "$artifact"
-        elif [[ "$artifact" == *.rpm ]]; then
-            inject_rpm_appstream "$artifact"
-        fi
-
-        cp "$artifact" "$DIST_DIR/"
-        count=$((count + 1))
-        local size
-        size=$(du -h "$artifact" | cut -f1)
-        log_ok "  $(basename "$artifact") (${size})"
-    done < <(find "$publish_dir" -maxdepth 1 -type f \( \
-        -name "*.AppImage" -o \
-        -name "*.deb" -o \
-        -name "*.rpm" -o \
-        -name "*.tar.xz" -o \
-        -name "*.flatpak" -o \
-        -name "*.dmg" -o \
-        -name "*.zip" -o \
-        -name "*.exe" \
-    \) -print0 2>/dev/null)
-
-    local elapsed=$(( SECONDS - start_time ))
-    if [[ $count -gt 0 ]]; then
-        log_ok "$label ($rid) — $count artifact(s), ${elapsed}s"
-        BUILD_COUNT=$((BUILD_COUNT + count))
-    else
-        log_warn "$label ($rid) — no artifacts found (${elapsed}s)"
-    fi
-}
-
-# ─── Build for a platform with multiple arches ────────────────────────────────
-build_platform() {
-    local platform="$1"
-    local targets_json="$2"
-    local label="$3"
-
-    # Check platform compatibility
-    if ! check_platform "$platform"; then
-        local pname
-        pname=$(platform_name "$platform")
-        log_warn "Skipping $label — requires $pname (current OS: $(platform_name "$CURRENT_OS"))"
-        SKIP_COUNT=$((SKIP_COUNT + 1))
-        return 0
-    fi
-
-    log_section "$label"
-
-    if [[ "$platform" == "mac" ]]; then
-        prepare_macos_icon
-    elif [[ "$platform" == "linux" ]]; then
-        prepare_linux_icon_set
-    fi
-
-    write_config "$platform" "$targets_json"
-
-    local arches
-    arches=$(get_arches "$platform")
-    if [[ -z "$arches" ]]; then
-        log_warn "No valid architectures for $platform"
-        SKIP_COUNT=$((SKIP_COUNT + 1))
-        return 0
-    fi
-
-    for arch in $arches; do
-        local rid
-        rid=$(get_rid "$platform" "$arch")
-        do_publish "$rid" "$label [$arch]"
-    done
-}
-
-# ─── Target definitions ──────────────────────────────────────────────────────
-
-build_appimage() { build_platform "linux" '["AppImage"]'                           "AppImage"; }
-build_deb()      { build_platform "linux" '["deb"]'                                 "deb"; }
-build_rpm()      { build_platform "linux" '["rpm"]'                                 "rpm"; }
-build_tar()      { build_platform "linux" '["tar.xz"]'                              "tar.xz"; }
-
-# Build flatpak using the repository Flatpak manifest (Properties/linux/flatpak/...)
-# -- do NOT rely on electron-builder's flatpak target; use flatpak-builder + build-bundle
-arch_to_flatpak_arch() {
-    case "$1" in
-        x64)  echo "x86_64" ;;
-        arm64) echo "aarch64" ;;
-        *)    echo "$1" ;;
-    esac
-}
-
-build_flatpak() {
-    local platform="linux"
-
-    # Platform check
-    if ! check_platform "$platform"; then
-        local pname
-        pname=$(platform_name "$platform")
-        log_warn "Skipping flatpak — requires $pname (current OS: $(platform_name "$CURRENT_OS"))"
-        SKIP_COUNT=$((SKIP_COUNT + 1))
-        return 0
-    fi
-
-    log_section "flatpak"
-    prepare_linux_icon_set
-
-    local arches
-    arches=$(get_arches "$platform")
-    if [[ -z "$arches" ]]; then
-        log_warn "No valid architectures for flatpak"
-        SKIP_COUNT=$((SKIP_COUNT + 1))
-        return 0
-    fi
-
-    for arch in $arches; do
-        local rid
-        rid=$(get_rid "$platform" "$arch")
-        do_flatpak_publish "$rid" "$arch"
-    done
-}
-
-# Publish for a single RID then build .flatpak from Properties/linux/flatpak manifest
-do_flatpak_publish() {
-    local rid="$1"
-    local arch="$2"
-    local start_time=$SECONDS
-
-    log_info "Building flatpak for ${BOLD}$arch${NC} (RID: $rid)"
-
-    # dotnet publish (same as do_publish does)
-    cd "$PROJECT_ROOT"
-    # Ensure dotnet/electron-builder temp files land on disk (avoid small tmpfs /tmp)
-    mkdir -p "$PROJECT_ROOT/.tmp"
-    export TMPDIR="$PROJECT_ROOT/.tmp"
-
     if ! dotnet publish -c Release -p:RuntimeIdentifier="$rid"; then
         log_error "dotnet publish failed for $rid"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
         return 1
     fi
-
-    local publish_dir="$PROJECT_ROOT/bin/Release/net10.0/$rid/publish"
-    if [[ ! -d "$publish_dir" ]]; then
-        log_error "No publish output at $publish_dir"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        return 1
-    fi
-
-    # Copy publish output into manifest 'bundle' source (manifest expects a 'bundle' dir)
-local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
-    local bundle_dir="$manifest_dir/bundle"
-    rm -rf "$bundle_dir"
-    mkdir -p "$bundle_dir"
-    cp -a "$publish_dir/." "$bundle_dir/"
-
-    # Ensure flatpak manifest can find the executable when electron-builder places
-    # the binary under linux-unpacked/ (copy it to bundle/HyPrism for compatibility)
-    if [[ -x "$bundle_dir/linux-unpacked/HyPrism" ]]; then
-        cp -a "$bundle_dir/linux-unpacked/HyPrism" "$bundle_dir/HyPrism"
-        chmod +x "$bundle_dir/HyPrism" || true
-    fi
-
-    # Build local flatpak repo and export .flatpak
-    local repo_dir="$DIST_DIR/flatpak-repo-$arch"
-    rm -rf "$repo_dir"
-    mkdir -p "$repo_dir"
-
-    local build_dir="$PROJECT_ROOT/.flatpak-builder/build-flatpak-$arch"
-    rm -rf "$build_dir"
-    mkdir -p "$build_dir"
-
-    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" io.github.HyPrismTeam.HyPrism.yml); then
-        log_error "flatpak-builder failed for $arch"
-        rm -rf "$bundle_dir" "$build_dir"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-        return 1
-    fi
-
-    # Version from project file
-    local version
-    version=$(grep -oP '<Version>\K[^<]+' "$PROJECT_ROOT/HyPrism.csproj" || echo "0.0.0")
-
-    local flatpak_arch
-    flatpak_arch=$(arch_to_flatpak_arch "$arch")
-    local out_file="$DIST_DIR/HyPrism-linux-$arch-$version.flatpak"
-
-    # Use the app-id declared in the Flatpak manifest so repo refs match the bundle export
-    local manifest_file="$manifest_dir/io.github.HyPrismTeam.HyPrism.yml"
-    local flatpak_app_id
-    flatpak_app_id=$(grep -E '^app-id:' "$manifest_file" | awk '{print $2}' | tr -d "\"'" ) || flatpak_app_id="io.github.HyPrismTeam.HyPrism"
-
-    flatpak build-bundle "$repo_dir" "$out_file" "$flatpak_app_id" --arch="$flatpak_arch"
-
-    local elapsed=$(( SECONDS - start_time ))
-    log_ok "Flatpak built: $(basename "$out_file") — ${elapsed}s"
-    BUILD_COUNT=$((BUILD_COUNT + 1))
-
-    # cleanup temporary bundle & build dir (keep repo for inspection)
-    rm -rf "$bundle_dir" "$build_dir"
+    echo "$PROJECT_ROOT/bin/Release/net10.0/$rid/publish"
 }
 
-build_dmg()      { build_platform "mac"   '["dmg"]'                                 "dmg"; }
-build_zip()      { build_platform "win"   '["zip"]'                                 "zip"; }
-build_exe()      { build_platform "win"   '["nsis"]'                                "exe (NSIS)"; }
+# ─── AppImage ─────────────────────────────────────────────────────────────────
+build_appimage() {
+    local platform="linux"
+    check_platform "$platform" || { log_warn "AppImage requires Linux"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "AppImage"
+    prepare_linux_icons
 
-build_linux()    { build_platform "linux" '["AppImage", "deb", "rpm", "tar.xz"]'    "Linux (all formats)"; }
-build_win()      { build_platform "win"   '["zip", "nsis"]'                        "Windows (zip + exe)"; }
-build_mac()      { build_platform "mac"   '["dmg"]'                                 "macOS (dmg)"; }
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    if ! command -v appimagetool >/dev/null 2>&1; then
+        log_error "appimagetool not found — install from https://appimage.github.io/appimagetool/"
+        FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local version; version="$(get_version)"
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS
+        rid="$(get_rid "$platform" "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        local appdir="$PROJECT_ROOT/.tmp/AppDir-$arch"
+        rm -rf "$appdir"
+        mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" "$appdir/usr/share/metainfo"
+        mkdir -p "$appdir/usr/share/icons/hicolor/256x256/apps"
+
+        cp -a "$pub_dir/." "$appdir/usr/bin/"
+
+        # AppRun entry point
+        cat > "$appdir/AppRun" << 'APPRUN'
+#!/usr/bin/env bash
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/bin/HyPrism" "$@"
+APPRUN
+        chmod +x "$appdir/AppRun"
+
+        # Desktop file
+        cat > "$appdir/$APP_NAME.desktop" << DESKTOP
+[Desktop Entry]
+Name=$APP_NAME
+Comment=$DESCRIPTION
+Exec=HyPrism
+Icon=$APP_NAME
+Type=Application
+Categories=$CATEGORIES
+DESKTOP
+        cp "$appdir/$APP_NAME.desktop" "$appdir/usr/share/applications/"
+
+        # Icon
+        local icon_src; icon_src="$(get_icon_png)"
+        if [[ -n "$icon_src" ]]; then
+            cp "$icon_src" "$appdir/$APP_NAME.png"
+            cp "$icon_src" "$appdir/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png"
+        fi
+
+        # AppStream metainfo
+        local metainfo="$PROJECT_ROOT/Properties/linux/flatpak/$LINUX_APP_ID.metainfo.xml"
+        [[ -f "$metainfo" ]] && cp "$metainfo" "$appdir/usr/share/metainfo/"
+
+        local appimage_arch
+        case "$arch" in x64) appimage_arch="x86_64" ;; arm64) appimage_arch="aarch64" ;; *) appimage_arch="$arch" ;; esac
+
+        local out="$DIST_DIR/$APP_NAME-linux-$arch-$version.AppImage"
+        ARCH="$appimage_arch" appimagetool "$appdir" "$out" 2>&1 | grep -v "^$" || true
+
+        rm -rf "$appdir"
+
+        local elapsed=$(( SECONDS - start_time ))
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "AppImage not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── deb ─────────────────────────────────────────────────────────────────────
+build_deb() {
+    local platform="linux"
+    check_platform "$platform" || { log_warn "deb requires Linux"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "deb"
+
+    if ! command -v dpkg-deb >/dev/null 2>&1; then
+        log_error "dpkg-deb not found"; FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local version; version="$(get_version)"
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS deb_arch
+        rid="$(get_rid "$platform" "$arch")"
+        deb_arch="$(arch_to_deb_arch "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        local pkg_dir="$PROJECT_ROOT/.tmp/deb-$arch"
+        local install_dir="$pkg_dir/usr/lib/hyprism"
+        rm -rf "$pkg_dir"
+        mkdir -p "$install_dir" "$pkg_dir/DEBIAN"
+        mkdir -p "$pkg_dir/usr/bin"
+        mkdir -p "$pkg_dir/usr/share/applications"
+        mkdir -p "$pkg_dir/usr/share/metainfo"
+        mkdir -p "$pkg_dir/usr/share/icons/hicolor/256x256/apps"
+
+        cp -a "$pub_dir/." "$install_dir/"
+        chmod +x "$install_dir/$APP_BINARY" 2>/dev/null || true
+
+        # Wrapper in /usr/bin
+        cat > "$pkg_dir/usr/bin/hyprism" << WRAPPER
+#!/usr/bin/env bash
+exec /usr/lib/hyprism/$APP_BINARY "\$@"
+WRAPPER
+        chmod +x "$pkg_dir/usr/bin/hyprism"
+
+        # Desktop entry
+        cat > "$pkg_dir/usr/share/applications/$LINUX_APP_ID.desktop" << DESKTOP
+[Desktop Entry]
+Name=$APP_NAME
+Comment=$DESCRIPTION
+Exec=hyprism
+Icon=$LINUX_APP_ID
+Type=Application
+Categories=$CATEGORIES
+DESKTOP
+
+        # Icon
+        local icon_src; icon_src="$(get_icon_png)"
+        [[ -n "$icon_src" ]] && cp "$icon_src" "$pkg_dir/usr/share/icons/hicolor/256x256/apps/$LINUX_APP_ID.png"
+
+        # AppStream metainfo
+        local metainfo="$PROJECT_ROOT/Properties/linux/flatpak/$LINUX_APP_ID.metainfo.xml"
+        [[ -f "$metainfo" ]] && cp "$metainfo" "$pkg_dir/usr/share/metainfo/"
+
+        # Package size (in KB)
+        local installed_size; installed_size=$(du -sk "$pkg_dir" | cut -f1)
+
+        cat > "$pkg_dir/DEBIAN/control" << CONTROL
+Package: hyprism
+Version: $version
+Architecture: $deb_arch
+Maintainer: $MAINTAINER
+Installed-Size: $installed_size
+Depends: libgtk-3-0, libglib2.0-0
+Description: $DESCRIPTION
+ $LONG_DESCRIPTION
+CONTROL
+
+        local out="$DIST_DIR/$APP_NAME-linux-$arch-$version.deb"
+        dpkg-deb -b "$pkg_dir" "$out" >/dev/null 2>&1
+        rm -rf "$pkg_dir"
+
+        local elapsed=$(( SECONDS - start_time ))
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "deb not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── rpm ─────────────────────────────────────────────────────────────────────
+build_rpm() {
+    local platform="linux"
+    check_platform "$platform" || { log_warn "rpm requires Linux"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "rpm"
+
+    if ! command -v rpmbuild >/dev/null 2>&1; then
+        log_error "rpmbuild not found (install rpm-build)"; FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local version; version="$(get_version)"
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS rpm_arch
+        rid="$(get_rid "$platform" "$arch")"
+        rpm_arch="$(arch_to_rpm_arch "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        local build_root="$PROJECT_ROOT/.tmp/rpmbuild-$arch"
+        local install_dir="$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/lib/hyprism"
+        rm -rf "$build_root"
+        mkdir -p "$install_dir"
+        mkdir -p "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/bin"
+        mkdir -p "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/share/applications"
+        mkdir -p "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/share/icons/hicolor/256x256/apps"
+        mkdir -p "$build_root"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+        cp -a "$pub_dir/." "$install_dir/"
+        chmod +x "$install_dir/$APP_BINARY" 2>/dev/null || true
+
+        cat > "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/bin/hyprism" << 'WRAPPER'
+#!/usr/bin/env bash
+exec /usr/lib/hyprism/HyPrism "$@"
+WRAPPER
+        chmod +x "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/bin/hyprism"
+
+        cat > "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/share/applications/$LINUX_APP_ID.desktop" << DESKTOP
+[Desktop Entry]
+Name=$APP_NAME
+Comment=$DESCRIPTION
+Exec=hyprism
+Icon=$LINUX_APP_ID
+Type=Application
+Categories=$CATEGORIES
+DESKTOP
+
+        local icon_src; icon_src="$(get_icon_png)"
+        [[ -n "$icon_src" ]] && cp "$icon_src" "$build_root/BUILDROOT/hyprism-$version-1.$rpm_arch/usr/share/icons/hicolor/256x256/apps/$LINUX_APP_ID.png"
+
+        cat > "$build_root/SPECS/hyprism.spec" << SPEC
+Name: hyprism
+Version: $version
+Release: 1
+Summary: $DESCRIPTION
+License: GPL-3.0-only
+BuildArch: $rpm_arch
+AutoReqProv: no
+Requires: gtk3, glib2
+
+%description
+$LONG_DESCRIPTION
+
+%install
+
+%files
+/usr/lib/hyprism/
+/usr/bin/hyprism
+/usr/share/applications/$LINUX_APP_ID.desktop
+/usr/share/icons/hicolor/256x256/apps/$LINUX_APP_ID.png
+
+%post
+update-desktop-database -q /usr/share/applications || true
+gtk-update-icon-cache -q /usr/share/icons/hicolor || true
+SPEC
+
+        rpmbuild --define "_topdir $build_root" \
+                 --define "_builddir $build_root/BUILD" \
+                 --define "_buildrootdir $build_root/BUILDROOT" \
+                 --define "_rpmdir $build_root/RPMS" \
+                 --nodebuginfo -bb "$build_root/SPECS/hyprism.spec" >/dev/null 2>&1
+
+        local built_rpm; built_rpm="$(find "$build_root/RPMS" -type f -name "*.rpm" | head -1)"
+        local out="$DIST_DIR/$APP_NAME-linux-$arch-$version.rpm"
+
+        rm -rf "$build_root"
+        local elapsed=$(( SECONDS - start_time ))
+
+        if [[ -n "$built_rpm" && -f "$built_rpm" ]]; then
+            mv "$built_rpm" "$out"
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "rpm not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── tar.xz ──────────────────────────────────────────────────────────────────
+build_tar() {
+    local platform="linux"
+    check_platform "$platform" || { log_warn "tar.xz requires Linux"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "tar.xz"
+
+    local version; version="$(get_version)"
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS
+        rid="$(get_rid "$platform" "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        local out="$DIST_DIR/$APP_NAME-linux-$arch-$version.tar.xz"
+        tar -cJf "$out" -C "$(dirname "$pub_dir")" "$(basename "$pub_dir")" --transform "s|$(basename "$pub_dir")|hyprism-$version|"
+
+        local elapsed=$(( SECONDS - start_time ))
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "tar.xz not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── flatpak ─────────────────────────────────────────────────────────────────
+build_flatpak() {
+    local platform="linux"
+    check_platform "$platform" || { log_warn "flatpak requires Linux"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "flatpak"
+
+    if ! command -v flatpak-builder >/dev/null 2>&1; then
+        log_error "flatpak-builder not found"; FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local version; version="$(get_version)"
+    local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
+    local manifest="$manifest_dir/$LINUX_APP_ID.yml"
+
+    if [[ ! -f "$manifest" ]]; then
+        log_error "Flatpak manifest not found: $manifest"; FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS flatpak_arch
+        rid="$(get_rid "$platform" "$arch")"
+        flatpak_arch="$(arch_to_flatpak_arch "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        # Copy publish output into bundle/ dir expected by the manifest
+        local bundle_dir="$manifest_dir/bundle"
+        rm -rf "$bundle_dir" && mkdir -p "$bundle_dir"
+        cp -a "$pub_dir/." "$bundle_dir/"
+
+        local repo_dir="$DIST_DIR/flatpak-repo-$arch"
+        local build_dir="$PROJECT_ROOT/.flatpak-builder/build-$arch"
+        rm -rf "$repo_dir" "$build_dir"
+        mkdir -p "$repo_dir"
+
+        if ! (cd "$manifest_dir" && flatpak-builder \
+                --force-clean \
+                --repo="$repo_dir" \
+                --install-deps-from=flathub \
+                "--arch=$flatpak_arch" \
+                "$build_dir" "$manifest"); then
+            log_error "flatpak-builder failed for $arch"
+            rm -rf "$bundle_dir" "$build_dir"
+            FAIL_COUNT=$((FAIL_COUNT+1)); continue
+        fi
+
+        local flatpak_app_id
+        flatpak_app_id="$(grep -E '^app-id:' "$manifest" | awk '{print $2}' | tr -d "\"'")" || flatpak_app_id="$LINUX_APP_ID"
+
+        local out="$DIST_DIR/$APP_NAME-linux-$arch-$version.flatpak"
+        flatpak build-bundle "$repo_dir" "$out" "$flatpak_app_id" "--arch=$flatpak_arch"
+
+        rm -rf "$bundle_dir" "$build_dir"
+        local elapsed=$(( SECONDS - start_time ))
+
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "flatpak not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── zip ─────────────────────────────────────────────────────────────────────
+build_zip() {
+    log_section "zip"
+    local version; version="$(get_version)"
+
+    local platform
+    case "$CURRENT_OS" in linux) platform="linux" ;; win) platform="win" ;; mac) platform="mac" ;; *) platform="linux" ;; esac
+
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS
+        rid="$(get_rid "$platform" "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        local out="$DIST_DIR/$APP_NAME-$platform-$arch-$version.zip"
+        (cd "$(dirname "$pub_dir")" && zip -qr "$out" "$(basename "$pub_dir")")
+
+        local elapsed=$(( SECONDS - start_time ))
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "zip not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── exe (Windows NSIS installer) ────────────────────────────────────────────
+build_exe() {
+    local platform="win"
+    check_platform "$platform" || { log_warn "exe (NSIS) requires Windows"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "exe (NSIS)"
+
+    if ! command -v makensis >/dev/null 2>&1; then
+        log_error "makensis not found (install NSIS)"; FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local version; version="$(get_version)"
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS
+        rid="$(get_rid "$platform" "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        local nsis_script="$PROJECT_ROOT/.tmp/installer-$arch.nsi"
+        local out="$DIST_DIR/$APP_NAME-win-$arch-$version.exe"
+
+        cat > "$nsis_script" << NSIS
+!define AppName "$APP_NAME"
+!define AppVersion "$version"
+!define OutFile "$out"
+!define InstDir "\$PROGRAMFILES64\\$APP_NAME"
+!define SourceDir "$pub_dir"
+
+Name "\${AppName}"
+OutFile "\${OutFile}"
+InstallDir "\${InstDir}"
+RequestExecutionLevel admin
+
+Section "Install"
+    SetOutPath "\${InstDir}"
+    File /r "\${SourceDir}\\*.*"
+    CreateShortCut "\$DESKTOP\\$APP_NAME.lnk" "\${InstDir}\\$APP_BINARY.exe"
+    CreateDirectory "\$SMPROGRAMS\\$APP_NAME"
+    CreateShortCut "\$SMPROGRAMS\\$APP_NAME\\$APP_NAME.lnk" "\${InstDir}\\$APP_BINARY.exe"
+SectionEnd
+
+Section "Uninstall"
+    Delete "\$DESKTOP\\$APP_NAME.lnk"
+    Delete "\$SMPROGRAMS\\$APP_NAME\\$APP_NAME.lnk"
+    RMDir "\$SMPROGRAMS\\$APP_NAME"
+    RMDir /r "\${InstDir}"
+SectionEnd
+NSIS
+
+        makensis "$nsis_script" >/dev/null 2>&1
+        rm -f "$nsis_script"
+
+        local elapsed=$(( SECONDS - start_time ))
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "exe not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── dmg (macOS) ─────────────────────────────────────────────────────────────
+build_dmg() {
+    local platform="mac"
+    check_platform "$platform" || { log_warn "dmg requires macOS"; SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+    log_section "dmg"
+    prepare_macos_icon
+
+    if ! command -v hdiutil >/dev/null 2>&1; then
+        log_error "hdiutil not found"; FAIL_COUNT=$((FAIL_COUNT+1)); return 1
+    fi
+
+    local version; version="$(get_version)"
+    local arches; arches="$(get_arches "$platform")"
+    [[ -z "$arches" ]] && { SKIP_COUNT=$((SKIP_COUNT+1)); return 0; }
+
+    for arch in $arches; do
+        local rid start_time=$SECONDS
+        rid="$(get_rid "$platform" "$arch")"
+        local pub_dir; pub_dir="$(do_dotnet_publish "$rid")" || { FAIL_COUNT=$((FAIL_COUNT+1)); continue; }
+
+        # Build .app bundle
+        local app_bundle="$PROJECT_ROOT/.tmp/$APP_NAME.app"
+        rm -rf "$app_bundle"
+        mkdir -p "$app_bundle/Contents/MacOS" "$app_bundle/Contents/Resources"
+        cp -a "$pub_dir/." "$app_bundle/Contents/MacOS/"
+        chmod +x "$app_bundle/Contents/MacOS/$APP_BINARY" 2>/dev/null || true
+
+        local icns="$PROJECT_ROOT/Build/icon.icns"
+        [[ -f "$icns" ]] && cp "$icns" "$app_bundle/Contents/Resources/$APP_NAME.icns"
+
+        local info_plist="$PROJECT_ROOT/Properties/macos/Info.plist"
+        if [[ -f "$info_plist" ]]; then
+            cp "$info_plist" "$app_bundle/Contents/Info.plist"
+        else
+            cat > "$app_bundle/Contents/Info.plist" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>$APP_BINARY</string>
+    <key>CFBundleIdentifier</key><string>$LINUX_APP_ID</string>
+    <key>CFBundleName</key><string>$APP_NAME</string>
+    <key>CFBundleVersion</key><string>$version</string>
+    <key>CFBundleShortVersionString</key><string>$version</string>
+    <key>CFBundleIconFile</key><string>$APP_NAME</string>
+    <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>
+PLIST
+        fi
+
+        # Stage for DMG
+        local dmg_stage="$PROJECT_ROOT/.tmp/dmg-$arch"
+        rm -rf "$dmg_stage" && mkdir -p "$dmg_stage"
+        cp -r "$app_bundle" "$dmg_stage/"
+        ln -s /Applications "$dmg_stage/Applications" 2>/dev/null || true
+
+        local out="$DIST_DIR/$APP_NAME-mac-$arch-$version.dmg"
+        hdiutil create -volname "$APP_NAME" -srcfolder "$dmg_stage" -ov -format UDZO "$out" >/dev/null 2>&1
+
+        rm -rf "$app_bundle" "$dmg_stage"
+        local elapsed=$(( SECONDS - start_time ))
+
+        if [[ -f "$out" ]]; then
+            log_ok "$(basename "$out") ($(du -h "$out" | cut -f1)) — ${elapsed}s"
+            BUILD_COUNT=$((BUILD_COUNT+1))
+        else
+            log_error "dmg not produced for $arch"; FAIL_COUNT=$((FAIL_COUNT+1))
+        fi
+    done
+}
+
+# ─── Compound targets ─────────────────────────────────────────────────────────
+build_linux() {
+    build_appimage
+    build_deb
+    build_rpm
+    build_tar
+}
+
+build_win() {
+    build_zip
+    build_exe
+}
+
+build_mac() {
+    build_dmg
+}
 
 build_all() {
     build_linux
@@ -748,62 +783,45 @@ build_all() {
 # ─── Clean ────────────────────────────────────────────────────────────────────
 do_clean() {
     log_section "Cleaning"
-    rm -rf "$DIST_DIR"
-    log_ok "Removed dist/"
-
-    # Clean intermediate publish dirs for all RIDs
-    local rids=(linux-x64 linux-arm64 win-x64 win-arm64 osx-x64 osx-arm64)
-    for rid in "${rids[@]}"; do
-        local pub_tmp="$PROJECT_ROOT/obj/Release/net10.0/$rid/PubTmp"
-        local pub_dir="$PROJECT_ROOT/bin/Release/net10.0/$rid/publish"
-        if [[ -d "$pub_tmp" ]]; then
-            rm -rf "$pub_tmp"
-            log_ok "Removed obj/.../$rid/PubTmp"
-        fi
-        if [[ -d "$pub_dir" ]]; then
-            rm -rf "$pub_dir"
-            log_ok "Removed bin/.../$rid/publish"
-        fi
+    rm -rf "$DIST_DIR" && log_ok "Removed dist/"
+    rm -rf "$PROJECT_ROOT/.tmp" && log_ok "Removed .tmp/"
+    rm -rf "$PROJECT_ROOT/.flatpak-builder" && log_ok "Removed .flatpak-builder/"
+    for rid in linux-x64 linux-arm64 win-x64 win-arm64 osx-x64 osx-arm64; do
+        local p="$PROJECT_ROOT/bin/Release/net10.0/$rid/publish"
+        [[ -d "$p" ]] && rm -rf "$p" && log_ok "Removed bin/.../$rid/publish"
     done
     log_ok "Clean complete"
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
-
-# Handle clean separately (no config backup needed)
 if [[ "${TARGETS[0]}" == "clean" ]]; then
-    do_clean
-    exit 0
+    do_clean; exit 0
 fi
 
-# Save & restore electron-builder.json
-EB_CONFIG_BAK=$(mktemp)
-cp "$EB_CONFIG" "$EB_CONFIG_BAK" 2>/dev/null || true
-trap 'cp "$EB_CONFIG_BAK" "$EB_CONFIG" 2>/dev/null; rm -f "$EB_CONFIG_BAK"' EXIT
-
-mkdir -p "$DIST_DIR"
+mkdir -p "$DIST_DIR" "$PROJECT_ROOT/.tmp"
 TOTAL_START=$SECONDS
 
 log_section "HyPrism Publish"
 log_info "OS: $(platform_name "$CURRENT_OS")"
+log_info "Version: $(get_version)"
 log_info "Targets: ${TARGETS[*]}"
 [[ -n "$ARCH_FILTER" ]] && log_info "Arch: $ARCH_FILTER" || log_info "Arch: x64 + arm64"
 log_info "Output: $DIST_DIR/"
 
 for target in "${TARGETS[@]}"; do
     case "$target" in
-        all)       build_all ;;
-        linux)     build_linux ;;
-        win)       build_win ;;
-        mac)       build_mac ;;
-        appimage)  build_appimage ;;
-        deb)       build_deb ;;
-        rpm)       build_rpm ;;
-        tar)       build_tar ;;
-        flatpak)   build_flatpak ;;
-        dmg)       build_dmg ;;
-        zip)       build_zip ;;
-        exe)       build_exe ;;
+        all)      build_all ;;
+        linux)    build_linux ;;
+        win)      build_win ;;
+        mac)      build_mac ;;
+        appimage) build_appimage ;;
+        deb)      build_deb ;;
+        rpm)      build_rpm ;;
+        tar)      build_tar ;;
+        flatpak)  build_flatpak ;;
+        dmg)      build_dmg ;;
+        zip)      build_zip ;;
+        exe)      build_exe ;;
         *)
             log_error "Unknown target: $target"
             echo "Valid targets: all linux win mac appimage deb rpm tar flatpak dmg zip exe clean"
