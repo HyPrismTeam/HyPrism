@@ -1,13 +1,14 @@
-import { Component, render, type ComponentChildren } from 'preact';
-import App from './App';
-import { AccentColorProvider } from './contexts/AccentColorContext';
-
-import { initI18n } from './i18n';
+import { h, Component, render } from 'preact';
+import type { ComponentChildren } from 'preact';
+import { App } from './App';
 import './index.css';
-import 'flag-icons/css/flag-icons.min.css';
 
-// Error boundary to catch crashes
-class ErrorBoundary extends Component<{ children: ComponentChildren }, { hasError: boolean, error: Error | null }> {
+// ─── Error boundary ───────────────────────────────────────────────────────────
+// Catches render errors so we don't get a completely blank screen on crash.
+class ErrorBoundary extends Component<
+  { children: ComponentChildren },
+  { hasError: boolean; error: Error | null }
+> {
   constructor(props: { children: ComponentChildren }) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -17,17 +18,25 @@ class ErrorBoundary extends Component<{ children: ComponentChildren }, { hasErro
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: { componentStack?: string }) {
-    console.error('Preact Error Boundary caught:', error, errorInfo);
+  componentDidCatch(error: Error, info: { componentStack?: string }) {
+    console.error('[HyPrism] Render error:', error, info?.componentStack ?? '');
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 20, color: 'white', background: '#1a1a1a', height: '100vh' }}>
-          <h1>Something went wrong</h1>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error?.toString()}</pre>
-          <button onClick={() => window.location.reload()}>Reload</button>
+        <div style={{ padding: 24, color: '#f0f0f0', background: '#090909', height: '100vh', fontFamily: 'sans-serif' }}>
+          <h2 style={{ color: '#FFA845', marginBottom: 12 }}>Render error</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', color: '#aaa', fontSize: 12 }}>
+            {this.state.error?.toString()}
+          </pre>
+          <br />
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{ padding: '8px 16px', cursor: 'pointer', background: '#FFA845', border: 'none', borderRadius: 6, fontWeight: 600 }}
+          >
+            Retry
+          </button>
         </div>
       );
     }
@@ -35,16 +44,15 @@ class ErrorBoundary extends Component<{ children: ComponentChildren }, { hasErro
   }
 }
 
-// Initialize i18n from backend, then render the app
-initI18n().catch((err) => {
-  console.warn('[i18n] init failed, rendering with fallback keys:', err);
-}).finally(() => {
+// ─── Mount ────────────────────────────────────────────────────────────────────
+const root = document.getElementById('root');
+if (root) {
   render(
     <ErrorBoundary>
-      <AccentColorProvider>
-        <App />
-      </AccentColorProvider>
+      <App />
     </ErrorBoundary>,
-    document.getElementById('root')!
+    root
   );
-});
+} else {
+  console.error('[HyPrism] #root element not found');
+}
