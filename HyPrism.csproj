@@ -88,6 +88,29 @@
     <Compile Remove="Services/Game/Sources/MirrorVersionSource.cs" />
   </ItemGroup>
 
+  <!--
+    Sciter native library — NOT included in the NuGet package; must be present in
+    Native/{rid}/ alongside the project.  MSBuild copies the RID-matching file to
+    the output/publish directory root automatically on every build.
+    Download from: https://gitlab.com/sciter-engine/sciter-js-sdk/-/releases
+      Linux x64   → bin/linux/x64/libsciter.so   → Native/linux-x64/SciterLibrary.so
+      macOS       → bin/macosx/libsciter.dylib    → Native/osx-{arm64|x64}/SciterLibrary.dylib
+      Windows x64 → bin/windows/x64/sciter.dll   → Native/win-x64/SciterLibrary.dll
+  -->
+  <Target Name="CopySciterNativeLib" AfterTargets="Build" Condition="Exists('Native/$(RuntimeIdentifier)/')">
+    <ItemGroup>
+      <_SciterNative Include="Native/$(RuntimeIdentifier)/SciterLibrary.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_SciterNative)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopySciterNativeLibPublish" AfterTargets="Publish" Condition="Exists('Native/$(RuntimeIdentifier)/')">
+    <ItemGroup>
+      <_SciterNativePub Include="Native/$(RuntimeIdentifier)/SciterLibrary.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_SciterNativePub)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+  </Target>
+
   <!-- ================================================================ -->
   <!--  FRONTEND AUTO-BUILD PIPELINE                                     -->
   <!--  `npm ci` when lockfile changes, then `npm run build`             -->

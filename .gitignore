@@ -100,3 +100,5 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
+# Sciter native libraries (download separately from Sciter SDK releases)
+Native/
