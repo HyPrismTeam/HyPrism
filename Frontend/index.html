@@ -4,8 +4,6 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <link rel="icon" type="image/png" href="./icon.png"/>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <title>HyPrism</title>
     <style>
         body {
@@ -15,6 +13,41 @@
             background: #090909;
         }
     </style>
+    <script>
+        // ── Sciter JS compatibility polyfills ──────────────────────────────────
+        // Sciter's JS engine is QuickJS-based and lacks some browser globals
+        // that libraries like Framer Motion expect.
+        if (typeof queueMicrotask === 'undefined') {
+            globalThis.queueMicrotask = function(fn) {
+                Promise.resolve().then(fn).catch(function(e) {
+                    setTimeout(function() { throw e; });
+                });
+            };
+        }
+        if (typeof MessageChannel === 'undefined') {
+            globalThis.MessageChannel = function() {
+                var h1 = [], h2 = [];
+                this.port1 = {
+                    onmessage: null,
+                    postMessage: function(d) {
+                        var e = { data: d };
+                        queueMicrotask(function() {
+                            h2.forEach(function(f) { f(e); });
+                        });
+                    }
+                };
+                this.port2 = {
+                    onmessage: null,
+                    postMessage: function(d) {
+                        var e = { data: d };
+                        queueMicrotask(function() {
+                            h1.forEach(function(f) { f(e); });
+                        });
+                    }
+                };
+            };
+        }
+    </script>
 </head>
 <body>
 <div id="root"></div>

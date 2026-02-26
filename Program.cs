@@ -18,6 +18,11 @@ class Program
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
         GCSettings.LatencyMode = GCLatencyMode.Interactive;
 
+        // Save original Console.Out before anything (Sciter) may replace it.
+        // Logger.WriteToConsole uses _originalOut so our log output continues
+        // to appear in the terminal even after we redirect Console.Out.
+        Logger.CaptureOriginalConsole();
+
         // ── Logger initialisation ─────────────────────────────────────────────
         var appDir = UtilityService.GetEffectiveAppDir();
         var logsDir = Path.Combine(appDir, "Logs");
@@ -83,6 +88,12 @@ class Program
         // SciterAPI expects the native library (libsciter.so / sciter.dll / libsciter.dylib)
         // to reside next to the application executable.
         var sciterLibDir = AppDomain.CurrentDomain.BaseDirectory;
+
+        // Redirect Console.Out/Error so Sciter's own diagnostic output goes
+        // through our structured Logger instead of raw stdout.
+        var sciterLog = new SciterStdoutRedirector();
+        Console.SetOut(sciterLog);
+        Console.SetError(sciterLog);
 
         // ── Create Sciter host ────────────────────────────────────────────────
         var host = new SciterAPIHost(sciterLibDir);

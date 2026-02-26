@@ -97,6 +97,37 @@
       macOS       → bin/macosx/libsciter.dylib    → Native/osx-{arm64|x64}/SciterLibrary.dylib
       Windows x64 → bin/windows/x64/sciter.dll   → Native/win-x64/SciterLibrary.dll
   -->
+
+  <PropertyGroup Label="SciterNative">
+    <!-- Bump this when upgrading Sciter SDK -->
+    <SciterVersion>6.0.3.11</SciterVersion>
+    <SciterNativeDir>$(MSBuildProjectDirectory)/Native</SciterNativeDir>
+    <SciterGitBase>https://gitlab.com/sciter-engine/sciter-js-sdk/-/raw/$(SciterVersion)</SciterGitBase>
+  </PropertyGroup>
+
+  <!-- Auto-download Linux x64 native if missing -->
+  <Target Name="EnsureSciterNativeLinux"
+          BeforeTargets="CopySciterNativeLib"
+          Condition="$([MSBuild]::IsOSPlatform('Linux')) AND !Exists('$(SciterNativeDir)/linux-x64/SciterLibrary.so')">
+    <Message Importance="high" Text="→ Downloading Sciter $(SciterVersion) native lib for Linux x64 (this is a one-time step)..." />
+    <Exec Command="mkdir -p '$(SciterNativeDir)/linux-x64' &amp;&amp; curl -fsSL '$(SciterGitBase)/bin/linux/x64/libsciter.so' -o '$(SciterNativeDir)/linux-x64/SciterLibrary.so'" />
+  </Target>
+
+  <!-- Auto-download macOS (universal binary covers both x64 and arm64) if missing -->
+  <Target Name="EnsureSciterNativeMacOS"
+          BeforeTargets="CopySciterNativeLib"
+          Condition="$([MSBuild]::IsOSPlatform('OSX')) AND !Exists('$(SciterNativeDir)/osx-arm64/SciterLibrary.dylib')">
+    <Message Importance="high" Text="→ Downloading Sciter $(SciterVersion) native lib for macOS (universal, one-time)..." />
+    <Exec Command="mkdir -p '$(SciterNativeDir)/osx-arm64' '$(SciterNativeDir)/osx-x64' &amp;&amp; curl -fsSL '$(SciterGitBase)/bin/macosx/libsciter.dylib' -o '$(SciterNativeDir)/osx-arm64/SciterLibrary.dylib' &amp;&amp; cp '$(SciterNativeDir)/osx-arm64/SciterLibrary.dylib' '$(SciterNativeDir)/osx-x64/SciterLibrary.dylib'" />
+  </Target>
+
+  <!-- Auto-download Windows x64 native if missing -->
+  <Target Name="EnsureSciterNativeWindows"
+          BeforeTargets="CopySciterNativeLib"
+          Condition="$([MSBuild]::IsOSPlatform('Windows')) AND !Exists('$(SciterNativeDir)\win-x64\SciterLibrary.dll')">
+    <Message Importance="high" Text="→ Downloading Sciter $(SciterVersion) native lib for Windows x64 (one-time)..." />
+    <Exec Command="powershell -NoProfile -Command &quot;New-Item -ItemType Directory -Force '$(SciterNativeDir)\win-x64' | Out-Null; Invoke-WebRequest -Uri '$(SciterGitBase)/bin/windows/x64/sciter.dll' -OutFile '$(SciterNativeDir)\win-x64\SciterLibrary.dll'&quot;" />
+  </Target>
   <Target Name="CopySciterNativeLib" AfterTargets="Build" Condition="Exists('Native/$(RuntimeIdentifier)/')">
     <ItemGroup>
       <_SciterNative Include="Native/$(RuntimeIdentifier)/SciterLibrary.*" />
