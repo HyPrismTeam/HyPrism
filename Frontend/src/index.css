@@ -381,3 +381,483 @@ code, pre {
   gap: 12px;
   padding-top: 8px;
 }
+
+/* ── Tailwind Utility Equivalents ───────────────────────────────────────── */
+/* Spacing */
+.p-1 { padding: 4px; } .p-2 { padding: 8px; } .p-3 { padding: 12px; } .p-4 { padding: 16px; } .p-5 { padding: 20px; } .p-6 { padding: 24px; } .p-8 { padding: 32px; }
+.px-1 { padding-left: 4px; padding-right: 4px; } .px-2 { padding-left: 8px; padding-right: 8px; } .px-3 { padding-left: 12px; padding-right: 12px; } .px-4 { padding-left: 16px; padding-right: 16px; } .px-6 { padding-left: 24px; padding-right: 24px; } .px-8 { padding-left: 32px; padding-right: 32px; }
+.py-1 { padding-top: 4px; padding-bottom: 4px; } .py-2 { padding-top: 8px; padding-bottom: 8px; } .py-3 { padding-top: 12px; padding-bottom: 12px; } .py-4 { padding-top: 16px; padding-bottom: 16px; } .py-6 { padding-top: 24px; padding-bottom: 24px; } .py-8 { padding-top: 32px; padding-bottom: 32px; }
+.pt-1 { padding-top: 4px; } .pt-2 { padding-top: 8px; } .pt-4 { padding-top: 16px; } .pt-6 { padding-top: 24px; } .pt-8 { padding-top: 32px; }
+.pb-1 { padding-bottom: 4px; } .pb-2 { padding-bottom: 8px; } .pb-4 { padding-bottom: 16px; } .pb-6 { padding-bottom: 24px; } .pb-8 { padding-bottom: 32px; }
+.pl-1 { padding-left: 4px; } .pl-2 { padding-left: 8px; } .pl-4 { padding-left: 16px; }
+.pr-1 { padding-right: 4px; } .pr-2 { padding-right: 8px; } .pr-4 { padding-right: 16px; }
+
+.m-1 { margin: 4px; } .m-2 { margin: 8px; } .m-3 { margin: 12px; } .m-4 { margin: 16px; } .m-6 { margin: 24px; } .m-8 { margin: 32px; }
+.mx-1 { margin-left: 4px; margin-right: 4px; } .mx-2 { margin-left: 8px; margin-right: 8px; } .mx-3 { margin-left: 12px; margin-right: 12px; } .mx-4 { margin-left: 16px; margin-right: 16px; } .mx-auto { margin-left: auto; margin-right: auto; }
+.my-1 { margin-top: 4px; margin-bottom: 4px; } .my-2 { margin-top: 8px; margin-bottom: 8px; } .my-3 { margin-top: 12px; margin-bottom: 12px; } .my-4 { margin-top: 16px; margin-bottom: 16px; } .my-8 { margin-top: 32px; margin-bottom: 32px; }
+.mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; } .mt-4 { margin-top: 16px; } .mt-6 { margin-top: 24px; } .mt-8 { margin-top: 32px; } .mt-auto { margin-top: auto; }
+.mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 12px; } .mb-4 { margin-bottom: 16px; } .mb-6 { margin-bottom: 24px; } .mb-8 { margin-bottom: 32px; } .mb-auto { margin-bottom: auto; }
+.ml-1 { margin-left: 4px; } .ml-2 { margin-left: 8px; } .ml-3 { margin-left: 12px; } .ml-4 { margin-left: 16px; } .ml-auto { margin-left: auto; }
+.mr-1 { margin-right: 4px; } .mr-2 { margin-right: 8px; } .mr-3 { margin-right: 12px; } .mr-4 { margin-right: 16px; } .mr-auto { margin-right: auto; }
+
+/* Typography */
+.text-xs { font-size: 12px; } .text-sm { font-size: 13px; } .text-base { font-size: 14px; } .text-lg { font-size: 16px; } .text-xl { font-size: 18px; } .text-2xl { font-size: 24px; } .text-3xl { font-size: 30px; } .text-4xl { font-size: 36px; }
+.font-normal { font-weight: 400; } .font-medium { font-weight: 500; } .font-semibold { font-weight: 600; } .font-bold { font-weight: 700; }
+.text-left { text-align: left; } .text-center { text-align: center; } .text-right { text-align: right; }
+.uppercase { text-transform: uppercase; } .lowercase { text-transform: lowercase; } .capitalize { text-transform: capitalize; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Colors */
+.text-white { color: #ffffff; }
+.text-white-30 { color: rgba(255, 255, 255, 0.3); }
+.text-white-40 { color: rgba(255, 255, 255, 0.4); }
+.text-white-50 { color: rgba(255, 255, 255, 0.5); }
+.text-white-60 { color: rgba(255, 255, 255, 0.6); }
+.text-white-70 { color: rgba(255, 255, 255, 0.7); }
+.text-white-80 { color: rgba(255, 255, 255, 0.8); }
+.text-white-90 { color: rgba(255, 255, 255, 0.9); }
+.text-black { color: #000000; }
+.text-accent { color: var(--accent); }
+.text-red-500 { color: #ef4444; } .text-red-400 { color: #f87171; }
+.text-green-500 { color: #10b981; } .text-green-400 { color: #34d399; }
+.text-yellow-500 { color: #f59e0b; } .text-yellow-400 { color: #fbbf24; }
+.text-blue-500 { color: #3b82f6; } .text-blue-400 { color: #60a5fa; }
+
+.bg-transparent { background-color: transparent; }
+.bg-white { background-color: #ffffff; }
+.bg-black { background-color: #000000; }
+.bg-white-5 { background-color: rgba(255, 255, 255, 0.05); }
+.bg-white-10 { background-color: rgba(255, 255, 255, 0.1); }
+.bg-white-20 { background-color: rgba(255, 255, 255, 0.2); }
+.bg-black-10 { background-color: rgba(0, 0, 0, 0.1); }
+.bg-black-20 { background-color: rgba(0, 0, 0, 0.2); }
+.bg-black-30 { background-color: rgba(0, 0, 0, 0.3); }
+.bg-black-40 { background-color: rgba(0, 0, 0, 0.4); }
+.bg-black-50 { background-color: rgba(0, 0, 0, 0.5); }
+.bg-black-60 { background-color: rgba(0, 0, 0, 0.6); }
+.bg-black-70 { background-color: rgba(0, 0, 0, 0.7); }
+.bg-black-80 { background-color: rgba(0, 0, 0, 0.8); }
+.bg-black-90 { background-color: rgba(0, 0, 0, 0.9); }
+.bg-accent { background-color: var(--accent); }
+.bg-red-500 { background-color: #ef4444; } .bg-red-500-20 { background-color: rgba(239, 68, 68, 0.2); }
+.bg-green-500 { background-color: #10b981; } .bg-green-500-20 { background-color: rgba(16, 185, 129, 0.2); }
+
+/* Layout */
+.fixed { position: fixed; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.top-0 { top: 0; } .right-0 { right: 0; } .bottom-0 { bottom: 0; } .left-0 { left: 0; }
+.z-0 { z-index: 0; } .z-10 { z-index: 10; } .z-20 { z-index: 20; } .z-30 { z-index: 30; } .z-40 { z-index: 40; } .z-50 { z-index: 50; }
+
+/* Borders */
+.rounded-none { border-radius: 0; }
+.rounded-sm { border-radius: 4px; }
+.rounded { border-radius: 8px; }
+.rounded-md { border-radius: 10px; }
+.rounded-lg { border-radius: 12px; }
+.rounded-xl { border-radius: 16px; }
+.rounded-2xl { border-radius: 24px; }
+.rounded-full { border-radius: 9999px; }
+
+.border { border-width: 1px; border-style: solid; }
+.border-t { border-top-width: 1px; border-top-style: solid; }
+.border-r { border-right-width: 1px; border-right-style: solid; }
+.border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+.border-l { border-left-width: 1px; border-left-style: solid; }
+.border-transparent { border-color: transparent; }
+.border-white-5 { border-color: rgba(255, 255, 255, 0.05); }
+.border-white-10 { border-color: rgba(255, 255, 255, 0.1); }
+.border-white-20 { border-color: rgba(255, 255, 255, 0.2); }
+.border-accent { border-color: var(--accent); }
+
+/* Effects */
+.opacity-0 { opacity: 0; } .opacity-10 { opacity: 0.1; } .opacity-20 { opacity: 0.2; } .opacity-30 { opacity: 0.3; } .opacity-40 { opacity: 0.4; } .opacity-50 { opacity: 0.5; } .opacity-60 { opacity: 0.6; } .opacity-70 { opacity: 0.7; } .opacity-80 { opacity: 0.8; } .opacity-90 { opacity: 0.9; } .opacity-100 { opacity: 1; }
+.transition-all { transition: all 0.3s ease; }
+.transition-colors { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+.transition-opacity { transition: opacity 0.3s ease; }
+.cursor-pointer { cursor: pointer; }
+.cursor-default { cursor: default; }
+.cursor-not-allowed { cursor: not-allowed; }
+.pointer-events-none { pointer-events: none; }
+.pointer-events-auto { pointer-events: auto; }
+
+/* Flex/Grid */
+.flex-shrink-0 { flex-shrink: 0; }
+.flex-grow { flex-grow: 1; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* Semantic */
+.glass-panel {
+  background: rgba(20, 20, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+.glass-control {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+.glass-control:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Keyframes */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin { animation: spin 1s linear infinite; }
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+.animate-pulse { animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(to right, rgba(255,255,255,0.05) 4%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.05) 36%);
+  background-size: 1000px 100%;
+}
+
+/* Sizing */
+.w-1 { width: 4px; } .w-2 { width: 8px; } .w-3 { width: 12px; } .w-4 { width: 16px; } .w-5 { width: 20px; } .w-6 { width: 24px; } .w-8 { width: 32px; } .w-10 { width: 40px; } .w-12 { width: 48px; } .w-16 { width: 64px; } .w-20 { width: 80px; } .w-24 { width: 96px; } .w-32 { width: 128px; } .w-48 { width: 192px; } .w-64 { width: 256px; }
+.h-1 { height: 4px; } .h-2 { height: 8px; } .h-3 { height: 12px; } .h-4 { height: 16px; } .h-5 { height: 20px; } .h-6 { height: 24px; } .h-8 { height: 32px; } .h-10 { height: 40px; } .h-12 { height: 48px; } .h-16 { height: 64px; } .h-20 { height: 80px; } .h-24 { height: 96px; } .h-32 { height: 128px; } .h-48 { height: 192px; } .h-64 { height: 256px; }
+.w-screen { width: 100vw; } .h-screen { height: 100vh; }
+.max-w-xs { max-width: 320px; } .max-w-sm { max-width: 384px; } .max-w-md { max-width: 448px; } .max-w-lg { max-width: 512px; } .max-w-xl { max-width: 576px; } .max-w-2xl { max-width: 672px; } .max-w-3xl { max-width: 768px; } .max-w-4xl { max-width: 896px; } .max-w-5xl { max-width: 1024px; } .max-w-6xl { max-width: 1152px; } .max-w-7xl { max-width: 1280px; } .max-w-full { max-width: 100%; }
+.max-h-full { max-height: 100%; } .max-h-screen { max-height: 100vh; }
+.min-w-0 { min-width: 0; } .min-w-full { min-width: 100%; }
+.min-h-0 { min-height: 0; } .min-h-full { min-height: 100%; } .min-h-screen { min-height: 100vh; }
+
+/* Display */
+.block { display: block; }
+.inline-block { display: inline-block; }
+.inline-flex { display: inline-flex; }
+.inline { display: inline; }
+.hidden { display: none; }
+
+/* ── Extended Tailwind Utilities for Sciter ─────────────────────────────── */
+/* Decimal-point spacing */
+.p-0\.5  { padding: 2px; }  .p-1\.5  { padding: 6px; }  .p-2\.5  { padding: 10px; }
+.px-0\.5 { padding-left: 2px; padding-right: 2px; } .px-1\.5 { padding-left: 6px; padding-right: 6px; } .px-2\.5 { padding-left: 10px; padding-right: 10px; } .px-3\.5 { padding-left: 14px; padding-right: 14px; }
+.py-0\.5 { padding-top: 2px; padding-bottom: 2px; } .py-1\.5 { padding-top: 6px; padding-bottom: 6px; } .py-2\.5 { padding-top: 10px; padding-bottom: 10px; }
+.mt-0\.5 { margin-top: 2px; } .mb-0\.5 { margin-bottom: 2px; } .mb-1\.5 { margin-bottom: 6px; }
+.gap-0\.5 { gap: 2px; } .gap-1\.5 { gap: 6px; }
+.h-0\.5  { height: 2px; } .h-1\.5  { height: 6px; }
+.space-y-0\.5 > * + * { margin-top: 2px; } .space-y-1\.5 > * + * { margin-top: 6px; }
+.gap-5 { gap: 20px; } .gap-6 { gap: 24px; } .gap-8 { gap: 32px; }
+.gap-y-2 { row-gap: 8px; } .gap-x-2 { column-gap: 8px; }
+
+/* Additional sizing */
+.w-7 { width: 28px; } .h-7 { height: 28px; }
+.w-9 { width: 36px; } .h-9 { height: 36px; }
+.w-11 { width: 44px; } .h-11 { height: 44px; }
+.w-14 { width: 56px; } .h-14 { height: 56px; }
+.w-40 { width: 160px; } .w-52 { width: 208px; }
+.h-40 { height: 160px; }
+.max-h-24 { max-height: 96px; } .max-h-40 { max-height: 160px; } .max-h-48 { max-height: 192px; } .max-h-60 { max-height: 240px; }
+.min-w-4 { min-width: 16px; } .min-w-max { min-width: max-content; }
+
+/* Positioning values */
+.top-1 { top: 4px; } .top-2 { top: 8px; } .top-3 { top: 12px; } .top-4 { top: 16px; } .top-6 { top: 24px; }
+.right-1 { right: 4px; } .right-2 { right: 8px; } .right-3 { right: 12px; } .right-4 { right: 16px; } .right-6 { right: 24px; } .right-8 { right: 32px; }
+.bottom-2 { bottom: 8px; } .bottom-3 { bottom: 12px; } .bottom-4 { bottom: 16px; } .bottom-6 { bottom: 24px; } .bottom-8 { bottom: 32px; } .bottom-32 { bottom: 128px; }
+.left-1 { left: 4px; } .left-2 { left: 8px; } .left-3 { left: 12px; } .left-4 { left: 16px; }
+.top-full { top: 100%; } .bottom-full { bottom: 100%; }
+.left-1\/2 { left: 50%; }
+.inset-y-0 { top: 0; bottom: 0; }
+.-top-1 { top: -4px; } .-right-1 { right: -4px; }
+
+/* Transforms */
+.-translate-x-1\/2 { transform: translateX(-50%); }
+.-translate-y-1\/2 { transform: translateY(-50%); }
+.translate-x-0 { transform: translateX(0); }
+.translate-x-1 { transform: translateX(4px); }
+.translate-x-2 { transform: translateX(8px); }
+.translate-x-6 { transform: translateX(24px); }
+.rotate-180 { transform: rotate(180deg); }
+
+/* Typography extras */
+.font-sans { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+.font-mono { font-family: Consolas, 'Courier New', monospace; }
+.whitespace-nowrap { white-space: nowrap; }
+.whitespace-pre-wrap { white-space: pre-wrap; }
+.tracking-wider { letter-spacing: 0.05em; }
+.tracking-tight { letter-spacing: -0.025em; }
+.leading-none { line-height: 1; }
+.leading-tight { line-height: 1.25; }
+.leading-snug { line-height: 1.375; }
+.leading-relaxed { line-height: 1.625; }
+.leading-4 { line-height: 16px; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.break-all { word-break: break-all; }
+.underline { text-decoration: underline; }
+
+/* Object fit / misc */
+.object-cover { object-fit: cover; }
+.object-contain { object-fit: contain; }
+.select-none { user-select: none; }
+.appearance-none { appearance: none; }
+.outline-none { outline: none; }
+.list-disc { list-style-type: disc; }
+.list-inside { list-style-position: inside; }
+.overflow-x-hidden { overflow-x: hidden; }
+.overflow-x-auto { overflow-x: auto; }
+.shrink-0 { flex-shrink: 0; }
+
+/* Aspect ratio */
+.aspect-video { aspect-ratio: 16 / 9; }
+
+/* Background */
+.bg-cover { background-size: cover; }
+.bg-center { background-position: center; }
+
+/* Gradients — Sciter doesn't support CSS custom properties, so the Tailwind
+   composable gradient system (from-X + to-Y + bg-gradient-to-DIR) cannot work.
+   Components that need gradients use inline `style` attributes instead. */
+
+/* Border extras */
+.border-2 { border-width: 2px; border-style: solid; }
+.border-0 { border-width: 0; }
+.border-dashed { border-style: dashed; }
+
+/* Shadows — NOTE: Sciter supports basic box-shadow */
+.shadow-md { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.3); }
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px rgba(0,0,0,0.3); }
+.shadow-xl { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.3); }
+.shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+
+/* Transition durations */
+.duration-150 { transition-duration: 0.15s; }
+.duration-200 { transition-duration: 0.2s; }
+.duration-300 { transition-duration: 0.3s; }
+.duration-500 { transition-duration: 0.5s; }
+.duration-1000 { transition-duration: 1s; }
+.transition-transform { transition-property: transform; transition-timing-function: ease; transition-duration: 0.3s; }
+
+/* Space utilities */
+.space-y-1 > * + * { margin-top: 4px; }
+.space-y-2 > * + * { margin-top: 8px; }
+.space-y-3 > * + * { margin-top: 12px; }
+.space-y-4 > * + * { margin-top: 16px; }
+.space-y-6 > * + * { margin-top: 24px; }
+.space-x-1 > * + * { margin-left: 4px; }
+.space-x-2 > * + * { margin-left: 8px; }
+.space-x-3 > * + * { margin-left: 12px; }
+.space-x-4 > * + * { margin-left: 16px; }
+
+/* Accessibility */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+
+/* Ring (focus indicators) */
+.ring-0 { box-shadow: none; }
+.ring-2 { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ── Color aliases: Tailwind slash notation → Sciter-compatible ─────────
+   Components use both `text-white-40` (dash) and `text-white/40` (slash).
+   Define the slash variants as aliases. ───────────────────────────────── */
+.text-white\/30 { color: rgba(255,255,255,0.3); }
+.text-white\/40 { color: rgba(255,255,255,0.4); }
+.text-white\/50 { color: rgba(255,255,255,0.5); }
+.text-white\/60 { color: rgba(255,255,255,0.6); }
+.text-white\/70 { color: rgba(255,255,255,0.7); }
+.text-white\/80 { color: rgba(255,255,255,0.8); }
+.text-white\/85 { color: rgba(255,255,255,0.85); }
+.text-white\/90 { color: rgba(255,255,255,0.9); }
+.text-white-35 { color: rgba(255,255,255,0.35); }
+
+.bg-white\/3  { background-color: rgba(255,255,255,0.03); }
+.bg-white\/4  { background-color: rgba(255,255,255,0.04); }
+.bg-white\/5  { background-color: rgba(255,255,255,0.05); }
+.bg-white\/6  { background-color: rgba(255,255,255,0.06); }
+.bg-white\/8  { background-color: rgba(255,255,255,0.08); }
+.bg-white\/10 { background-color: rgba(255,255,255,0.1); }
+.bg-white\/15 { background-color: rgba(255,255,255,0.15); }
+.bg-white\/20 { background-color: rgba(255,255,255,0.2); }
+
+.border-white\/5  { border-color: rgba(255,255,255,0.05); }
+.border-white\/6  { border-color: rgba(255,255,255,0.06); }
+.border-white\/8  { border-color: rgba(255,255,255,0.08); }
+.border-white\/10 { border-color: rgba(255,255,255,0.1); }
+.border-white\/12 { border-color: rgba(255,255,255,0.12); }
+.border-white\/20 { border-color: rgba(255,255,255,0.2); }
+.border-white\/30 { border-color: rgba(255,255,255,0.3); }
+.border-white\/40 { border-color: rgba(255,255,255,0.4); }
+
+.bg-black\/50 { background-color: rgba(0,0,0,0.5); }
+.bg-black\/60 { background-color: rgba(0,0,0,0.6); }
+.bg-black\/70 { background-color: rgba(0,0,0,0.7); }
+.bg-black\/80 { background-color: rgba(0,0,0,0.8); }
+.bg-black\/90 { background-color: rgba(0,0,0,0.9); }
+
+/* Extended semantic colors */
+.text-amber-400  { color: #fbbf24; }
+.text-amber-200  { color: #fde68a; }
+.text-orange-400 { color: #fb923c; }
+.text-gray-400   { color: #9ca3af; }
+.text-blue-300   { color: #93c5fd; }
+.text-red-200    { color: #fecaca; }
+.text-red-300    { color: #fca5a5; }
+.bg-amber-500\/10 { background-color: rgba(245,158,11,0.1); }
+.border-amber-500\/20 { border-color: rgba(245,158,11,0.2); }
+.bg-orange-400\/10 { background-color: rgba(251,146,60,0.1); }
+.border-orange-400\/20 { border-color: rgba(251,146,60,0.2); }
+.bg-red-500\/5   { background-color: rgba(239,68,68,0.05); }
+.bg-red-500\/10  { background-color: rgba(239,68,68,0.1); }
+.bg-red-500\/20  { background-color: rgba(239,68,68,0.2); }
+.bg-red-500\/80  { background-color: rgba(239,68,68,0.8); }
+.border-red-500\/20 { border-color: rgba(239,68,68,0.2); }
+.border-red-500\/40 { border-color: rgba(239,68,68,0.4); }
+.bg-green-500\/10 { background-color: rgba(16,185,129,0.1); }
+.bg-green-500\/20 { background-color: rgba(16,185,129,0.2); }
+.bg-green-500\/30 { background-color: rgba(16,185,129,0.3); }
+.border-green-500\/20 { border-color: rgba(16,185,129,0.2); }
+.border-green-500\/40 { border-color: rgba(16,185,129,0.4); }
+.bg-blue-500\/15 { background-color: rgba(59,130,246,0.15); }
+.border-blue-500\/20 { border-color: rgba(59,130,246,0.2); }
+
+/* ── Arbitrary value classes (most commonly used) ───────────────────────── */
+/* Z-index */
+.z-\[5\]    { z-index: 5; }
+.z-\[100\]  { z-index: 100; }
+.z-\[200\]  { z-index: 200; }
+.z-\[250\]  { z-index: 250; }
+.z-\[300\]  { z-index: 300; }
+.z-\[9999\] { z-index: 9999; }
+
+/* Background colors (arbitrary hex) */
+.bg-\[\#090909\] { background-color: #090909; }
+.bg-\[\#0a0a0a\] { background-color: #0a0a0a; }
+.bg-\[\#111111\] { background-color: #111111; }
+.bg-\[\#151515\] { background-color: #151515; }
+.bg-\[\#1a1a1a\] { background-color: #1a1a1a; }
+.bg-\[\#1c1c1e\] { background-color: #1c1c1e; }
+.bg-\[\#252527\] { background-color: #252527; }
+.bg-\[\#2c2c2e\] { background-color: #2c2c2e; }
+.bg-\[\#5865F2\] { background-color: #5865F2; }
+
+/* Text sizes (arbitrary px) */
+.text-\[9px\]  { font-size: 9px; }
+.text-\[10px\] { font-size: 10px; }
+.text-\[11px\] { font-size: 11px; }
+.text-\[12px\] { font-size: 12px; }
+
+/* Sizes (arbitrary px / vh / %) */
+.w-\[160px\] { width: 160px; }
+.w-\[260px\] { width: 260px; }
+.w-\[350px\] { width: 350px; }
+.w-\[720px\] { width: 720px; }
+.h-\[700px\] { height: 700px; }
+.h-\[85vh\]  { height: 85vh; }
+.h-\[80vh\]  { height: 80vh; }
+.max-w-\[140px\] { max-width: 140px; }
+.max-w-\[250px\] { max-width: 250px; }
+.max-w-\[280px\] { max-width: 280px; }
+.max-w-\[55\%\]  { max-width: 55%; }
+.max-h-\[55vh\]  { max-height: 55vh; }
+.max-h-\[280px\] { max-height: 280px; }
+.max-h-\[80vh\]  { max-height: 80vh; }
+.max-h-\[40vh\]  { max-height: 40vh; }
+.min-w-\[60px\]  { min-width: 60px; }
+.min-w-\[140px\] { min-width: 140px; }
+
+/* Margins (arbitrary) */
+.ml-\[18px\] { margin-left: 18px; }
+.ml-\[22px\] { margin-left: 22px; }
+
+/* Border (arbitrary) */
+.rounded-\[inherit\] { border-radius: inherit; }
+.border-white\/\[0\.06\] { border-color: rgba(255,255,255,0.06); }
+.border-white\/\[0\.08\] { border-color: rgba(255,255,255,0.08); }
+.border-white\/\[0\.12\] { border-color: rgba(255,255,255,0.12); }
+
+/* Grid arbitrary */
+.grid-cols-\[200px_1fr\] { grid-template-columns: 200px 1fr; }
+
+/* Gradient from/to — Sciter does not support CSS custom properties,
+   so we cannot use the composable from-X / to-Y / bg-gradient-to-DIR pattern.
+   These are no-ops; gradients that matter use inline `style` in components. */
+
+/* Custom semantic classes */
+.glass-panel-static-solid {
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+.glass-control-solid {
+  background: rgba(40, 40, 40, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+.glass {
+  background: rgba(20, 20, 20, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+@keyframes rgb-shift {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+.animate-rgb { animation: rgb-shift 3s linear infinite; }
+
+/* ── Pseudo-class variants (most commonly used) ────────────────────────── */
+/* NOTE: Sciter supports :hover, :active, :focus, and :disabled natively.
+   Escaped Tailwind selectors (hover\:xxx:hover) work if the engine parses
+   the backslash-escaped class name.  We define the most critical ones as
+   plain CSS.  Components should prefer inline style objects for complex
+   hover effects. */
+
+/* Hover */
+.hover\:bg-white\/5:hover  { background-color: rgba(255,255,255,0.05); }
+.hover\:bg-white\/10:hover { background-color: rgba(255,255,255,0.1); }
+.hover\:bg-white\/15:hover { background-color: rgba(255,255,255,0.15); }
+.hover\:text-white:hover   { color: #ffffff; }
+.hover\:text-white\/80:hover { color: rgba(255,255,255,0.8); }
+.hover\:opacity-90:hover   { opacity: 0.9; }
+.hover\:opacity-100:hover  { opacity: 1; }
+.hover\:underline:hover    { text-decoration: underline; }
+.hover\:border-white\/20:hover { border-color: rgba(255,255,255,0.2); }
+.hover\:border-white\/30:hover { border-color: rgba(255,255,255,0.3); }
+.hover\:scale-105:hover { transform: scale(1.05); }
+.hover\:scale-110:hover { transform: scale(1.1); }
+.hover\:bg-\[\#252527\]:hover { background-color: #252527; }
+.hover\:bg-red-500\/10:hover  { background-color: rgba(239,68,68,0.1); }
+.hover\:bg-green-500\/30:hover { background-color: rgba(16,185,129,0.3); }
+.hover\:bg-transparent:hover { background-color: transparent; }
+
+/* Focus */
+.focus\:outline-none:focus { outline: none; }
+.focus\:border-white\/20:focus { border-color: rgba(255,255,255,0.2); }
+.focus\:border-white\/30:focus { border-color: rgba(255,255,255,0.3); }
+.focus\:ring-0:focus { box-shadow: none; }
+
+/* Active */
+.active\:scale-95:active { transform: scale(0.95); }
+.active\:scale-\[0\.98\]:active { transform: scale(0.98); }
+
+/* Disabled */
+.disabled\:opacity-40:disabled { opacity: 0.4; }
+.disabled\:opacity-50:disabled { opacity: 0.5; }
+.disabled\:cursor-not-allowed:disabled { cursor: not-allowed; }
+
+/* Group-hover (requires parent to have .group class) */
+.group:hover .group-hover\:opacity-100 { opacity: 1; }
+.group:hover .group-hover\:scale-105 { transform: scale(1.05); }
+.group:hover .group-hover\:text-white-60 { color: rgba(255,255,255,0.6); }
+.group:hover .group-hover\:underline { text-decoration: underline; }
+.group:hover .group-hover\:translate-x-0 { transform: translateX(0); }
+
+/* Placeholder — Sciter does not support ::placeholder pseudo-element.
+   Input placeholder styling is handled via Sciter's native CSS. */

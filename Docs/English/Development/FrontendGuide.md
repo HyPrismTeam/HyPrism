@@ -6,15 +6,16 @@ The frontend is a Preact 10 SPA built with Vite and TypeScript. It runs inside a
 
 ## Stack
 
-| Library | Purpose |
-|---------|---------|
+| Library / Module | Purpose |
+|------------------|---------|
 | Preact 10 | UI framework |
 | TypeScript | Type safety |
 | Vite | Build tool |
 | TailwindCSS v3 | Utility-first CSS |
-| GSAP 3 + @gsap/react | Animations |
-| Lucide React | Icons |
-| React Router DOM | Client-side routing |
+| `lib/motion.tsx` | Custom animation primitives (Sciter-safe, framer-motion–like API) |
+| `components/icons/LucideIcons.tsx` | Inline SVG icon set (Lucide-compatible, no external package) |
+| `lib/i18n.tsx` | i18n provider and `useTranslation()` hook |
+| Custom page state router | Client-side navigation via `currentPage` state in `App.tsx` |
 
 ## Pages
 
@@ -129,26 +130,38 @@ All theme colors are CSS custom properties defined in `Frontend/src/index.css`:
 - CSS vars for theme colors: `style={{ color: 'var(--accent)' }}`
 - Never hardcode hex colors — always use CSS variables
 
-## Animations (GSAP)
+## Animations (`lib/motion`)
 
-Page transitions and micro-interactions use GSAP:
+Animations use the custom `lib/motion.tsx` module — a lightweight Sciter-safe replacement with a framer-motion–like API. GSAP is **not** used.
 
 ```tsx
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
+import { motion, AnimatePresence } from '../lib/motion';
 
-export function MyPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
+// Animate on mount
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -10 }}
+  transition={{ duration: 0.25, ease: 'easeOut' }}
+>
+  ...
+</motion.div>
 
-  useGSAP(() => {
-    gsap.from(containerRef.current, {
-      opacity: 0, y: 20, duration: 0.5, ease: 'power2.out'
-    });
-  }, []);
+// Named variants
+<motion.div
+  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+  initial="hidden"
+  animate="visible"
+/>
 
-  return <div ref={containerRef}>...</div>;
-}
+// Presence guard for exit animations
+<AnimatePresence mode="wait">
+  {show && <motion.div key="panel" exit={{ opacity: 0 }}>…</motion.div>}
+</AnimatePresence>
 ```
+
+Available components: `motion.div`, `motion.span`, `motion.button`.
+All standard CSS-animatable properties are supported as JS camelCase keys.
 
 ## IPC Usage
 
@@ -188,10 +201,54 @@ Add new contexts in `Frontend/src/contexts/` for other domain state.
 
 ## Icons
 
-All icons come from **Lucide React**
+All icons are bundled inline in `components/icons/LucideIcons.tsx` as Preact components — the external `lucide-react` package is **not** installed.
 
 ```tsx
-import { Settings, Download, Play } from 'lucide-react';
+import { Settings, Download, Play, type LucideIcon } from '../components/icons/LucideIcons';
 
-<Settings size={18} style={{ color: 'var(--text-secondary)' }} />
+<Settings size={18} color="var(--text-secondary)" />
 ```
+
+To add a new icon copy the SVG path(s) from [lucide.dev](https://lucide.dev) into `LucideIcons.tsx` following the existing pattern.
+
+## Navigation / Routing
+
+The app uses a **custom page-state router** — there is no `react-router-dom`.
+
+Pages are rendered based on `currentPage` state in `App.tsx`. To navigate programmatically dispatch the custom window event:
+
+```ts
+window.dispatchEvent(new CustomEvent('hyprism:menu:navigate', { detail: { page: 'settings' } }));
+```
+
+Valid page values are defined by the `PageType` union in `App.tsx`.
+
+## Sciter Compatibility Utilities
+
+Because the app runs inside Sciter (QuickJS), some browser APIs are missing or behave differently. The following helpers abstract over Sciter limitations.
+
+### Clipboard — `utils/clipboard.ts`
+
+```ts
+import { copyToClipboard } from '../utils/clipboard';
+
+await copyToClipboard('hello'); // returns true on success
+```
+
+Falls back to `document.execCommand('copy')` when `navigator.clipboard` is unavailable (Sciter).
+
+**Always use this instead of `navigator.clipboard.writeText` directly.**
+
+### Audio — `MusicPlayer` helpers
+
+Sciter does not expose all `HTMLAudioElement` methods. `components/layout/MusicPlayer.tsx` wraps every audio call with guards:
+
+```ts
+audioPlay(audio)    // safe audio.play()
+audioPause(audio)   // safe audio.pause()
+audioSetVolume(audio, vol) // safe audio.volume =
+audioGetVolume(audio)      // safe audio.volume read
+audioIsPaused(audio)       // safe audio.paused read
+```
+
+Do not call `audio.play()` / `audio.pause()` / `audio.volume` directly — use these helpers in any audio-related code.

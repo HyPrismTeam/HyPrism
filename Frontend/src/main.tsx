@@ -1,14 +1,14 @@
-import { h, Component, render } from 'preact';
-import type { ComponentChildren } from 'preact';
-import { App } from './App';
+import './utils/polyfills'; // Sciter / QuickJS compatibility — must be first
+import { h, Component, ComponentChildren, render } from 'preact';
+import App from './App';
+import { AccentColorProvider } from './contexts/AccentColorContext';
+import { I18nProvider } from './lib/i18n';
+import { ipc } from './lib/ipc';
+
 import './index.css';
 
-// ─── Error boundary ───────────────────────────────────────────────────────────
-// Catches render errors so we don't get a completely blank screen on crash.
-class ErrorBoundary extends Component<
-  { children: ComponentChildren },
-  { hasError: boolean; error: Error | null }
-> {
+// Error boundary to catch crashes
+class ErrorBoundary extends Component<{ children: ComponentChildren }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: ComponentChildren }) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -18,25 +18,17 @@ class ErrorBoundary extends Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: { componentStack?: string }) {
-    console.error('[HyPrism] Render error:', error, info?.componentStack ?? '');
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('Preact Error Boundary caught:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 24, color: '#f0f0f0', background: '#090909', height: '100vh', fontFamily: 'sans-serif' }}>
-          <h2 style={{ color: '#FFA845', marginBottom: 12 }}>Render error</h2>
-          <pre style={{ whiteSpace: 'pre-wrap', color: '#aaa', fontSize: 12 }}>
-            {this.state.error?.toString()}
-          </pre>
-          <br />
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: '8px 16px', cursor: 'pointer', background: '#FFA845', border: 'none', borderRadius: 6, fontWeight: 600 }}
-          >
-            Retry
-          </button>
+        <div style={{ padding: 20, color: 'white', background: '#1a1a1a', height: '100vh' }}>
+          <h1>Something went wrong</h1>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error?.toString()}</pre>
+          <button onClick={() => ipc.windowCtl.restart()}>Reload</button>
         </div>
       );
     }
@@ -44,15 +36,13 @@ class ErrorBoundary extends Component<
   }
 }
 
-// ─── Mount ────────────────────────────────────────────────────────────────────
-const root = document.getElementById('root');
-if (root) {
-  render(
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>,
-    root
-  );
-} else {
-  console.error('[HyPrism] #root element not found');
-}
+render(
+  <ErrorBoundary>
+    <I18nProvider>
+      <AccentColorProvider>
+        <App />
+      </AccentColorProvider>
+    </I18nProvider>
+  </ErrorBoundary>,
+  document.getElementById('root')!
+);

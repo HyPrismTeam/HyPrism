@@ -6,15 +6,16 @@
 
 ## Стек
 
-| Библиотека | Назначение |
-|------------|-----------|
+| Библиотека / Модуль | Назначение |
+|---------------------|------------|
 | Preact 10 | UI-фреймворк |
 | TypeScript | Типобезопасность |
 | Vite | Инструмент сборки |
 | TailwindCSS v3 | Утилитарный CSS |
-| GSAP 3 + @gsap/react | Анимации |
-| Lucide React | Иконки |
-| React Router DOM | Клиентская маршрутизация |
+| `lib/motion.tsx` | Кастомные анимации (безопасен для Sciter, API похож на framer-motion) |
+| `components/icons/LucideIcons.tsx` | Встроенные SVG-иконки (Lucide-совместимые, без внешнего пакета) |
+| `lib/i18n.tsx` | Провайдер i18n и хук `useTranslation()` |
+| Кастомный page-state router | Клиентская навигация через состояние `currentPage` в `App.tsx` |
 
 ## Страницы
 
@@ -135,26 +136,38 @@ export function ProfileCard({ profileId }: Props) {
 - CSS-переменные для цветов темы: `style={{ color: 'var(--accent)' }}`
 - Никогда не используйте захардкоженные hex-цвета — всегда CSS-переменные
 
-## Анимации (GSAP)
+## Анимации (`lib/motion`)
 
-Переходы между страницами и микровзаимодействия используют GSAP:
+Анимации используют кастомный модуль `lib/motion.tsx` — лёгкую замену framer-motion, безопасную для Sciter. GSAP **не используется**.
 
 ```tsx
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
+import { motion, AnimatePresence } from '../lib/motion';
 
-export function MyPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
+// Анимация при монтировании
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -10 }}
+  transition={{ duration: 0.25, ease: 'easeOut' }}
+>
+  ...
+</motion.div>
 
-  useGSAP(() => {
-    gsap.from(containerRef.current, {
-      opacity: 0, y: 20, duration: 0.5, ease: 'power2.out'
-    });
-  }, []);
+// Именованные варианты
+<motion.div
+  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+  initial="hidden"
+  animate="visible"
+/>
 
-  return <div ref={containerRef}>...</div>;
-}
+// Анимация выхода
+<AnimatePresence mode="wait">
+  {show && <motion.div key="panel" exit={{ opacity: 0 }}>…</motion.div>}
+</AnimatePresence>
 ```
+
+Доступные компоненты: `motion.div`, `motion.span`, `motion.button`.
+Поддерживаются все CSS-анимируемые свойства в camelCase.
 
 ## Использование IPC
 
@@ -188,10 +201,54 @@ const { isPlaying, launch, cancel } = useGame();
 
 ## Иконки
 
-Все иконки берутся из **Lucide React** — без пользовательских SVG-файлов:
+Все иконки встроены в `components/icons/LucideIcons.tsx` как Preact-компоненты — внешний пакет `lucide-react` **не установлен**.
 
 ```tsx
-import { Settings, Download, Play } from 'lucide-react';
+import { Settings, Download, Play, type LucideIcon } from '../components/icons/LucideIcons';
 
-<Settings size={18} style={{ color: 'var(--text-secondary)' }} />
+<Settings size={18} color="var(--text-secondary)" />
 ```
+
+Чтобы добавить новую иконку, скопируйте SVG-пути с [lucide.dev](https://lucide.dev) в `LucideIcons.tsx` по аналогии с существующими.
+
+## Навигация / Маршрутизация
+
+В приложении используется **кастомный page-state router** без `react-router-dom`.
+
+Страницы рендерятся на основе состояния `currentPage` в `App.tsx`. Для программной навигации отправьте кастомное событие:
+
+```ts
+window.dispatchEvent(new CustomEvent('hyprism:menu:navigate', { detail: { page: 'settings' } }));
+```
+
+Допустимые значения страниц определены типом `PageType` в `App.tsx`.
+
+## Совместимость с Sciter
+
+Приложение работает внутри Sciter (QuickJS), поэтому некоторые браузерные API отсутствуют или ведут себя иначе. Используйте следующие утилиты.
+
+### Буфер обмена — `utils/clipboard.ts`
+
+```ts
+import { copyToClipboard } from '../utils/clipboard';
+
+await copyToClipboard('hello'); // возвращает true при успехе
+```
+
+Если `navigator.clipboard` недоступен (Sciter), используется `document.execCommand('copy')`.
+
+**Всегда используйте эту функцию вместо прямого `navigator.clipboard.writeText`.**
+
+### Аудио — хелперы в `MusicPlayer`
+
+Sciter не реализует все методы `HTMLAudioElement`. В `components/layout/MusicPlayer.tsx` каждый вызов аудио обёрнут в guard-функции:
+
+```ts
+audioPlay(audio)             // безопасный audio.play()
+audioPause(audio)            // безопасный audio.pause()
+audioSetVolume(audio, vol)   // безопасный audio.volume =
+audioGetVolume(audio)        // безопасное чтение audio.volume
+audioIsPaused(audio)         // безопасное чтение audio.paused
+```
+
+Не вызывайте `audio.play()` / `audio.pause()` / `audio.volume` напрямую — используйте эти хелперы в любом коде, связанном с аудио.

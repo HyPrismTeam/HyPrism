@@ -79,3 +79,48 @@ await ipc.i18n.set({ language: 'ru-RU' });
 const langs = await ipc.i18n.languages();
 // → [{ code: 'en-US', name: 'English' }, ...]
 ```
+
+## Хук `useTranslation()` (`lib/i18n.tsx`)
+
+Внутри Preact-компонентов используйте хук `useTranslation` (также экспортируется как `useI18n`):
+
+```tsx
+import { useTranslation } from '../lib/i18n';
+
+export function MyComponent() {
+  const { t, language, setLanguage } = useTranslation();
+
+  // Простой поиск по ключу
+  const label = t('button.play');
+
+  // Ключ с именованными параметрами
+  const msg = t('dashboard.welcome', { name: 'Player' });
+
+  // Ключ с fallback-строкой при отсутствии перевода
+  const hint = t('tooltip.help', 'Help');
+
+  return (
+    <div>
+      <span>{msg}</span>
+      <button onClick={() => setLanguage('ru-RU')}>{language}</button>
+    </div>
+  );
+}
+```
+
+### Возвращаемые значения
+
+| Значение | Тип | Описание |
+|--------|------|----------|
+| `t` | `(key, paramsOrFallback?) => string` | Перевести ключ через точку |
+| `language` | `string` | Текущий код языка (напр., `'ru-RU'`) |
+| `setLanguage` | `(code: string) => void` | Сменить язык и сохранить через IPC |
+| `i18n` | `{ language, changeLanguage }` | Низкоуровневый i18n-объект (устаревший, предпочитительно используйте `setLanguage`) |
+
+### Сигнатура `t()`
+
+```ts
+t(key: string): string
+t(key: string, params: Record<string, string | number>): string  // подстановка именованных {param}
+t(key: string, fallback: string): string                         // fallback при отсутствии ключа
+```
