@@ -20,9 +20,8 @@ public sealed class SciterIpcBridge : ISciterIpcBridge
     private SciterAPIHost? _host;
     private nint _mainWindow;
 
-    // Strong reference to created behavior handlers so the GC cannot collect
-    // them and invalidate the native callback pointers stored inside Sciter.
-    private readonly List<SciterIpcBehaviorHandler> _behaviorHandlers = [];
+    // Strong reference to the window handler so the GC cannot collect it.
+    private SciterIpcWindowHandler? _windowHandler;
 
     private readonly Dictionary<string, List<Action<object?>>> _handlers = [];
     private readonly Lock _lock = new();
@@ -33,25 +32,18 @@ public sealed class SciterIpcBridge : ISciterIpcBridge
 
     /// <summary>
     /// Bind the bridge to the Sciter host and main window.
-    /// Registers the 'hyprism-ipc' behavior factory so that when Sciter renders
-    /// the #hyprism-ipc-bridge element (behavior:hyprism-ipc in HTML), it creates
-    /// a behavior handler that intercepts xcall("hyprismCall", ...).
+    /// Registers a window-level event handler so that
+    ///   Window.this.xcall("hyprismCall", channel, jsonArgs)
+    /// from JS routes to ScriptMethodCall here.
+    /// (Proven approach: see SciterAPI integration tests DocumentXCallHandler)
     /// </summary>
     public void Attach(SciterAPIHost host, nint mainWindow)
     {
         _host = host;
         _mainWindow = mainWindow;
 
-        // Register the element behavior factory. Sciter calls this when it
-        // encounters an element with  style="behavior:hyprism-ipc"  in the DOM.
-        host.Callbacks.AddAttachBehaviourFactory(
-            "hyprismIpc",
-            element =>
-            {
-                var handler = new SciterIpcBehaviorHandler(element, host, this);
-                _behaviorHandlers.Add(handler);   // prevent GC collection
-                return handler;
-            });
+        _windowHandler = new SciterIpcWindowHandler(host, this);
+        host.AddWindowEventHandler(_windowHandler);
 
         Logger.Info("SciterBridge", "IPC bridge attached to Sciter window");
     }
@@ -157,22 +149,23 @@ public sealed class SciterIpcBridge : ISciterIpcBridge
 }
 
 /// <summary>
-/// Element behavior handler for the #hyprism-ipc-bridge element.
-/// Routes xcall("hyprismCall", channel, jsonArgs) from JS to
-/// <see cref="SciterIpcBridge.DispatchCall"/>.
+/// Window-level event handler.
+/// Receives Window.this.xcall("hyprismCall", channel, jsonArgs) from JS
+/// and dispatches to <see cref="SciterIpcBridge.DispatchCall"/>.
+/// Registered via host.AddWindowEventHandler() which subscribes to ALL events
+/// (HandleAll) — no BeforeRegisterEvent override needed.
 /// </summary>
-internal sealed class SciterIpcBehaviorHandler : ElementEventHandler
+internal sealed class SciterIpcWindowHandler : SciterEventHandler
 {
     private readonly SciterIpcBridge _bridge;
 
-    public SciterIpcBehaviorHandler(nint element, SciterAPIHost host, SciterIpcBridge bridge)
-        : base(element, host)
+    // Must use IntPtr.Zero + SciterEventHandlerMode.Window — matches the
+    // pattern from SciterAPI integration test DocumentXCallHandler.
+    public SciterIpcWindowHandler(SciterAPIHost host, SciterIpcBridge bridge)
+        : base(nint.Zero, host, SciterEventHandlerMode.Window)
     {
         _bridge = bridge;
     }
-
-    public override EventBehaviourGroups BeforeRegisterEvent() =>
-        EventBehaviourGroups.HANDLE_SCRIPTING_METHOD_CALL;
 
     public override (SciterValue? value, bool handled) ScriptMethodCall(
         string name, IEnumerable<SciterValue> arguments)

@@ -70,8 +70,16 @@ function renderPage(page: PageId) {
 
 // ─── Titlebar ─────────────────────────────────────────────────────────────────
 function Titlebar() {
+  function handleMouseDown(e: MouseEvent) {
+    // Only drag from the bar background, not from control buttons
+    if ((e.target as Element).closest('.titlebar-btn')) return;
+    // Window.this.move() starts the native interactive window drag in Sciter
+    const w = (globalThis as any).Window?.this;
+    if (w?.move) w.move();
+  }
+
   return (
-    <div class="titlebar">
+    <div class="titlebar" onMouseDown={handleMouseDown}>
       <div class="titlebar-brand">
         <span class="titlebar-brand-dot"/>
         <span class="titlebar-title">HyPrism</span>

@@ -9,9 +9,9 @@ interface IconProps {
 const SVG_PROPS = {
   fill: 'none',
   stroke: 'currentColor',
-  'stroke-width': '1.75',
-  'stroke-linecap': 'round' as const,
-  'stroke-linejoin': 'round' as const,
+  strokeWidth: '1.75',
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
 };
 
 export function IconHome({ size = 20 }: IconProps) {

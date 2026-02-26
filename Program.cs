@@ -126,6 +126,11 @@ class Program
         host.SetWindowMinimizable(host.MainWindow, true);
         host.SetWindowResizable(host.MainWindow, true);
 
+        // ── Remove OS window decorations (uses our custom titlebar) ──────────────
+        // SciterWindowFrameType.Solid = frameless solid-background window
+        // (removes GTK/X11 native title bar; app-region drag handled via JS)
+        host.SetWindowFrameType(host.MainWindow, SciterWindowFrameType.Solid);
+
         // ── Load the frontend HTML ─────────────────────────────────────────────
         var indexPath = Path.Combine(wwwroot, "index.html");
         if (!File.Exists(indexPath))

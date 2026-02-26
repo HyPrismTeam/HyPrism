@@ -50,10 +50,6 @@
     </script>
 </head>
 <body>
-<!-- HyPrism IPC bridge — behavior registered by C# SciterIpcBridge.
-     JS calls document.getElementById('hyprism-ipc-bridge').xcall('hyprismCall', channel, json)
-     which routes to SciterIpcBridge.ScriptMethodCall via the element behavior. -->
-<div id="hyprism-ipc-bridge" style="behavior: hyprismIpc; display:none; width:0; height:0; overflow:hidden"></div>
 <div id="root"></div>
 <script src="./src/main.tsx" type="module"></script>
 </body>
