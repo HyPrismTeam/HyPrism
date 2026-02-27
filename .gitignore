@@ -3,6 +3,7 @@
 .AppleDouble
 .LSOverride
 ._*
+.*hidden
 
 # .NET / C# Build outputs
 bin/
@@ -21,6 +22,7 @@ Build/*
 .idea/
 *.swp
 *.swo
+.c*/
 
 # VS Code
 .vscode/

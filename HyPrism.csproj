@@ -90,6 +90,14 @@
     <Compile Remove="Services/Game/Sources/MirrorVersionSource.cs" />
   </ItemGroup>
 
+  <!-- ElectronNET custom startup hook: IPv6 loopback socket bridge (VPN compatibility) -->
+  <!-- Copied next to main.js in the .electron output directory so ElectronNET picks it up -->
+  <ItemGroup>
+    <Content Include=".electron\custom_main.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- ================================================================ -->
   <!--  FRONTEND AUTO-BUILD PIPELINE                                     -->
   <!--  `npm ci` when lockfile changes, then `npm run build`             -->

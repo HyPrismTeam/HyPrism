@@ -78,6 +78,17 @@ class Program
             // Perform async initialization (fetch CurseForge key if needed)
             await Bootstrapper.InitializeAsync(services);
 
+            ElectronNetRuntime.ElectronExtraArguments = string.Join(" ",
+                "--in-process-gpu",
+                "--num-raster-threads=1",
+                "--renderer-process-limit=1",
+                "--disable-features=SpareRendererForSitePerProcess,BackForwardCache,Translate,AutofillServerCommunication",
+                "--disable-background-networking",
+                "--aggressive-cache-discard",
+                "--disable-dev-shm-usage",
+                "--js-flags=--max-old-space-size=256"
+            );
+
             // Start Electron runtime and wait for socket bridge
             Logger.Info("Boot", "Starting Electron runtime...");
             await runtimeController.Start();
@@ -165,7 +176,21 @@ class Program
                 Title = "HyPrism",
                 AutoHideMenuBar = true,
                 BackgroundColor = "#0D0D10",
-                Icon = iconPath ?? string.Empty
+                Icon = iconPath ?? string.Empty,
+                WebPreferences = new WebPreferences
+                {
+                    // DevTools protocol has a persistent overhead even when the panel is
+                    // closed — disable it in production to free that memory.
+                    DevTools = false,
+
+                    // No WebGL usage in the frontend (confirmed — no three.js / pixi / etc.).
+                    // Disabling prevents Chromium from initialising WebGL contexts.
+                    Webgl = false,
+
+                    // Webview tags allow embedding arbitrary web content inside the window.
+                    // Not used; disabling removes the associated process isolation overhead.
+                    WebviewTag = false,
+                }
             },
             $"file://{Path.Combine(wwwroot, "index.html")}"
         );
