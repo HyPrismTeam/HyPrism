@@ -1,8 +1,5 @@
-using System;
-using System.Net.Http;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
-using HyPrism.Services;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Core.Platform;
 using HyPrism.Services.Core.Integration;
@@ -11,7 +8,6 @@ using HyPrism.Services.Core.Ipc;
 using HyPrism.Services.User;
 using HyPrism.Services.Game;
 using HyPrism.Services.Game.Asset;
-using HyPrism.Services.Game.Auth;
 using HyPrism.Services.Game.Butler;
 using HyPrism.Services.Game.Download;
 using HyPrism.Services.Game.Instance;
