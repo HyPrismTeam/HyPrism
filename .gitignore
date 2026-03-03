@@ -84,7 +84,7 @@ repo
 build-dir
 flathub-bundle.tar.gz
 # Generated Flathub manifest (do not commit a static copy)
-Properties/linux/flathub/io.github.HyPrismTeam.HyPrism.yml
+Properties/linux/flathub/io.github.hyprismteam.HyPrism.yml
 
 # scripts
 scripts/run.sh

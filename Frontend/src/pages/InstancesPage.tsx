@@ -34,14 +34,12 @@ interface InstancesPageProps {
   onInstanceDeleted?: () => void;
   onInstanceSelected?: () => void;
   isGameRunning?: boolean;
-  runningBranch?: string;
-  runningVersion?: number;
+  runningInstanceId?: string;
   onStopGame?: () => void;
   activeTab?: InstanceTab;
   onTabChange?: (tab: InstanceTab) => void;
   isDownloading?: boolean;
-  downloadingBranch?: string;
-  downloadingVersion?: number;
+  downloadingInstanceId?: string;
   downloadState?: 'downloading' | 'extracting' | 'launching';
   progress?: number;
   downloaded?: number;
@@ -51,7 +49,7 @@ interface InstancesPageProps {
   launchDetail?: string;
   canCancel?: boolean;
   onCancelDownload?: () => void;
-  onLaunchInstance?: (branch: string, version: number, instanceId?: string) => void;
+  onLaunchInstance?: (instanceId: string) => void;
   officialServerBlocked?: boolean;
   hasDownloadSources?: boolean;
 }
@@ -81,14 +79,12 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
     onInstanceDeleted: props.onInstanceDeleted,
     onInstanceSelected: props.onInstanceSelected,
     isGameRunning: props.isGameRunning,
-    runningBranch: props.runningBranch,
-    runningVersion: props.runningVersion,
+    runningInstanceId: props.runningInstanceId,
     onStopGame: props.onStopGame,
     activeTab: props.activeTab,
     onTabChange: props.onTabChange,
     isDownloading: props.isDownloading,
-    downloadingBranch: props.downloadingBranch,
-    downloadingVersion: props.downloadingVersion,
+    downloadingInstanceId: props.downloadingInstanceId,
     onLaunchInstance: props.onLaunchInstance,
   });
 
@@ -227,9 +223,8 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
                     <div className="flex items-center gap-2">
                       {/* Play/Stop/Download Button */}
                       {(() => {
-                        const runningIdentityKnown = !!page.runningBranch && page.runningVersion !== undefined;
-                        const isThisRunning = page.isGameRunning && (!runningIdentityKnown || (page.runningBranch === page.selectedInstance?.branch && page.runningVersion === page.selectedInstance?.version));
-                        const isThisDownloading = page.isDownloading && page.downloadingBranch === page.selectedInstance?.branch && page.downloadingVersion === page.selectedInstance?.version;
+                        const isThisRunning = page.isGameRunning && (!page.runningInstanceId || page.runningInstanceId === page.selectedInstance?.id);
+                        const isThisDownloading = page.isDownloading && page.downloadingInstanceId === page.selectedInstance?.id;
                         const isInstalled = page.selectedInstance?.validationStatus === 'Valid';
 
                         if (isThisRunning) {
@@ -262,7 +257,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
                           );
                         }
 
-                        if (page.isGameRunning && runningIdentityKnown) {
+                        if (page.isGameRunning && !!page.runningInstanceId) {
                           return (
                             <LauncherActionButton variant="play" disabled className="h-10 px-4 text-sm">
                               <Play size={16} fill="currentColor" />
@@ -355,7 +350,7 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
 
                   {/* Download Progress */}
                   <AnimatePresence>
-                    {page.isDownloading && page.downloadingBranch === page.selectedInstance?.branch && page.downloadingVersion === page.selectedInstance?.version && launchState !== 'complete' && (
+                    {page.isDownloading && page.downloadingInstanceId === page.selectedInstance?.id && launchState !== 'complete' && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -438,8 +433,6 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
                       {page.selectedInstance && (
                         <InlineModBrowser
                           currentInstanceId={page.selectedInstance.id}
-                          currentBranch={page.selectedInstance.branch}
-                          currentVersion={page.selectedInstance.version}
                           installedModIds={new Set(page.modManager.installedMods.map(m => m.curseForgeId ? `cf-${m.curseForgeId}` : m.id))}
                           installedFileIds={new Set(page.modManager.installedMods.filter(m => m.fileId).map(m => String(m.fileId)))}
                           onModsInstalled={() => page.modManager.loadInstalledMods()}

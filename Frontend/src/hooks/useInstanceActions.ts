@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { ipc, invoke, type SaveInfo } from '@/lib/ipc';
-import type { InstalledVersionInfo, InstalledModInfo } from '@/types';
+import type { InstalledVersionInfo } from '@/types';
 
 /**
  * IPC wrapper functions for instance operations.
@@ -16,9 +16,9 @@ export const exportInstance = async (instanceId: string): Promise<string> => {
   }
 };
 
-export const deleteInstance = async (instanceId: string, branch: string, version: number): Promise<boolean> => {
+export const deleteInstance = async (instanceId: string): Promise<boolean> => {
   try {
-    return await ipc.instance.delete({ instanceId, branch, version });
+    return await ipc.instance.delete({ instanceId });
   } catch (e) {
     console.warn('[IPC] DeleteGame:', e);
     return false;
@@ -42,18 +42,18 @@ export const getCustomInstanceDir = async (): Promise<string> => {
   return (await ipc.settings.get()).dataDirectory ?? '';
 };
 
-export const getInstanceInstalledMods = async (branch: string, version: number, instanceId?: string): Promise<unknown[]> => {
+export const getInstanceInstalledMods = async (instanceId: string): Promise<unknown[]> => {
   try {
-    return await ipc.mods.installed({ branch, version, instanceId });
+    return await ipc.mods.installed({ instanceId });
   } catch (e) {
     console.warn('[IPC] GetInstanceInstalledMods:', e);
     return [];
   }
 };
 
-export const uninstallInstanceMod = async (modId: string, branch: string, version: number, instanceId?: string): Promise<boolean> => {
+export const uninstallInstanceMod = async (modId: string, instanceId: string): Promise<boolean> => {
   try {
-    return await ipc.mods.uninstall({ modId, branch, version, instanceId });
+    return await ipc.mods.uninstall({ modId, instanceId });
   } catch (e) {
     console.warn('[IPC] UninstallInstanceMod:', e);
     return false;
@@ -64,31 +64,31 @@ export const openInstanceModsFolder = (instanceId: string): void => {
   ipc.instance.openModsFolder({ instanceId });
 };
 
-export const checkInstanceModUpdates = async (branch: string, version: number, instanceId?: string): Promise<unknown[]> => {
+export const checkInstanceModUpdates = async (instanceId: string): Promise<unknown[]> => {
   try {
-    return await ipc.mods.checkUpdates({ branch, version, instanceId });
+    return await ipc.mods.checkUpdates({ instanceId });
   } catch (e) {
     console.warn('[IPC] CheckInstanceModUpdates:', e);
     return [];
   }
 };
 
-export const getInstanceSaves = async (instanceId: string, branch: string, version: number): Promise<SaveInfo[]> => {
+export const getInstanceSaves = async (instanceId: string): Promise<SaveInfo[]> => {
   try {
-    return await ipc.instance.saves({ instanceId, branch, version });
+    return await ipc.instance.saves({ instanceId });
   } catch (e) {
     console.warn('[IPC] GetInstanceSaves:', e);
     return [];
   }
 };
 
-export const openSaveFolder = (instanceId: string, branch: string, version: number, saveName: string): void => {
-  ipc.instance.openSaveFolder({ instanceId, branch, version, saveName });
+export const openSaveFolder = (instanceId: string, saveName: string): void => {
+  ipc.instance.openSaveFolder({ instanceId, saveName });
 };
 
-export const deleteSaveFolder = async (instanceId: string, branch: string, version: number, saveName: string): Promise<boolean> => {
+export const deleteSaveFolder = async (instanceId: string, saveName: string): Promise<boolean> => {
   try {
-    return await invoke<boolean>('hyprism:instance:deleteSave', { instanceId, branch, version, saveName });
+    return await invoke<boolean>('hyprism:instance:deleteSave', { instanceId, saveName });
   } catch (e) {
     console.warn('[IPC] DeleteSaveFolder:', e);
     return false;
@@ -134,7 +134,7 @@ export function useInstanceActions(
     onInstanceDeleted?: () => void
   ) => {
     try {
-      await deleteInstance(inst.id, inst.branch, inst.version);
+      await deleteInstance(inst.id);
       setInstanceToDelete(null);
       if (selectedInstance?.id === inst.id) {
         setSelectedInstance(null);

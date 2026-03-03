@@ -8,7 +8,6 @@ import type { InstalledVersionInfo } from '@/types';
 import {
   parseJavaHeapMb,
   upsertJavaHeapArgument,
-  removeJavaFlag,
   upsertJavaGcMode,
   detectJavaGcMode,
   sanitizeAdvancedJavaArguments,
@@ -436,7 +435,7 @@ export function useSettings(options: UseSettingsOptions) {
     if (activeTab === 'about' && contributors.length === 0 && !isLoadingContributors) {
       setIsLoadingContributors(true);
       setContributorsError(null);
-      fetch('https://api.github.com/repos/HyPrismTeam/HyPrism/contributors')
+      fetch('https://api.github.com/repos/hyprismteam/HyPrism/contributors')
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -762,11 +761,11 @@ export function useSettings(options: UseSettingsOptions) {
   }, []);
 
   const openGitHub = useCallback(() => {
-    import('@/utils/openUrl').then(({ openUrl }) => openUrl('https://github.com/HyPrismTeam/HyPrism'));
+    import('@/utils/openUrl').then(({ openUrl }) => openUrl('https://github.com/hyprismteam/HyPrism'));
   }, []);
 
   const openBugReport = useCallback(() => {
-    import('@/utils/openUrl').then(({ openUrl }) => openUrl('https://github.com/HyPrismTeam/HyPrism/issues/new'));
+    import('@/utils/openUrl').then(({ openUrl }) => openUrl('https://github.com/hyprismteam/HyPrism/issues/new'));
   }, []);
 
   const openDiscord = useCallback(async () => {

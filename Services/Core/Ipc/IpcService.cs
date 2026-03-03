@@ -309,7 +309,7 @@ public class IpcService
             // Default behavior comes from persisted config.
             var launchAfterDownload = configService.Configuration.LaunchAfterDownload;
 
-            // Optionally accept branch and version to launch a specific instance
+            // Optionally override the selected instance and launch-after-download setting.
             if (args != null)
             {
                 try
@@ -318,37 +318,12 @@ public class IpcService
                     var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
                     if (data != null)
                     {
-                        if (data.TryGetValue("branch", out var branchEl))
-                        {
-                            var branchValue = branchEl.GetString() ?? "release";
-                            #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-                            configService.Configuration.VersionType = branchValue;
-                            #pragma warning restore CS0618
-                            configService.Configuration.LauncherBranch = branchValue;
-                        }
-                        if (data.TryGetValue("version", out var versionEl))
-                        {
-                            #pragma warning disable CS0618 // Backward compatibility: SelectedVersion kept for migration
-                            configService.Configuration.SelectedVersion = versionEl.GetInt32();
-                            #pragma warning restore CS0618
-                        }
-
                         if (data.TryGetValue("instanceId", out var instanceIdEl))
                         {
                             var instanceId = instanceIdEl.GetString();
                             if (!string.IsNullOrWhiteSpace(instanceId))
                             {
                                 instanceService.SetSelectedInstance(instanceId);
-
-                                // Ensure launch config follows selected instance exactly.
-                                var selected = instanceService.FindInstanceById(instanceId);
-                                if (selected != null)
-                                {
-                                    #pragma warning disable CS0618 // Backward compatibility: VersionType/SelectedVersion kept for migration
-                                    configService.Configuration.VersionType = selected.Branch;
-                                    configService.Configuration.SelectedVersion = selected.Version;
-                                    #pragma warning restore CS0618
-                                }
                             }
                         }
 
@@ -604,14 +579,13 @@ public class IpcService
             }
         });
 
-        // List all instances from config
+        // List all instances from cache
         Electron.IpcMain.On("hyprism:instance:list", (_) =>
         {
             try
             {
                 instanceService.SyncInstancesWithConfig();
-                var config = _services.GetRequiredService<IConfigService>().Configuration;
-                var instances = config.Instances?.Select(i => {
+                var instances = instanceService.GetCachedInstances().Select(i => {
                     // Check installation status for each instance
                     var instancePath = instanceService.GetInstancePathById(i.Id);
                     bool isInstalled = false;
@@ -626,7 +600,7 @@ public class IpcService
                         version = i.Version,
                         isInstalled = isInstalled
                     };
-                }).ToList() ?? new List<object>();
+                }).ToList();
                 
                 Reply("hyprism:instance:list:reply", instances);
             }
@@ -637,7 +611,7 @@ public class IpcService
             }
         });
 
-        // Delete an instance
+        // Delete an instance by ID
         Electron.IpcMain.On("hyprism:instance:delete", (args) =>
         {
             try
@@ -646,20 +620,15 @@ public class IpcService
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
                 var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
 
-                bool result;
-                if (!string.IsNullOrWhiteSpace(instanceId))
+                if (string.IsNullOrWhiteSpace(instanceId))
                 {
-                    result = instanceService.DeleteGameById(instanceId);
-                    Logger.Info("IPC", $"Deleted instance by ID {instanceId}: {result}");
-                }
-                else
-                {
-                    var branch = data?["branch"].GetString() ?? "release";
-                    var version = data?["version"].GetInt32() ?? 0;
-                    result = instanceService.DeleteGame(branch, version);
-                    Logger.Info("IPC", $"Deleted instance {branch}/{version}: {result}");
+                    Logger.Warning("IPC", "instance:delete: instanceId is required");
+                    Reply("hyprism:instance:delete:reply", false);
+                    return;
                 }
 
+                var result = instanceService.DeleteGameById(instanceId);
+                Logger.Info("IPC", $"Deleted instance {instanceId}: {result}");
                 Reply("hyprism:instance:delete:reply", result);
             }
             catch (Exception ex)
@@ -708,37 +677,19 @@ public class IpcService
             {
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
-                
-                string? instancePath = null;
-                
-                // Try instanceId first (new method)
-                if (data?.TryGetValue("instanceId", out var idElement) == true)
-                {
-                    var instanceId = idElement.GetString();
-                    if (!string.IsNullOrEmpty(instanceId))
-                    {
-                        instancePath = instanceService.GetInstancePathById(instanceId);
-                    }
-                }
-                
-                // Fall back to branch/version (for ModManager compatibility)
-                if (string.IsNullOrEmpty(instancePath))
-                {
-                    var branch = data?["branch"].GetString() ?? "release";
-                    var version = data?["version"].GetInt32() ?? 0;
-                    instancePath = instanceService.GetInstancePath(branch, version);
-                }
-                
+                var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
+                var instancePath = !string.IsNullOrWhiteSpace(instanceId)
+                    ? instanceService.GetInstancePathById(instanceId)
+                    : null;
+
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Logger.Warning("IPC", "openModsFolder: Could not find instance path");
                     return;
                 }
-                
+
                 var modsPath = Path.Combine(instancePath, "UserData", "Mods");
-                
                 ModService.EnsureModsDirectory(modsPath);
-                
                 fileService.OpenFolder(modsPath);
                 Logger.Info("IPC", $"Opened mods folder: {modsPath}");
             }
@@ -769,10 +720,8 @@ public class IpcService
                 }
                 else
                 {
-                    var branch = data?["branch"].GetString() ?? "release";
-                    var version = data?["version"].GetInt32() ?? 0;
-                    instancePath = instanceService.GetInstancePath(branch, version);
-                    defaultFileName = $"HyPrism-{branch}-v{version}_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
+                    instancePath = null;
+                    defaultFileName = $"HyPrism-instance_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
                 }
                 
                 if (string.IsNullOrEmpty(instancePath) || !Directory.Exists(instancePath))
@@ -859,12 +808,9 @@ public class IpcService
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
                 var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
-                var branch = data?["branch"].GetString() ?? "release";
-                var version = data?["version"].GetInt32() ?? 0;
-
                 var instancePath = !string.IsNullOrWhiteSpace(instanceId)
-                    ? instanceService.GetInstancePathById(instanceId) ?? instanceService.GetInstancePath(branch, version)
-                    : instanceService.GetInstancePath(branch, version);
+                    ? instanceService.GetInstancePathById(instanceId)
+                    : null;
 
                 if (string.IsNullOrWhiteSpace(instancePath))
                 {
@@ -902,7 +848,7 @@ public class IpcService
                     }
                 }
                 
-                Logger.Info("IPC", $"Found {saves.Count} saves for {branch}/{version}");
+                Logger.Info("IPC", $"Found {saves.Count} saves for instance {instanceId}");
                 Reply("hyprism:instance:saves:reply", saves);
             }
             catch (Exception ex)
@@ -920,13 +866,10 @@ public class IpcService
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
                 var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
-                var branch = data?["branch"].GetString() ?? "release";
-                var version = data?["version"].GetInt32() ?? 0;
-                var saveName = data?["saveName"].GetString() ?? "";
-                
+                var saveName = data?.TryGetValue("saveName", out var snElement) == true ? snElement.GetString() ?? "" : "";
                 var instancePath = !string.IsNullOrWhiteSpace(instanceId)
-                    ? instanceService.GetInstancePathById(instanceId) ?? instanceService.GetInstancePath(branch, version)
-                    : instanceService.GetInstancePath(branch, version);
+                    ? instanceService.GetInstancePathById(instanceId)
+                    : null;
 
                 if (string.IsNullOrWhiteSpace(instancePath))
                 {
@@ -955,9 +898,7 @@ public class IpcService
                 var json = ArgsToJson(args);
                 var data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOpts);
                 var instanceId = data?.TryGetValue("instanceId", out var idElement) == true ? idElement.GetString() : null;
-                var branch = data?["branch"].GetString() ?? "release";
-                var version = data?["version"].GetInt32() ?? 0;
-                var saveName = data?["saveName"].GetString() ?? "";
+                var saveName = data?.TryGetValue("saveName", out var snElement) == true ? snElement.GetString() ?? "" : "";
 
                 if (string.IsNullOrWhiteSpace(saveName))
                 {
@@ -966,8 +907,8 @@ public class IpcService
                 }
 
                 var instancePath = !string.IsNullOrWhiteSpace(instanceId)
-                    ? instanceService.GetInstancePathById(instanceId) ?? instanceService.GetInstancePath(branch, version)
-                    : instanceService.GetInstancePath(branch, version);
+                    ? instanceService.GetInstancePathById(instanceId)
+                    : null;
 
                 if (string.IsNullOrWhiteSpace(instancePath))
                 {
@@ -1183,7 +1124,7 @@ public class IpcService
         {
             try
             {
-                var news = await newsService.GetNewsAsync();
+                var news = await newsService.GetNewsAsync(count: 20);
                 Reply("hyprism:news:get:reply", news);
             }
             catch (Exception ex)
@@ -1199,7 +1140,7 @@ public class IpcService
     // #region Profiles
     // @ipc invoke hyprism:profile:get -> ProfileSnapshot
     // @ipc invoke hyprism:profile:list -> Profile[]
-    // @ipc invoke hyprism:profile:switch -> { success: boolean }
+    // @ipc invoke hyprism:profile:switch [{ id: string }] -> { success: boolean }
     // @ipc invoke hyprism:profile:setNick -> { success: boolean }
     // @ipc invoke hyprism:profile:setUuid -> { success: boolean }
     // @ipc invoke hyprism:profile:create -> Profile
@@ -1236,8 +1177,8 @@ public class IpcService
             {
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
-                var index = doc.RootElement.GetProperty("index").GetInt32();
-                var success = profileMgmt.SwitchProfile(index);
+                var id = doc.RootElement.GetProperty("id").GetString() ?? "";
+                var success = profileMgmt.SwitchProfile(id);
                 
                 // Reload Hytale session for the new profile
                 if (success)
@@ -1998,7 +1939,7 @@ public class IpcService
         var instanceService = _services.GetRequiredService<IInstanceService>();
         var config = _services.GetRequiredService<IConfigService>();
 
-        string? ResolveModInstancePath(string branch, int version, string? instanceId = null)
+        string? ResolveModInstancePath(string? instanceId)
         {
             if (!string.IsNullOrWhiteSpace(instanceId))
             {
@@ -2007,21 +1948,10 @@ public class IpcService
                     return byId;
             }
 
-            var existing = instanceService.FindExistingInstancePath(branch, version);
-            if (!string.IsNullOrEmpty(existing))
-                return existing;
-
+            // Fall back to the currently selected instance.
             var selected = instanceService.GetSelectedInstance();
             if (selected != null)
-            {
-                var byId = instanceService.GetInstancePathById(selected.Id);
-                if (!string.IsNullOrEmpty(byId))
-                    return byId;
-
-                var selectedExisting = instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
-                if (!string.IsNullOrEmpty(selectedExisting))
-                    return selectedExisting;
-            }
+                return instanceService.GetInstancePathById(selected.Id);
 
             return null;
         }
@@ -2030,8 +1960,7 @@ public class IpcService
         {
             try
             {
-                var branch = config.Configuration.LauncherBranch ?? "release";
-                var instancePath = ResolveModInstancePath(branch, 0);
+                var instancePath = ResolveModInstancePath(null);
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Reply("hyprism:mods:list:reply", new List<object>());
@@ -2079,7 +2008,7 @@ public class IpcService
             }
         });
 
-        // Get installed mods for a specific instance (by branch and version)
+        // Get installed mods for a specific instance (by instanceId)
         Electron.IpcMain.On("hyprism:mods:installed", (args) =>
         {
             try
@@ -2087,17 +2016,15 @@ public class IpcService
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                var branch = root.GetProperty("branch").GetString() ?? "release";
-                var version = root.GetProperty("version").GetInt32();
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
-                    Logger.Warning("IPC", $"Mods installed skipped: no target instance found for {branch}/{version}");
+                    Logger.Warning("IPC", "Mods installed skipped: no target instance found");
                     Reply("hyprism:mods:installed:reply", new List<object>());
                     return;
                 }
-                
+
                 var mods = modService.GetInstanceInstalledMods(instancePath);
                 Reply("hyprism:mods:installed:reply", mods);
             }
@@ -2117,13 +2044,11 @@ public class IpcService
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 var modId = root.GetProperty("modId").GetString() ?? "";
-                var branch = root.GetProperty("branch").GetString() ?? "release";
-                var version = root.GetProperty("version").GetInt32();
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
-                    Logger.Warning("IPC", $"Mods uninstall skipped: no target instance found for {branch}/{version}");
+                    Logger.Warning("IPC", "Mods uninstall skipped: no target instance found");
                     Reply("hyprism:mods:uninstall:reply", false);
                     return;
                 }
@@ -2253,17 +2178,15 @@ public class IpcService
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                var branch = root.GetProperty("branch").GetString() ?? "release";
-                var version = root.GetProperty("version").GetInt32();
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
-                    Logger.Warning("IPC", $"Mods check updates skipped: no target instance found for {branch}/{version}");
+                    Logger.Warning("IPC", "Mods check updates skipped: no target instance found");
                     Reply("hyprism:mods:checkUpdates:reply", new List<object>());
                     return;
                 }
-                
+
                 var updates = await modService.CheckInstanceModUpdatesAsync(instancePath);
                 Reply("hyprism:mods:checkUpdates:reply", updates);
             }
@@ -2284,18 +2207,16 @@ public class IpcService
                 var root = doc.RootElement;
                 var modId = root.GetProperty("modId").GetString() ?? "";
                 var fileId = root.GetProperty("fileId").GetString() ?? "";
-                var branch = root.TryGetProperty("branch", out var b) ? b.GetString() ?? "release" : "release";
-                var version = root.TryGetProperty("version", out var v) ? v.GetInt32() : 0;
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
 
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Logger.Warning("IPC", "Mods install failed: no target instance selected");
                     Reply("hyprism:mods:install:reply", new { success = false, error = "No target instance selected" });
                     return;
                 }
-                
+
                 var success = await modService.InstallModFileToInstanceAsync(modId, fileId, instancePath);
                 Reply("hyprism:mods:install:reply", success);
             }
@@ -2393,11 +2314,9 @@ public class IpcService
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 var sourcePath = root.GetProperty("sourcePath").GetString() ?? "";
-                var branch = root.TryGetProperty("branch", out var b) ? b.GetString() ?? "release" : "release";
-                var version = root.TryGetProperty("version", out var v) ? v.GetInt32() : 0;
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
 
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Logger.Warning("IPC", "Mods install local failed: no target instance selected");
@@ -2425,11 +2344,9 @@ public class IpcService
                 var root = doc.RootElement;
                 var fileName = root.GetProperty("fileName").GetString() ?? "";
                 var base64Content = root.GetProperty("base64Content").GetString() ?? "";
-                var branch = root.TryGetProperty("branch", out var b) ? b.GetString() ?? "release" : "release";
-                var version = root.TryGetProperty("version", out var v) ? v.GetInt32() : 0;
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
 
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Logger.Warning("IPC", "Mods install base64 failed: no target instance selected");
@@ -2455,11 +2372,9 @@ public class IpcService
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                var branch = root.TryGetProperty("branch", out var b) ? b.GetString() ?? "release" : "release";
-                var version = root.TryGetProperty("version", out var v) ? v.GetInt32() : 0;
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
 
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
                     Logger.Warning("IPC", "Open mods folder skipped: no target instance selected");
@@ -2485,13 +2400,11 @@ public class IpcService
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 var modId = root.GetProperty("modId").GetString() ?? "";
-                var branch = root.GetProperty("branch").GetString() ?? "release";
-                var version = root.GetProperty("version").GetInt32();
                 var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
-                var instancePath = ResolveModInstancePath(branch, version, instanceId);
+                var instancePath = ResolveModInstancePath(instanceId);
                 if (string.IsNullOrEmpty(instancePath))
                 {
-                    Logger.Warning("IPC", $"Mods toggle skipped: no target instance found for {branch}/{version}");
+                    Logger.Warning("IPC", "Mods toggle skipped: no target instance found");
                     Reply("hyprism:mods:toggle:reply", false);
                     return;
                 }
@@ -2770,8 +2683,7 @@ public class IpcService
                 var json = ArgsToJson(args);
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                var branch = root.GetProperty("branch").GetString() ?? "release";
-                var version = root.GetProperty("version").GetInt32();
+                var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
                 var exportPath = root.GetProperty("exportPath").GetString() ?? "";
                 var exportType = root.TryGetProperty("exportType", out var et) ? et.GetString() ?? "modlist" : "modlist";
 
@@ -2781,7 +2693,19 @@ public class IpcService
                     return;
                 }
 
-                var instancePath = instanceService.GetInstancePath(branch, version);
+                var instancePath = !string.IsNullOrWhiteSpace(instanceId)
+                    ? instanceService.GetInstancePathById(instanceId)
+                    : instanceService.GetSelectedInstance() is { } sel ? instanceService.GetInstancePathById(sel.Id) : null;
+
+                if (string.IsNullOrEmpty(instancePath))
+                {
+                    Reply("hyprism:mods:exportToFolder:reply", "");
+                    return;
+                }
+
+                var instanceMeta = instanceService.GetInstanceMeta(instancePath);
+                var branch = instanceMeta?.Branch ?? "release";
+                var version = instanceMeta?.Version ?? 0;
                 var mods = modService.GetInstanceInstalledMods(instancePath);
 
                 if (mods.Count == 0)
@@ -2854,8 +2778,7 @@ public class IpcService
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
                 var filePath = root.GetProperty("filePath").GetString() ?? "";
-                var branch = root.GetProperty("branch").GetString() ?? "release";
-                var version = root.GetProperty("version").GetInt32();
+                var instanceId = root.TryGetProperty("instanceId", out var iid) ? iid.GetString() : null;
 
                 if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
                 {
@@ -2863,7 +2786,15 @@ public class IpcService
                     return;
                 }
 
-                var instancePath = instanceService.GetInstancePath(branch, version);
+                var instancePath = !string.IsNullOrWhiteSpace(instanceId)
+                    ? instanceService.GetInstancePathById(instanceId)
+                    : instanceService.GetSelectedInstance() is { } sel ? instanceService.GetInstancePathById(sel.Id) : null;
+
+                if (string.IsNullOrEmpty(instancePath))
+                {
+                    Reply("hyprism:mods:importList:reply", 0);
+                    return;
+                }
                 var content = await File.ReadAllTextAsync(filePath);
                 var modList = System.Text.Json.JsonSerializer.Deserialize<List<ModListEntry>>(content) ?? new();
                 var successCount = 0;

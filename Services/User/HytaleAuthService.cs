@@ -546,19 +546,35 @@ public class HytaleAuthService : IHytaleAuthService
     #region Session Persistence
 
     /// <summary>
+    /// Reads all profiles from the profiles.json cache on disk.
+    /// </summary>
+    private List<Profile> ReadProfilesCache()
+    {
+        try
+        {
+            var path = Path.Combine(UtilityService.GetProfilesRoot(_appDir), "profiles.json");
+            if (!File.Exists(path)) return new();
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<List<Profile>>(File.ReadAllText(path), opts) ?? new();
+        }
+        catch { return new(); }
+    }
+
+    /// <summary>
     /// Gets the profile folder path for the current active profile.
     /// Returns null if no profile is active.
     /// </summary>
     private string? GetCurrentProfileFolder()
     {
         var config = _configService.Configuration;
-        if (config.ActiveProfileIndex < 0 || config.Profiles == null ||
-            config.ActiveProfileIndex >= config.Profiles.Count)
-        {
+        var selectedId = config.SelectedProfileId;
+        if (string.IsNullOrEmpty(selectedId))
             return null;
-        }
 
-        var profile = config.Profiles[config.ActiveProfileIndex];
+        var profile = ReadProfilesCache().FirstOrDefault(p => p.Id == selectedId);
+        if (profile == null)
+            return null;
+
         return UtilityService.GetProfileFolderPath(_appDir, profile);
     }
 
@@ -605,13 +621,29 @@ public class HytaleAuthService : IHytaleAuthService
             if (CurrentSession != null)
             {
                 var config = _configService.Configuration;
-                if (config.ActiveProfileIndex >= 0 && config.Profiles != null &&
-                    config.ActiveProfileIndex < config.Profiles.Count)
+                var selectedId = config.SelectedProfileId;
+                if (!string.IsNullOrEmpty(selectedId))
                 {
-                    var profile = config.Profiles[config.ActiveProfileIndex];
-                    profile.IsOfficial = true;
-                    _configService.SaveConfig();
-                    Logger.Info("HytaleAuth", $"Marked profile '{profile.Name}' as official after migration");
+                    var profilesPath = Path.Combine(UtilityService.GetProfilesRoot(_appDir), "profiles.json");
+                    if (File.Exists(profilesPath))
+                    {
+                        try
+                        {
+                            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, WriteIndented = true };
+                            var profiles = JsonSerializer.Deserialize<List<Profile>>(File.ReadAllText(profilesPath), opts) ?? new();
+                            var activeProfile = profiles.FirstOrDefault(p => p.Id == selectedId);
+                            if (activeProfile != null)
+                            {
+                                activeProfile.IsOfficial = true;
+                                File.WriteAllText(profilesPath, JsonSerializer.Serialize(profiles, opts));
+                                Logger.Info("HytaleAuth", $"Marked profile '{activeProfile.Name}' as official after migration");
+                            }
+                        }
+                        catch (Exception ex2)
+                        {
+                            Logger.Warning("HytaleAuth", $"Failed to mark profile as official: {ex2.Message}");
+                        }
+                    }
                 }
             }
 
@@ -654,14 +686,7 @@ public class HytaleAuthService : IHytaleAuthService
         }
 
         // If current profile doesn't have a valid session, search all official profiles
-        var config = _configService.Configuration;
-        if (config.Profiles == null || config.Profiles.Count == 0)
-        {
-            return null;
-        }
-
-        // Find official profiles
-        var officialProfiles = config.Profiles.Where(p => p.IsOfficial).ToList();
+        var officialProfiles = ReadProfilesCache().Where(p => p.IsOfficial).ToList();
         if (officialProfiles.Count == 0)
         {
             Logger.Debug("HytaleAuth", "No official profiles found");

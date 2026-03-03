@@ -11,10 +11,8 @@ export interface UseGameSessionOptions {
 }
 
 export interface StartDownloadOptions {
-  branch: string;
-  version: number;
+  instanceId: string;
   launchAfterDownload?: boolean;
-  instanceId?: string;
 }
 
 export function useGameSession({
@@ -26,13 +24,11 @@ export function useGameSession({
 
   // Game running state
   const [isGameRunning, setIsGameRunning] = useState(false);
-  const [runningBranch, setRunningBranch] = useState<string | undefined>();
-  const [runningVersion, setRunningVersion] = useState<number | undefined>();
+  const [runningInstanceId, setRunningInstanceId] = useState<string | undefined>();
 
   // Download/progress state
   const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadingBranch, setDownloadingBranch] = useState<string | undefined>();
-  const [downloadingVersion, setDownloadingVersion] = useState<number | undefined>();
+  const [downloadingInstanceId, setDownloadingInstanceId] = useState<string | undefined>();
   const [downloadState, setDownloadState] = useState<'downloading' | 'extracting' | 'launching'>('downloading');
   const [progress, setProgress] = useState(0);
   const [downloaded, setDownloaded] = useState(0);
@@ -57,8 +53,7 @@ export function useGameSession({
 
   const clearDownloadState = useCallback(() => {
     setIsDownloading(false);
-    setDownloadingBranch(undefined);
-    setDownloadingVersion(undefined);
+    setDownloadingInstanceId(undefined);
   }, []);
 
   // Check for existing game process on startup
@@ -174,15 +169,13 @@ export function useGameSession({
       if (data.state === 'started') {
         setIsGameRunning(true);
         const inst = selectedInstanceRef.current;
-        if (inst) {
-          setRunningBranch(inst.branch);
-          setRunningVersion(inst.version);
+        if (inst?.id) {
+          setRunningInstanceId(inst.id);
         } else {
           try {
             const selected = await ipc.instance.getSelected();
-            if (selected) {
-              setRunningBranch(selected.branch);
-              setRunningVersion(selected.version);
+            if (selected?.id) {
+              setRunningInstanceId(selected.id);
             }
           } catch { /* ignore */ }
         }
@@ -215,8 +208,7 @@ export function useGameSession({
           }
         }
         setIsGameRunning(false);
-        setRunningBranch(undefined);
-        setRunningVersion(undefined);
+        setRunningInstanceId(undefined);
         clearDownloadState();
         setProgress(0);
         setLaunchState('');
@@ -250,16 +242,13 @@ export function useGameSession({
   }, [clearDownloadState, refreshInstances, selectedInstanceRef, t]);
 
   // Start a download/launch — called by App.tsx handlers
-  const startDownload = useCallback(({ branch, version, launchAfterDownload, instanceId }: StartDownloadOptions) => {
+  const startDownload = useCallback(({ instanceId, launchAfterDownload }: StartDownloadOptions) => {
     setIsDownloading(true);
-    setDownloadingBranch(branch);
-    setDownloadingVersion(version);
+    setDownloadingInstanceId(instanceId);
     setDownloadState('downloading');
     send('hyprism:game:launch', {
-      branch,
-      version,
+      instanceId,
       launchAfterDownload,
-      ...(instanceId ? { instanceId } : {}),
     });
   }, []);
 
@@ -294,11 +283,9 @@ export function useGameSession({
 
   return {
     isGameRunning,
-    runningBranch,
-    runningVersion,
+    runningInstanceId,
     isDownloading,
-    downloadingBranch,
-    downloadingVersion,
+    downloadingInstanceId,
     downloadState,
     progress,
     downloaded,

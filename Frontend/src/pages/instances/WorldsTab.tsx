@@ -31,7 +31,7 @@ export const WorldsTab: React.FC<WorldsTabProps> = ({
 
   const handleOpenSaveFolder = (saveName: string) => {
     if (!selectedInstance) return;
-    openSaveFolder(selectedInstance.id, selectedInstance.branch, selectedInstance.version, saveName);
+    openSaveFolder(selectedInstance.id, saveName);
   };
 
   const handleDeleteSave = async (e: React.MouseEvent, saveName: string) => {
@@ -39,7 +39,7 @@ export const WorldsTab: React.FC<WorldsTabProps> = ({
     e.stopPropagation();
     if (!selectedInstance) return;
 
-    const ok = await deleteSaveFolder(selectedInstance.id, selectedInstance.branch, selectedInstance.version, saveName);
+    const ok = await deleteSaveFolder(selectedInstance.id, saveName);
     if (ok) {
       setMessage({ type: 'success', text: 'World deleted' });
       await loadSaves();

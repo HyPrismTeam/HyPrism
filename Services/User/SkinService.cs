@@ -607,32 +607,15 @@ public class SkinService : ISkinService
 
     private string? TryGetCurrentExistingInstancePath()
     {
-        var config = _configService.Configuration;
         var selected = _instanceService.GetSelectedInstance();
         if (selected != null)
         {
-            var selectedPath = _instanceService.GetInstancePathById(selected.Id)
-                               ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
-            if (!string.IsNullOrWhiteSpace(selectedPath))
-            {
-                return selectedPath;
-            }
+            var path = _instanceService.GetInstancePathById(selected.Id);
+            if (!string.IsNullOrWhiteSpace(path))
+                return path;
         }
 
-        #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-        var branch = UtilityService.NormalizeVersionType(config.VersionType);
-        var configuredVersion = config.SelectedVersion;
-        #pragma warning restore CS0618
-
-        var configuredPath = _instanceService.FindExistingInstancePath(branch, configuredVersion);
-        if (!string.IsNullOrWhiteSpace(configuredPath))
-        {
-            return configuredPath;
-        }
-
-        return _instanceService
-            .GetInstalledInstances()
-            .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
-            ?.Path;
+        // Fall back to any installed instance when nothing is explicitly selected.
+        return _instanceService.GetInstalledInstances().FirstOrDefault()?.Path;
     }
 }

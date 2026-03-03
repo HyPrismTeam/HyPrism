@@ -123,7 +123,7 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
     if (!silent) setIsLoadingMods(true);
 
     try {
-      const mods = await getInstanceInstalledMods(currentInstance.branch, currentInstance.version, currentInstance.id);
+      const mods = await getInstanceInstalledMods(currentInstance.id);
       const normalized = normalizeInstalledMods(mods || []);
 
       if (selectedInstanceRef.current?.id === currentInstance.id && modsLoadSeqRef.current === requestSeq) {
@@ -136,7 +136,7 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
         // Check updates in background
         void (async () => {
           try {
-            const updates = await checkInstanceModUpdates(currentInstance.branch, currentInstance.version, currentInstance.id);
+            const updates = await checkInstanceModUpdates(currentInstance.id);
             const normalizedUpdates = normalizeInstalledMods(updates || []);
 
             if (selectedInstanceRef.current?.id === currentInstance.id && modsLoadSeqRef.current === requestSeq) {
@@ -226,7 +226,7 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
   const handleDeleteMod = useCallback(async (mod: InstalledModInfo) => {
     if (!selectedInstance) return false;
     try {
-      await uninstallInstanceMod(mod.id, selectedInstance.branch, selectedInstance.version, selectedInstance.id);
+      await uninstallInstanceMod(mod.id, selectedInstance.id);
       await loadInstalledMods();
       setMessage({ type: 'success', text: t('modManager.modDeleted') });
       setTimeout(() => setMessage(null), 3000);
@@ -245,7 +245,7 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
 
     try {
       for (const modId of idsToDelete) {
-        await uninstallInstanceMod(modId, selectedInstance.branch, selectedInstance.version, selectedInstance.id);
+        await uninstallInstanceMod(modId, selectedInstance.id);
       }
       setSelectedMods(new Set());
       await loadInstalledMods();
@@ -265,8 +265,6 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
       const ok = await ipc.mods.toggle({
         modId: mod.id,
         instanceId: selectedInstance.id,
-        branch: selectedInstance.branch,
-        version: selectedInstance.version,
       });
       if (ok) {
         setInstalledMods(prev =>
@@ -299,8 +297,6 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
         await ipc.mods.toggle({
           modId: mod.id,
           instanceId: selectedInstance.id,
-          branch: selectedInstance.branch,
-          version: selectedInstance.version,
         });
       }
 
@@ -339,8 +335,6 @@ export function useModManager({ selectedInstance, setMessage, t }: UseModManager
           modId: cfId,
           fileId,
           instanceId: selectedInstance.id,
-          branch: selectedInstance.branch,
-          version: selectedInstance.version,
         });
         const ok = typeof result === 'object' && result !== null ? (result as { success: boolean }).success : result;
         if (!ok) failed++;

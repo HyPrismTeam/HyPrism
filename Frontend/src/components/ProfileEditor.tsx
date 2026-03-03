@@ -47,8 +47,8 @@ async function DeleteProfile(id: string): Promise<boolean> {
   const r = await ipc.profile.delete(id);
   return r.success;
 }
-async function SwitchProfile(index: number): Promise<boolean> {
-  const r = await ipc.profile.switch({ index });
+async function SwitchProfile(id: string): Promise<boolean> {
+  const r = await ipc.profile.switch({ id });
   return r.success;
 }
 async function SaveCurrentAsProfile(): Promise<void> {
@@ -345,7 +345,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
             const targetAvatar = profileAvatars[targetProfile.uuid ?? ''];
             setLocalAvatar(targetAvatar || null);
             
-            const success = await SwitchProfile(actualIndex);
+            const success = await SwitchProfile(profileId);
             
             if (success) {
                 // Refresh avatar in the background (don't wait)
@@ -412,7 +412,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ isOpen, onClose, o
         const updatedProfiles = await GetProfiles();
         const newProfileIndex = updatedProfiles?.findIndex(p => p.id === profile.id);
         if (newProfileIndex !== undefined && newProfileIndex >= 0) {
-            await SwitchProfile(newProfileIndex);
+            await SwitchProfile(profile.id);
             setUsernameState(profile.name);
             setEditUsername(profile.name);
             setUuid(profile.uuid ?? '');

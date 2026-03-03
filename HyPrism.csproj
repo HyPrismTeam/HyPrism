@@ -22,14 +22,14 @@
 
   <!-- Electron.NET application metadata -->
   <PropertyGroup Label="ElectronNetCommon">
-    <ElectronPackageId>io.github.HyPrismTeam.HyPrism</ElectronPackageId>
+    <ElectronPackageId>io.github.hyprismteam.HyPrism</ElectronPackageId>
     <Title>HyPrism</Title>
     <Version>3.0.1</Version>
     <Description>Cross-platform Hytale launcher</Description>
     <Company>HyPrism</Company>
     <Copyright>Copyright © 2026 HyPrism Team</Copyright>
     <License>GPL-3.0-only</License>
-    <ProjectUrl>https://github.com/HyPrismTeam/HyPrism</ProjectUrl>
+    <ProjectUrl>https://github.com/hyprismteam/HyPrism</ProjectUrl>
     <ElectronVersion>34.2.0</ElectronVersion>
     <ElectronSkipMigrationChecks>true</ElectronSkipMigrationChecks>
   </PropertyGroup>

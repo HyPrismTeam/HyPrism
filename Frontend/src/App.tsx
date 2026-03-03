@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence } from 'framer-motion';
-import { ipc, send, NewsItem, InstanceInfo } from '@/lib/ipc';
+import { ipc, NewsItem, InstanceInfo } from '@/lib/ipc';
 import { BackgroundImage } from './components/layout/BackgroundImage';
 import { MusicPlayer } from './components/layout/MusicPlayer';
 import { DockMenu } from './components/layout/DockMenu';
@@ -188,29 +188,23 @@ const App: React.FC = () => {
       }
     } catch { /* use current */ }
 
-    game.startDownload({
-      branch: launchTarget?.branch ?? '',
-      version: launchTarget?.version ?? 0,
-      instanceId: launchTarget?.id,
-    });
+    if (!launchTarget?.id) return;
+    game.startDownload({ instanceId: launchTarget.id });
   };
 
-  const handleLaunchFromInstances = async (branch: string, version: number, instanceId?: string) => {
+  const handleLaunchFromInstances = async (instanceId: string) => {
     if (game.isGameRunning || game.isDownloading) return;
 
     const launchAfterDownload = (await ipc.settings.get()).launchAfterDownload ?? true;
 
-    const launchingInstance = instanceId
-      ? instances.find(i => i.id === instanceId) ?? null
-      : instances.find(i => i.branch === branch && i.version === version) ?? null;
-
+    const launchingInstance = instances.find(i => i.id === instanceId) ?? null;
     if (launchingInstance) {
       setSelectedInstance(launchingInstance);
       selectedInstanceRef.current = launchingInstance;
       ipc.instance.select({ id: launchingInstance.id }).catch(() => {});
     }
 
-    game.startDownload({ branch, version, launchAfterDownload, instanceId: launchingInstance?.id });
+    game.startDownload({ instanceId, launchAfterDownload });
   };
 
   const handleLauncherBranchChange = async (branch: string) => {
@@ -378,14 +372,12 @@ const App: React.FC = () => {
                 onInstanceDeleted={handleInstanceDeleted}
                 onInstanceSelected={refreshInstances}
                 isGameRunning={game.isGameRunning}
-                runningBranch={game.runningBranch}
-                runningVersion={game.runningVersion}
+                runningInstanceId={game.runningInstanceId}
                 onStopGame={game.handleExit}
                 activeTab={instanceTab}
                 onTabChange={setInstanceTab}
                 isDownloading={game.isDownloading}
-                downloadingBranch={game.downloadingBranch}
-                downloadingVersion={game.downloadingVersion}
+                downloadingInstanceId={game.downloadingInstanceId}
                 downloadState={game.downloadState}
                 progress={game.progress}
                 downloaded={game.downloaded}

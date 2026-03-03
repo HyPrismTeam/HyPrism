@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using HyPrism.Models;
 using HyPrism.Services.Core.Infrastructure;
 using HyPrism.Services.Game;
@@ -44,6 +45,87 @@ public class ProfileManagementService : IProfileManagementService
         EnsureProfileStorageUpgraded();
     }
 
+    // ── Profile cache (profiles.json) ─────────────────────────────────────
+
+    private static readonly JsonSerializerOptions _profileJsonOpts = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
+    };
+
+    /// <summary>Returns the path to the profile cache file inside the profiles folder.</summary>
+    private string GetProfileCachePath() => Path.Combine(GetProfilesFolder(), "profiles.json");
+
+    /// <summary>
+    /// Loads the profile list from profiles.json.
+    /// On first run migrates from the deprecated config.Profiles field.
+    /// </summary>
+    private List<Profile> LoadProfilesFromCache()
+    {
+        var path = GetProfileCachePath();
+        if (File.Exists(path))
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<List<Profile>>(File.ReadAllText(path), _profileJsonOpts) ?? new();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("Profile", $"Failed to read profiles.json: {ex.Message}");
+            }
+        }
+
+        // Migration: seed from deprecated config.Profiles if present
+        #pragma warning disable CS0618
+        var config = _configService.Configuration;
+        if (config.Profiles?.Count > 0)
+        {
+            Logger.Info("Profile", $"Migrating {config.Profiles.Count} profiles from config to profiles.json");
+            var migrated = config.Profiles.ToList();
+            SaveProfilesToCache(migrated);
+            config.Profiles = null;
+
+            // Migrate ActiveProfileIndex → SelectedProfileId
+            if (config.ActiveProfileIndex >= 0 && config.ActiveProfileIndex < migrated.Count
+                && string.IsNullOrEmpty(config.SelectedProfileId))
+            {
+                config.SelectedProfileId = migrated[config.ActiveProfileIndex].Id;
+            }
+            _configService.SaveConfig();
+            return migrated;
+        }
+        #pragma warning restore CS0618
+
+        return new List<Profile>();
+    }
+
+    /// <summary>Saves the profile list to profiles.json.</summary>
+    private void SaveProfilesToCache(IEnumerable<Profile> profiles)
+    {
+        try
+        {
+            var list = profiles.ToList();
+            var dir = GetProfilesFolder();
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(GetProfileCachePath(), JsonSerializer.Serialize(list, _profileJsonOpts));
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Profile", $"Failed to save profiles.json: {ex.Message}");
+        }
+    }
+
+    /// <summary>Gets the ID of the currently active profile.</summary>
+    public string GetSelectedProfileId() => _configService.Configuration.SelectedProfileId ?? "";
+
+    /// <summary>Gets the currently active profile object, or null if none is selected.</summary>
+    public Profile? GetSelectedProfile()
+    {
+        var id = GetSelectedProfileId();
+        if (string.IsNullOrEmpty(id)) return null;
+        return LoadProfilesFromCache().FirstOrDefault(p => p.Id == id);
+    }
+
 
     /// <inheritdoc/>
     /// <remarks>Filters out any profiles with null/empty names or UUIDs.</remarks>
@@ -51,44 +133,36 @@ public class ProfileManagementService : IProfileManagementService
     {
         EnsureProfileStorageUpgraded();
 
-        var config = _configService.Configuration;
-        
-        // Clean up any null/empty profiles first
-        if (config.Profiles != null)
+        var profiles = LoadProfilesFromCache();
+
+        // Clean up any null/empty profiles
+        var valid = profiles
+            .Where(p => !string.IsNullOrWhiteSpace(p.Name) && !string.IsNullOrWhiteSpace(p.UUID))
+            .ToList();
+
+        if (valid.Count != profiles.Count)
         {
-            var validProfiles = config.Profiles
-                .Where(p => !string.IsNullOrWhiteSpace(p.Name) && !string.IsNullOrWhiteSpace(p.UUID))
-                .ToList();
-            
-            if (validProfiles.Count != config.Profiles.Count)
-            {
-                Logger.Info("Profile", $"Cleaned up {config.Profiles.Count - validProfiles.Count} invalid profiles");
-                config.Profiles = validProfiles;
-                _configService.SaveConfig();
-            }
+            Logger.Info("Profile", $"Cleaned up {profiles.Count - valid.Count} invalid profiles");
+            SaveProfilesToCache(valid);
         }
-        
-        var profiles = config.Profiles ?? new List<Profile>();
-        Logger.Info("Profile", $"GetProfiles returning {profiles.Count} profiles");
-        return profiles;
+
+        Logger.Info("Profile", $"GetProfiles returning {valid.Count} profiles");
+        return valid;
     }
 
     private void EnsureProfileStorageUpgraded()
     {
         if (_profileFolderMigrationAttempted)
-        {
             return;
-        }
 
         _profileFolderMigrationAttempted = true;
 
         try
         {
-            var config = _configService.Configuration;
-            config.Profiles ??= new List<Profile>();
+            var profiles = LoadProfilesFromCache(); // also triggers config migration
 
             bool changed = false;
-            foreach (var profile in config.Profiles)
+            foreach (var profile in profiles)
             {
                 if (string.IsNullOrWhiteSpace(profile.Id) || !Guid.TryParse(profile.Id, out _))
                 {
@@ -96,16 +170,13 @@ public class ProfileManagementService : IProfileManagementService
                     changed = true;
                     Logger.Info("Profile", $"Assigned missing profile ID for '{profile.Name}': {profile.Id}");
                 }
-
                 UtilityService.GetProfileFolderPath(_appDir, profile, createIfMissing: false, migrateLegacyByName: true);
             }
 
-            ProfileMigrationService.MigrateUnresolvedFolders(GetProfilesFolder(), config.Profiles, _appDir);
+            ProfileMigrationService.MigrateUnresolvedFolders(GetProfilesFolder(), profiles, _appDir);
 
             if (changed)
-            {
-                _configService.SaveConfig();
-            }
+                SaveProfilesToCache(profiles);
         }
         catch (Exception ex)
         {
@@ -116,7 +187,9 @@ public class ProfileManagementService : IProfileManagementService
     /// <inheritdoc/>
     public int GetActiveProfileIndex()
     {
-        return _configService.Configuration.ActiveProfileIndex;
+        var id = GetSelectedProfileId();
+        if (string.IsNullOrEmpty(id)) return -1;
+        return LoadProfilesFromCache().FindIndex(p => p.Id == id);
     }
 
     /// <inheritdoc/>
@@ -154,26 +227,29 @@ public class ProfileManagementService : IProfileManagementService
                 CreatedAt = DateTime.UtcNow
             };
             
+            var profiles = LoadProfilesFromCache();
+            profiles.Add(profile);
+
+            // Auto-activate the first profile created, or if none is selected yet
             var config = _configService.Configuration;
-            config.Profiles ??= [];
-            config.Profiles.Add(profile);
-            
-            // Auto-activate the first profile created
-            if (config.Profiles.Count == 1 || config.ActiveProfileIndex < 0)
+            if (profiles.Count == 1 || string.IsNullOrEmpty(config.SelectedProfileId))
             {
-                config.ActiveProfileIndex = config.Profiles.Count - 1;
+                config.SelectedProfileId = profile.Id;
+                #pragma warning disable CS0618
                 config.UUID = profile.UUID;
                 config.Nick = profile.Name;
+                #pragma warning restore CS0618
                 Logger.Info("Profile", $"Auto-activated new profile '{profile.Name}'");
             }
-            
-            Logger.Info("Profile", $"Profile added to list. Total profiles: {config.Profiles.Count}");
+
+            SaveProfilesToCache(profiles);
             _configService.SaveConfig();
+            Logger.Info("Profile", $"Profile added to list. Total profiles: {profiles.Count}");
             Logger.Info("Profile", $"Config saved to disk");
-            
+
             // Save profile to disk folder
             SaveProfileToDisk(profile);
-            
+
             Logger.Success("Profile", $"Created profile '{trimmedName}' with UUID {parsedUuid}");
             return profile;
         }
@@ -185,41 +261,37 @@ public class ProfileManagementService : IProfileManagementService
     }
 
     /// <inheritdoc/>
-    /// <remarks>Adjusts active profile index if needed after deletion.</remarks>
+    /// <remarks>Updates SelectedProfileId if the deleted profile was active.</remarks>
     public bool DeleteProfile(string profileId)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(profileId))
-            {
                 return false;
-            }
-            
+
+            var profiles = LoadProfilesFromCache();
+            var profile = profiles.FirstOrDefault(p => p.Id == profileId);
+            if (profile == null)
+                return false;
+
+            profiles.Remove(profile);
+            SaveProfilesToCache(profiles);
+
+            // If the deleted profile was active, clear selection
             var config = _configService.Configuration;
-            var index = config.Profiles?.FindIndex(p => p.Id == profileId) ?? -1;
-            if (index < 0)
+            if (config.SelectedProfileId == profileId)
             {
-                return false;
+                config.SelectedProfileId = "";
+                #pragma warning disable CS0618
+                config.UUID = "";
+                config.Nick = "";
+                #pragma warning restore CS0618
             }
-            
-            var profile = config.Profiles![index];
-            config.Profiles.RemoveAt(index);
-            
-            // Adjust active profile index if needed
-            if (config.ActiveProfileIndex == index)
-            {
-                config.ActiveProfileIndex = -1;
-            }
-            else if (config.ActiveProfileIndex > index)
-            {
-                config.ActiveProfileIndex--;
-            }
-            
             _configService.SaveConfig();
-            
-            // Delete profile folder from disk (pass name for name-based folder)
+
+            // Delete profile folder from disk
             DeleteProfileFromDisk(profileId, profile.Name);
-            
+
             Logger.Success("Profile", $"Deleted profile '{profile.Name}'");
             return true;
         }
@@ -231,36 +303,50 @@ public class ProfileManagementService : IProfileManagementService
     }
 
     /// <inheritdoc/>
-    /// <remarks>Backups current profile's skin data and restores the new profile's skin data.</remarks>
+    /// <remarks>Backwards-compat wrapper — switches by index position in the cached list.</remarks>
     public bool SwitchProfile(int index)
     {
         try
         {
-            var config = _configService.Configuration;
-            if (config.Profiles == null || index < 0 || index >= config.Profiles.Count)
-            {
+            var profiles = LoadProfilesFromCache();
+            if (index < 0 || index >= profiles.Count)
                 return false;
-            }
-            
-            // First, backup current profile's skin data before switching
+            return SwitchProfile(profiles[index].Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Profile", $"Failed to switch profile (by index): {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Backups current profile's skin data and restores the new profile's skin data.</remarks>
+    public bool SwitchProfile(string profileId)
+    {
+        try
+        {
+            var profiles = LoadProfilesFromCache();
+            var profile = profiles.FirstOrDefault(p => p.Id == profileId);
+            if (profile == null)
+                return false;
+
+            // Backup current profile's skin data before switching
             var currentUuid = _userIdentityService.GetCurrentUuid();
             if (!string.IsNullOrWhiteSpace(currentUuid))
-            {
                 _skinService.BackupProfileSkinData(currentUuid);
-            }
-            
-            var profile = config.Profiles[index];
-            
-            // Restore the new profile's skin data
+
+            // Restore skin data for the incoming profile
             _skinService.RestoreProfileSkinData(profile);
-            
-            // Update current UUID and Nick
+
+            var config = _configService.Configuration;
+            config.SelectedProfileId = profile.Id;
+            #pragma warning disable CS0618
             config.UUID = profile.UUID;
             config.Nick = profile.Name;
-            config.ActiveProfileIndex = index;
+            #pragma warning restore CS0618
 
-            // If user switched to an official profile, force official auth server.
-            // Otherwise, clear auth domain to allow custom auth server usage.
+            // Auth domain handling
             if (profile.IsOfficial)
             {
                 config.AuthDomain = "sessions.hytale.com";
@@ -271,12 +357,10 @@ public class ProfileManagementService : IProfileManagementService
                 config.AuthDomain = "";
                 Logger.Info("Profile", "Non-official profile selected: cleared official auth domain");
             }
-            
-            // Ensure mods stay in the active instance folder (no profile symlink/junction)
+
             EnsureInstanceModsDirectory(profile);
-            
             _configService.SaveConfig();
-            
+
             Logger.Success("Profile", $"Switched to profile '{profile.Name}'");
             return true;
         }
@@ -292,36 +376,33 @@ public class ProfileManagementService : IProfileManagementService
     {
         try
         {
-            var config = _configService.Configuration;
-            var profile = config.Profiles?.FirstOrDefault(p => p.Id == profileId);
+            var profiles = LoadProfilesFromCache();
+            var profile = profiles.FirstOrDefault(p => p.Id == profileId);
             if (profile == null)
-            {
                 return false;
-            }
-            
+
             if (!string.IsNullOrWhiteSpace(newName))
-            {
                 profile.Name = newName.Trim();
-            }
-            
+
             if (!string.IsNullOrWhiteSpace(newUuid) && Guid.TryParse(newUuid.Trim(), out var parsedUuid))
-            {
                 profile.UUID = parsedUuid.ToString();
-            }
-            
-            // If this is the active profile, also update current UUID/Nick
-            var index = config.Profiles!.FindIndex(p => p.Id == profileId);
-            if (index == config.ActiveProfileIndex)
+
+            SaveProfilesToCache(profiles);
+
+            // If this is the active profile, also update config UUID/Nick for legacy compat
+            var config = _configService.Configuration;
+            if (config.SelectedProfileId == profileId)
             {
+                #pragma warning disable CS0618
                 config.UUID = profile.UUID;
                 config.Nick = profile.Name;
+                #pragma warning restore CS0618
+                _configService.SaveConfig();
             }
-            
-            _configService.SaveConfig();
-            
+
             // Update profile on disk
             UpdateProfileOnDisk(profile);
-            
+
             Logger.Success("Profile", $"Updated profile '{profile.Name}'");
             return true;
         }
@@ -337,30 +418,24 @@ public class ProfileManagementService : IProfileManagementService
     public Profile? SaveCurrentAsProfile()
     {
         var config = _configService.Configuration;
-        // Use Config.UUID directly instead of GetUuidForUser(Config.Nick).
-        // GetUuidForUser generates a NEW UUID when the nick changes (since the new nick
-        // has no mapping yet), which causes a new profile to be created instead of updating
-        // the existing one.
+        #pragma warning disable CS0618
         var uuid = config.UUID;
         var name = config.Nick;
-        
+        #pragma warning restore CS0618
+
         if (string.IsNullOrWhiteSpace(uuid) || string.IsNullOrWhiteSpace(name))
-        {
             return null;
-        }
-        
-        // Check if a profile with this UUID already exists
-        var existing = config.Profiles?.FirstOrDefault(p => p.UUID == uuid);
+
+        var profiles = LoadProfilesFromCache();
+        var existing = profiles.FirstOrDefault(p => p.UUID == uuid);
         if (existing != null)
         {
-            // Update existing profile
             existing.Name = name;
-            _configService.SaveConfig();
+            SaveProfilesToCache(profiles);
             UpdateProfileOnDisk(existing);
             return existing;
         }
-        
-        // Create new profile
+
         return CreateProfile(name, uuid);
     }
 
@@ -375,41 +450,23 @@ public class ProfileManagementService : IProfileManagementService
                 Logger.Warning("Profile", "Cannot duplicate profile with empty ID");
                 return null;
             }
-            
-            var config = _configService.Configuration;
-            var sourceProfile = config.Profiles?.FirstOrDefault(p => p.Id == profileId);
+
+            var allProfiles = LoadProfilesFromCache();
+            var sourceProfile = allProfiles.FirstOrDefault(p => p.Id == profileId);
             if (sourceProfile == null)
             {
                 Logger.Warning("Profile", $"Profile not found: {profileId}");
                 return null;
             }
-            
-            // Generate new UUID and name with " Copy" suffix
+
             var newUuid = Guid.NewGuid().ToString();
             var newName = $"{sourceProfile.Name} Copy";
-            
-            // Ensure name is unique
             int copyCount = 1;
-            while (config.Profiles != null && config.Profiles.Any(p => p.Name == newName))
-            {
-                copyCount++;
-                newName = $"{sourceProfile.Name} Copy {copyCount}";
-            }
-            
-            // Create new profile
-            var newProfile = new Profile
-            {
-                Id = Guid.NewGuid().ToString(),
-                UUID = newUuid,
-                Name = newName,
-                CreatedAt = DateTime.UtcNow
-            };
-            
-            config.Profiles ??= new List<Profile>();
-            config.Profiles.Add(newProfile);
-            _configService.SaveConfig();
-            
-            // Save profile to disk
+            while (allProfiles.Any(p => p.Name == newName)) { copyCount++; newName = $"{sourceProfile.Name} Copy {copyCount}"; }
+
+            var newProfile = new Profile { Id = Guid.NewGuid().ToString(), UUID = newUuid, Name = newName, CreatedAt = DateTime.UtcNow };
+            allProfiles.Add(newProfile);
+            SaveProfilesToCache(allProfiles);
             SaveProfileToDisk(newProfile);
             
             // Copy source profile's mods folder to new profile
@@ -508,40 +565,24 @@ public class ProfileManagementService : IProfileManagementService
                 Logger.Warning("Profile", "Cannot duplicate profile with empty ID");
                 return null;
             }
-            
-            var config = _configService.Configuration;
-            var sourceProfile = config.Profiles?.FirstOrDefault(p => p.Id == profileId);
+
+            var allProfiles = LoadProfilesFromCache();
+            var sourceProfile = allProfiles.FirstOrDefault(p => p.Id == profileId);
             if (sourceProfile == null)
             {
                 Logger.Warning("Profile", $"Profile not found: {profileId}");
                 return null;
             }
-            
-            // Generate new UUID and name with " Copy" suffix
+
             var newUuid = Guid.NewGuid().ToString();
             var newName = $"{sourceProfile.Name} Copy";
-            
-            // Ensure name is unique
             int copyCount = 1;
-            while (config.Profiles != null && config.Profiles.Any(p => p.Name == newName))
-            {
-                copyCount++;
-                newName = $"{sourceProfile.Name} Copy {copyCount}";
-            }
-            
-            // Create new profile
-            var newProfile = new Profile
-            {
-                Id = Guid.NewGuid().ToString(),
-                UUID = newUuid,
-                Name = newName,
-                CreatedAt = DateTime.UtcNow
-            };
-            
-            config.Profiles ??= new List<Profile>();
-            config.Profiles.Add(newProfile);
-            _configService.SaveConfig();
-            
+            while (allProfiles.Any(p => p.Name == newName)) { copyCount++; newName = $"{sourceProfile.Name} Copy {copyCount}"; }
+
+            var newProfile = new Profile { Id = Guid.NewGuid().ToString(), UUID = newUuid, Name = newName, CreatedAt = DateTime.UtcNow };
+            allProfiles.Add(newProfile);
+            SaveProfilesToCache(allProfiles);
+
             // Save profile to disk
             SaveProfileToDisk(newProfile);
             
@@ -602,34 +643,38 @@ public class ProfileManagementService : IProfileManagementService
     {
         try
         {
-            var config = _configService.Configuration;
-            Profile? profile = null;
+            var profile = GetSelectedProfile();
 
-            // Try active index first
-            if (config.ActiveProfileIndex >= 0 && config.Profiles != null &&
-                config.ActiveProfileIndex < config.Profiles.Count)
-            {
-                profile = config.Profiles[config.ActiveProfileIndex];
-            }
             // Fallback: find profile matching current UUID
-            else if (config.Profiles != null && config.Profiles.Count > 0 && !string.IsNullOrWhiteSpace(config.UUID))
+            if (profile == null)
             {
-                var idx = config.Profiles.FindIndex(p => p.UUID == config.UUID);
-                if (idx >= 0)
+                #pragma warning disable CS0618
+                var uuid = _configService.Configuration.UUID;
+                #pragma warning restore CS0618
+                if (!string.IsNullOrWhiteSpace(uuid))
                 {
-                    profile = config.Profiles[idx];
-                    config.ActiveProfileIndex = idx;
-                    _configService.SaveConfig();
-                    Logger.Info("Profile", $"Auto-activated profile '{profile.Name}' by UUID match");
+                    var profiles = LoadProfilesFromCache();
+                    profile = profiles.FirstOrDefault(p => p.UUID == uuid);
+                    if (profile != null)
+                    {
+                        _configService.Configuration.SelectedProfileId = profile.Id;
+                        _configService.SaveConfig();
+                        Logger.Info("Profile", $"Auto-activated profile '{profile.Name}' by UUID match");
+                    }
                 }
             }
+
             // Last resort: activate first profile
-            if (profile == null && config.Profiles != null && config.Profiles.Count > 0)
+            if (profile == null)
             {
-                profile = config.Profiles[0];
-                config.ActiveProfileIndex = 0;
-                _configService.SaveConfig();
-                Logger.Info("Profile", $"Auto-activated first profile '{profile.Name}'");
+                var profiles = LoadProfilesFromCache();
+                profile = profiles.FirstOrDefault();
+                if (profile != null)
+                {
+                    _configService.Configuration.SelectedProfileId = profile.Id;
+                    _configService.SaveConfig();
+                    Logger.Info("Profile", $"Auto-activated first profile '{profile.Name}'");
+                }
             }
 
             if (profile == null)
@@ -699,16 +744,13 @@ public class ProfileManagementService : IProfileManagementService
     {
         try
         {
-            var config = _configService.Configuration;
-            if (config.ActiveProfileIndex < 0 || config.Profiles == null || 
-                config.ActiveProfileIndex >= config.Profiles.Count)
+            var profile = GetSelectedProfile();
+            if (profile == null)
             {
                 Logger.Info("Mods", "No active profile, ensuring instance mods directory without profile linking");
                 EnsureInstanceModsDirectory(null);
                 return;
             }
-            
-            var profile = config.Profiles[config.ActiveProfileIndex];
 
             // Backward compatibility: if old builds created profile symlink/junction,
             // migrate it back into the real instance UserData/Mods directory.
@@ -840,33 +882,16 @@ public class ProfileManagementService : IProfileManagementService
 
     private string? TryGetCurrentExistingInstancePath()
     {
-        var config = _configService.Configuration;
         var selected = _instanceService.GetSelectedInstance();
         if (selected != null)
         {
-            var selectedPath = _instanceService.GetInstancePathById(selected.Id)
-                               ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
-            if (!string.IsNullOrWhiteSpace(selectedPath))
-            {
-                return selectedPath;
-            }
+            var path = _instanceService.GetInstancePathById(selected.Id);
+            if (!string.IsNullOrWhiteSpace(path))
+                return path;
         }
 
-        #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-        var branch = UtilityService.NormalizeVersionType(config.VersionType);
-        var configuredVersion = config.SelectedVersion;
-        #pragma warning restore CS0618
-
-        var configuredPath = _instanceService.FindExistingInstancePath(branch, configuredVersion);
-        if (!string.IsNullOrWhiteSpace(configuredPath))
-        {
-            return configuredPath;
-        }
-
-        return _instanceService
-            .GetInstalledInstances()
-            .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
-            ?.Path;
+        // Fall back to any installed instance when nothing is explicitly selected.
+        return _instanceService.GetInstalledInstances().FirstOrDefault()?.Path;
     }
     
     /// <summary>

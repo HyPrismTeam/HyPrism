@@ -46,7 +46,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 EB_CONFIG="$PROJECT_ROOT/Properties/electron-builder.json"
-LINUX_APP_ID="io.github.HyPrismTeam.HyPrism"
+LINUX_APP_ID="io.github.hyprismteam.HyPrism"
 
 # ─── Colors ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -289,10 +289,10 @@ prepare_linux_icon_set() {
 # ─── Inject AppStream metadata into .deb artifact ───────────────────────────
 inject_deb_appstream() {
     local deb_path="$1"
-    local metainfo_src="$PROJECT_ROOT/Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
+    local metainfo_src="$PROJECT_ROOT/Properties/linux/io.github.hyprismteam.HyPrism.metainfo.xml"
 
     if [[ ! -f "$metainfo_src" ]]; then
-        log_warn "AppStream metadata not found: Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
+        log_warn "AppStream metadata not found: Properties/linux/io.github.hyprismteam.HyPrism.metainfo.xml"
         return 0
     fi
 
@@ -310,13 +310,13 @@ inject_deb_appstream() {
         return 0
     fi
 
-    if [[ -f "$tmp_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml" ]]; then
+    if [[ -f "$tmp_dir/usr/share/metainfo/io.github.hyprismteam.HyPrism.metainfo.xml" ]]; then
         rm -rf "$tmp_dir"
         return 0
     fi
 
     mkdir -p "$tmp_dir/usr/share/metainfo"
-    cp "$metainfo_src" "$tmp_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml"
+    cp "$metainfo_src" "$tmp_dir/usr/share/metainfo/io.github.hyprismteam.HyPrism.metainfo.xml"
 
     if dpkg-deb -b "$tmp_dir" "$deb_path" >/dev/null 2>&1; then
         log_ok "Injected AppStream metainfo into $(basename "$deb_path")"
@@ -330,10 +330,10 @@ inject_deb_appstream() {
 # ─── Inject AppStream metadata into .rpm artifact ───────────────────────────
 inject_rpm_appstream() {
     local rpm_path="$1"
-    local metainfo_src="$PROJECT_ROOT/Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
+    local metainfo_src="$PROJECT_ROOT/Properties/linux/io.github.hyprismteam.HyPrism.metainfo.xml"
 
     if [[ ! -f "$metainfo_src" ]]; then
-        log_warn "AppStream metadata not found: Properties/linux/io.github.HyPrismTeam.HyPrism.metainfo.xml"
+        log_warn "AppStream metadata not found: Properties/linux/io.github.hyprismteam.HyPrism.metainfo.xml"
         return 0
     fi
 
@@ -354,13 +354,13 @@ inject_rpm_appstream() {
         return 0
     fi
 
-    if [[ -f "$root_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml" ]]; then
+    if [[ -f "$root_dir/usr/share/metainfo/io.github.hyprismteam.HyPrism.metainfo.xml" ]]; then
         rm -rf "$tmp_dir"
         return 0
     fi
 
     mkdir -p "$root_dir/usr/share/metainfo"
-    cp "$metainfo_src" "$root_dir/usr/share/metainfo/io.github.HyPrismTeam.HyPrism.metainfo.xml"
+    cp "$metainfo_src" "$root_dir/usr/share/metainfo/io.github.hyprismteam.HyPrism.metainfo.xml"
 
     # Remove build-id symlink tree if present (can conflict with filesystem package on Fedora)
     rm -rf "$root_dir/usr/lib/.build-id"
@@ -374,7 +374,7 @@ inject_rpm_appstream() {
     ) > "$files_manifest"
 
     local pkg_name pkg_version pkg_release pkg_arch pkg_summary pkg_license
-    pkg_name=$(rpm -qp --qf '%{NAME}' "$rpm_path" 2>/dev/null || echo "io.github.HyPrismTeam.HyPrism")
+    pkg_name=$(rpm -qp --qf '%{NAME}' "$rpm_path" 2>/dev/null || echo "io.github.hyprismteam.HyPrism")
     pkg_version=$(rpm -qp --qf '%{VERSION}' "$rpm_path" 2>/dev/null || echo "3.0.0")
     pkg_release=$(rpm -qp --qf '%{RELEASE}' "$rpm_path" 2>/dev/null || echo "1")
     pkg_arch=$(rpm -qp --qf '%{ARCH}' "$rpm_path" 2>/dev/null || echo "x86_64")
@@ -701,7 +701,7 @@ local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
     rm -rf "$build_dir"
     mkdir -p "$build_dir"
 
-    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" io.github.HyPrismTeam.HyPrism.yml); then
+    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" io.github.hyprismteam.HyPrism.yml); then
         log_error "flatpak-builder failed for $arch"
         rm -rf "$bundle_dir" "$build_dir"
         FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -717,9 +717,9 @@ local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
     local out_file="$DIST_DIR/HyPrism-linux-$arch-$version.flatpak"
 
     # Use the app-id declared in the Flatpak manifest so repo refs match the bundle export
-    local manifest_file="$manifest_dir/io.github.HyPrismTeam.HyPrism.yml"
+    local manifest_file="$manifest_dir/io.github.hyprismteam.HyPrism.yml"
     local flatpak_app_id
-    flatpak_app_id=$(grep -E '^app-id:' "$manifest_file" | awk '{print $2}' | tr -d "\"'" ) || flatpak_app_id="io.github.HyPrismTeam.HyPrism"
+    flatpak_app_id=$(grep -E '^app-id:' "$manifest_file" | awk '{print $2}' | tr -d "\"'" ) || flatpak_app_id="io.github.hyprismteam.HyPrism"
 
     flatpak build-bundle "$repo_dir" "$out_file" "$flatpak_app_id" --arch="$flatpak_arch"
 

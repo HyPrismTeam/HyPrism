@@ -4,7 +4,7 @@ set -euo pipefail
 # update-flathub-manifest.sh
 # - copy all regular files (not directories) from Properties/linux/flatpak -> Properties/linux/flathub
 # - download (or read locally) flathub-bundle.tar.gz, compute sha256 and update
-#   `Properties/linux/flathub/io.github.HyPrismTeam.HyPrism.yml` by replacing the placeholder
+#   `Properties/linux/flathub/io.github.hyprismteam.HyPrism.yml` by replacing the placeholder
 
 usage() {
   cat <<EOF
@@ -69,12 +69,12 @@ if [ -n "${README_SRC:-}" ]; then
   fi
 fi
 
-MANIFEST="$DST_DIR/io.github.HyPrismTeam.HyPrism.yml"
+MANIFEST="$DST_DIR/io.github.hyprismteam.HyPrism.yml"
 # if no manifest in DST, try to copy from SRC
 if [ ! -f "$MANIFEST" ]; then
-  if [ -f "$SRC_DIR/io.github.HyPrismTeam.HyPrism.yml" ]; then
+  if [ -f "$SRC_DIR/io.github.hyprismteam.HyPrism.yml" ]; then
     echo "Creating manifest '$MANIFEST' by copying from $SRC_DIR"
-    cp -a "$SRC_DIR/io.github.HyPrismTeam.HyPrism.yml" "$MANIFEST"
+    cp -a "$SRC_DIR/io.github.hyprismteam.HyPrism.yml" "$MANIFEST"
   else
     echo "Manifest not found in source or destination: $MANIFEST" >&2
     exit 3

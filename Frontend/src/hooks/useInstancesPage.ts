@@ -19,15 +19,13 @@ export interface UseInstancesPageOptions {
   onInstanceDeleted?: () => void;
   onInstanceSelected?: () => void;
   isGameRunning?: boolean;
-  runningBranch?: string;
-  runningVersion?: number;
+  runningInstanceId?: string;
   onStopGame?: () => void;
   activeTab?: InstanceTab;
   onTabChange?: (tab: InstanceTab) => void;
   isDownloading?: boolean;
-  downloadingBranch?: string;
-  downloadingVersion?: number;
-  onLaunchInstance?: (branch: string, version: number, instanceId?: string) => void;
+  downloadingInstanceId?: string;
+  onLaunchInstance?: (instanceId: string) => void;
 }
 
 export interface MessageState {
@@ -62,14 +60,12 @@ export function useInstancesPage(options: UseInstancesPageOptions) {
     onInstanceDeleted,
     onInstanceSelected,
     isGameRunning = false,
-    runningBranch,
-    runningVersion,
+    runningInstanceId,
     onStopGame,
     activeTab: controlledTab,
     onTabChange,
     isDownloading = false,
-    downloadingBranch,
-    downloadingVersion,
+    downloadingInstanceId,
     onLaunchInstance,
   } = options;
 
@@ -254,7 +250,7 @@ export function useInstancesPage(options: UseInstancesPageOptions) {
     }
     setIsLoadingSaves(true);
     try {
-      const savesData = await getInstanceSaves(selectedInstance.id, selectedInstance.branch, selectedInstance.version);
+      const savesData = await getInstanceSaves(selectedInstance.id);
       setSaves(savesData || []);
     } catch (err) {
       console.error('Failed to load saves:', err);
@@ -508,15 +504,14 @@ export function useInstancesPage(options: UseInstancesPageOptions) {
   // ============================================================================
   
   const handleLaunchInstance = useCallback((inst: InstalledVersionInfo) => {
-    const runningIdentityKnown = !!runningBranch && runningVersion !== undefined;
-    const isLikelyRunningThis = isGameRunning && (!runningIdentityKnown || (runningBranch === inst.branch && runningVersion === inst.version));
+    const isLikelyRunningThis = isGameRunning && (!runningInstanceId || runningInstanceId === inst.id);
 
     if (isLikelyRunningThis) {
       onStopGame?.();
     } else {
-      onLaunchInstance?.(inst.branch, inst.version, inst.id);
+      onLaunchInstance?.(inst.id);
     }
-  }, [isGameRunning, onLaunchInstance, onStopGame, runningBranch, runningVersion]);
+  }, [isGameRunning, onLaunchInstance, onStopGame, runningInstanceId]);
 
   // ============================================================================
   // Delete Mod Handler
@@ -586,8 +581,6 @@ export function useInstancesPage(options: UseInstancesPageOptions) {
           fileName: file.name,
           base64Content,
           instanceId: selectedInstance.id,
-          branch: selectedInstance.branch,
-          version: selectedInstance.version,
         });
         if (ok) okCount++;
         else failCount++;
@@ -736,11 +729,9 @@ export function useInstancesPage(options: UseInstancesPageOptions) {
     
     // Passed options for convenience
     isGameRunning,
-    runningBranch,
-    runningVersion,
+    runningInstanceId,
     isDownloading,
-    downloadingBranch,
-    downloadingVersion,
+    downloadingInstanceId,
     onInstanceDeleted,
   };
 }

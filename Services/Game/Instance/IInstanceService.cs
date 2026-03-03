@@ -192,6 +192,12 @@ public interface IInstanceService
     void SyncInstancesWithConfig();
 
     /// <summary>
+    /// Returns the in-memory/file-backed instance cache without rescanning the disk.
+    /// Useful for fast lookups when a full sync is not required.
+    /// </summary>
+    List<InstanceInfo> GetCachedInstances();
+
+    /// <summary>
     /// Finds an instance by its ID.
     /// </summary>
     /// <param name="instanceId">The instance ID.</param>
@@ -218,6 +224,13 @@ public interface IInstanceService
     /// Should be called during startup after MigrateLegacyData.
     /// </summary>
     void MigrateVersionFoldersToIdFolders();
+
+    /// <summary>
+    /// Migrates instance folders from the branch-subdirectory layout ({root}/{branch}/{guid})
+    /// to the flat layout ({root}/{guid}). Empty branch directories are removed afterwards.
+    /// Should be called during startup after MigrateVersionFoldersToIdFolders.
+    /// </summary>
+    void MigrateBranchSubdirectoriesToFlat();
 
     /// <summary>
     /// Creates a new instance directory with the given ID and returns the path.

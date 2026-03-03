@@ -243,20 +243,13 @@ public class UserIdentityService : IUserIdentityService
             var selected = _instanceService.GetSelectedInstance();
             if (selected != null)
             {
-                versionPath = _instanceService.GetInstancePathById(selected.Id)
-                              ?? _instanceService.FindExistingInstancePath(selected.Branch, selected.Version);
+                versionPath = _instanceService.GetInstancePathById(selected.Id);
             }
 
+            // Fall back to any installed instance when nothing is explicitly selected.
             if (string.IsNullOrWhiteSpace(versionPath))
             {
-                #pragma warning disable CS0618 // Backward compatibility: VersionType kept for migration
-                var branch = UtilityService.NormalizeVersionType(config.VersionType);
-                var configuredVersion = config.SelectedVersion;
-                #pragma warning restore CS0618
-                versionPath = _instanceService.FindExistingInstancePath(branch, configuredVersion)
-                              ?? _instanceService.GetInstalledInstances()
-                                  .FirstOrDefault(i => i.Branch.Equals(branch, StringComparison.OrdinalIgnoreCase))
-                                  ?.Path;
+                versionPath = _instanceService.GetInstalledInstances().FirstOrDefault()?.Path;
             }
 
             if (string.IsNullOrWhiteSpace(versionPath))

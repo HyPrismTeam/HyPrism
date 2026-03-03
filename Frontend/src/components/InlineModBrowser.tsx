@@ -24,8 +24,6 @@ import {
 
 export interface InlineModBrowserProps {
   currentInstanceId?: string;
-  currentBranch: string;
-  currentVersion: number;
   installedModIds?: Set<string>;
   installedFileIds?: Set<string>;
   onModsInstalled?: () => void;
@@ -40,8 +38,6 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
 
   const options: UseModBrowserOptions = {
     currentInstanceId: props.currentInstanceId,
-    currentBranch: props.currentBranch,
-    currentVersion: props.currentVersion,
     installedModIds: props.installedModIds,
     installedFileIds: props.installedFileIds,
     onModsInstalled: props.onModsInstalled,

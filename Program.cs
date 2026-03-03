@@ -149,6 +149,7 @@ class Program
         var instanceService = services.GetRequiredService<IInstanceService>();
         instanceService.MigrateLegacyData();
         instanceService.MigrateVersionFoldersToIdFolders();
+        instanceService.MigrateBranchSubdirectoriesToFlat();
 
         // Repair legacy profile mods symlink/junction if present and ensure
         // mods are stored in instance-local UserData/Mods.

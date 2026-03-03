@@ -5,12 +5,25 @@ import { ipc, type ModInfo, type ModCategory, type ModFileInfo } from '@/lib/ipc
 
 // ------- Helpers -------
 
+/**
+ * Formats a download count into a compact human-readable string.
+ * Values ≥ 1 000 000 are shown as `"X.XM"`, values ≥ 1 000 as `"X.XK"`,
+ * and smaller values are returned as-is.
+ * @param count - The raw download count.
+ * @returns A compact string such as `"1.2M"`, `"45.6K"`, or `"999"`.
+ */
 export const formatDownloads = (count: number): string => {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return count.toString();
 };
 
+/**
+ * Maps a CurseForge release type number to a localized label string.
+ * @param type - CurseForge release type: `1` = Release, `2` = Beta, `3` = Alpha.
+ * @param t - i18next translation function used to resolve the label key.
+ * @returns The localized release type label, or the "unknown" label for unrecognized values.
+ */
 export const getReleaseTypeLabel = (type: number, t: (key: string) => string) => {
   switch (type) {
     case 1: return t('modManager.releaseType.release');
@@ -20,6 +33,13 @@ export const getReleaseTypeLabel = (type: number, t: (key: string) => string) =>
   }
 };
 
+/**
+ * Reads a `File` object and returns its contents as a Base64-encoded string.
+ * Used when Electron's native file path is unavailable and the file must be
+ * transferred to the backend via IPC as a Base64 payload.
+ * @param file - The browser `File` object to encode.
+ * @returns A promise that resolves with the Base64-encoded file contents.
+ */
 export const readFileAsBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -49,8 +69,6 @@ export type SortOption = { id: number; name: string };
 
 export interface UseModBrowserOptions {
   currentInstanceId?: string;
-  currentBranch: string;
-  currentVersion: number;
   installedModIds?: Set<string>;
   installedFileIds?: Set<string>;
   onModsInstalled?: () => void;
@@ -61,8 +79,6 @@ export interface UseModBrowserOptions {
 export const useModBrowser = (options: UseModBrowserOptions) => {
   const {
     currentInstanceId,
-    currentBranch,
-    currentVersion,
     installedModIds,
     installedFileIds,
     onModsInstalled,
@@ -337,7 +353,7 @@ export const useModBrowser = (options: UseModBrowserOptions) => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         setDownloadJobs(prev => prev.map(j => j.id === item.id ? { ...j, status: 'running', attempts: attempt } : j));
         try {
-          const result = await ipc.mods.install({ modId: item.id, fileId: item.fileId, branch: currentBranch, version: currentVersion, instanceId: currentInstanceId });
+          const result = await ipc.mods.install({ modId: item.id, fileId: item.fileId, instanceId: currentInstanceId });
           const ok = typeof result === 'object' && result !== null ? (result as { success: boolean }).success : result;
           const errorMsg = typeof result === 'object' && result !== null ? (result as { error?: string }).error : undefined;
           if (!ok) throw new Error(errorMsg || t('modManager.backendRefused'));
@@ -353,7 +369,7 @@ export const useModBrowser = (options: UseModBrowserOptions) => {
       completed++;
       setDownloadProgress({ current: completed, total: items.length, currentMod: item.name });
     }
-  }, [currentBranch, currentVersion, currentInstanceId, t]);
+  }, [currentInstanceId, t]);
 
   const handleDownloadSelected = useCallback(async () => {
     if (selectedMods.size === 0) return;
@@ -439,11 +455,11 @@ export const useModBrowser = (options: UseModBrowserOptions) => {
         setImportProgress(t('modManager.installingMod').replace('{{name}}', file.name));
         const electronFile = file as unknown as { path?: string };
         if (electronFile.path) {
-          const ok = await ipc.mods.installLocal({ sourcePath: electronFile.path, branch: currentBranch, version: currentVersion, instanceId: currentInstanceId });
+          const ok = await ipc.mods.installLocal({ sourcePath: electronFile.path, instanceId: currentInstanceId });
           if (ok) successCount++;
         } else {
           const base64 = await readFileAsBase64(file);
-          const ok = await ipc.mods.installBase64({ fileName: file.name, base64Content: base64, branch: currentBranch, version: currentVersion, instanceId: currentInstanceId });
+          const ok = await ipc.mods.installBase64({ fileName: file.name, base64Content: base64, instanceId: currentInstanceId });
           if (ok) successCount++;
         }
       }
@@ -457,7 +473,7 @@ export const useModBrowser = (options: UseModBrowserOptions) => {
     } finally {
       setIsImporting(false);
     }
-  }, [currentBranch, currentVersion, currentInstanceId, onModsInstalled, t]);
+  }, [currentInstanceId, onModsInstalled, t]);
 
   // ------- Helpers -------
   const getCategoryName = useCallback((id: number) => {

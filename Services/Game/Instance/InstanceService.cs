@@ -12,7 +12,9 @@ namespace HyPrism.Services.Game.Instance;
 /// Handles instance discovery, creation, and migration from legacy launcher versions.
 /// </summary>
 /// <remarks>
-/// Instances are organized by branch (release/pre-release) and version number.
+/// Instances are organized in a flat layout: {InstanceRoot}/{instanceId}/.
+/// Branch and version information is stored in each instance's meta.json.
+/// Legacy layouts (branch subdirectories, version-named folders) are migrated on startup.
 /// This service also handles user data directories and cosmetic skins.
 /// </remarks>
 public class InstanceService : IInstanceService
@@ -51,6 +53,66 @@ public class InstanceService : IInstanceService
     /// </summary>
     /// <param name="config">The configuration object (parameter kept for API compatibility).</param>
     private void SaveConfig(Config config) => _configService.SaveConfig();
+
+    // ── Instance cache (instances.json) ─────────────────────────────────────
+
+    /// <summary>Returns the path to the instance cache file.</summary>
+    private string GetInstanceCachePath() => Path.Combine(GetInstanceRoot(), "instances.json");
+
+    /// <summary>
+    /// Loads the instance list from instances.json.
+    /// On first run migrates from the deprecated config.Instances field.
+    /// </summary>
+    private List<InstanceInfo> LoadInstanceCache()
+    {
+        var path = GetInstanceCachePath();
+        if (File.Exists(path))
+        {
+            try
+            {
+                var json = File.ReadAllText(path);
+                return JsonSerializer.Deserialize<List<InstanceInfo>>(json, JsonOptions) ?? new();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("InstanceService", $"Failed to read instances.json, rescanning: {ex.Message}");
+            }
+        }
+
+        // Migration: seed from deprecated config field if present
+        #pragma warning disable CS0618
+        var config = GetConfig();
+        if (config.Instances?.Count > 0)
+        {
+            Logger.Info("InstanceService", $"Migrating {config.Instances.Count} instances from config to instances.json");
+            SaveInstanceCache(config.Instances);
+            config.Instances = null;
+            _configService.SaveConfig();
+            return LoadInstanceCache();
+        }
+        #pragma warning restore CS0618
+
+        return new List<InstanceInfo>();
+    }
+
+    /// <summary>Saves the instance list to instances.json.</summary>
+    private void SaveInstanceCache(IEnumerable<InstanceInfo> instances)
+    {
+        try
+        {
+            var list = instances.ToList();
+            var path = GetInstanceCachePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, JsonSerializer.Serialize(list, JsonOptions));
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("InstanceService", $"Failed to save instances.json: {ex.Message}");
+        }
+    }
+
+    /// <inheritdoc cref="IInstanceService.GetCachedInstances"/>
+    public List<InstanceInfo> GetCachedInstances() => LoadInstanceCache();
 
     /// <inheritdoc/>
     public string GetInstanceRoot()
@@ -136,64 +198,65 @@ public class InstanceService : IInstanceService
         string normalizedBranch = NormalizeVersionType(branch);
         string versionSegment = version == 0 ? "latest" : version.ToString();
 
+        // Primary: flat structure — {root}/{guid}/
+        var flatRoot = GetInstanceRoot();
+        if (Directory.Exists(flatRoot))
+        {
+            foreach (var instanceDir in Directory.GetDirectories(flatRoot))
+            {
+                var dirName = Path.GetFileName(instanceDir);
+                // Skip legacy branch subdirectories
+                if (dirName.Equals("release", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!Guid.TryParse(dirName, out _))
+                    continue;
+
+                var meta = GetInstanceMeta(instanceDir);
+                if (meta == null) continue;
+                if (!meta.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase)) continue;
+
+                if (version == 0 && meta.IsLatest) return instanceDir;
+                if (version > 0 && meta.Version == version) return instanceDir;
+            }
+        }
+
+        // Legacy fallback: branch subdirectories and dash-layout roots
         foreach (var root in GetInstanceRootsIncludingLegacy())
         {
             var branchPath = Path.Combine(root, normalizedBranch);
-            
-            // New layout: search GUID-named folders by checking meta.json
+
             if (Directory.Exists(branchPath))
             {
                 foreach (var instanceDir in Directory.GetDirectories(branchPath))
                 {
                     var folderName = Path.GetFileName(instanceDir);
-                    
-                    // Check if it's a GUID-named folder
+
                     if (Guid.TryParse(folderName, out _))
                     {
                         var meta = GetInstanceMeta(instanceDir);
                         if (meta != null)
                         {
-                            // For latest (version 0), check IsLatest flag
-                            if (version == 0 && meta.IsLatest)
-                            {
-                                return instanceDir;
-                            }
-                            // For specific versions, check Version match
-                            if (version > 0 && meta.Version == version && 
+                            if (version == 0 && meta.IsLatest) return instanceDir;
+                            if (version > 0 && meta.Version == version &&
                                 meta.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase))
-                            {
                                 return instanceDir;
-                            }
                         }
                     }
-                    
-                    // Legacy: "latest" folder name
+
                     if (version == 0 && folderName.Equals("latest", StringComparison.OrdinalIgnoreCase))
-                    {
                         return instanceDir;
-                    }
-                    
-                    // Legacy: version number as folder name
+
                     if (version > 0 && folderName == version.ToString())
-                    {
                         return instanceDir;
-                    }
                 }
             }
 
-            // Legacy dash layout: release-5
             var candidate2 = Path.Combine(root, $"{normalizedBranch}-{versionSegment}");
-            if (Directory.Exists(candidate2))
-            {
-                return candidate2;
-            }
+            if (Directory.Exists(candidate2)) return candidate2;
 
-            // Legacy dash layout with v prefix: release-v5
             var candidate3 = Path.Combine(root, $"{normalizedBranch}-v{versionSegment}");
-            if (Directory.Exists(candidate3))
-            {
-                return candidate3;
-            }
+            if (Directory.Exists(candidate3)) return candidate3;
         }
 
         return null;
@@ -341,12 +404,23 @@ public class InstanceService : IInstanceService
                 }
             }
 
-            // Fallback: write legacy latest.json if no instance meta exists yet
-            // (e.g. during initial install before meta is created)
-            Directory.CreateDirectory(GetBranchPath(normalizedBranch));
-            var info = new LatestInstanceInfo { Version = version, UpdatedAt = DateTime.UtcNow };
-            var json = JsonSerializer.Serialize(info, new JsonSerializerOptions(JsonOptions) { WriteIndented = true });
-            File.WriteAllText(GetLatestInfoPath(normalizedBranch), json);
+            // Fallback: search flat structure for a latest-type instance for this branch
+            var latestFlat = GetInstalledInstances()
+                .FirstOrDefault(i => i.Version == 0 &&
+                    i.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase));
+            if (latestFlat != null)
+            {
+                var flatMeta = GetInstanceMeta(latestFlat.Path);
+                if (flatMeta != null)
+                {
+                    flatMeta.InstalledVersion = version;
+                    SaveInstanceMeta(latestFlat.Path, flatMeta);
+                    Logger.Debug("Instance", $"Updated InstalledVersion={version} for latest instance {latestFlat.Id}");
+                    return;
+                }
+            }
+
+            Logger.Warning("Instance", $"SaveLatestInfo: no latest instance found for branch '{branch}', skipping");
         }
         catch (Exception ex)
         {
@@ -912,36 +986,52 @@ public class InstanceService : IInstanceService
         }
         
         string normalizedBranch = NormalizeVersionType(branch);
-        var branchPath = Path.Combine(GetInstanceRoot(), normalizedBranch);
-        
-        // Search for existing instance with this branch/version in ID-named folders
+        var flatRoot = GetInstanceRoot();
+
+        // Primary: flat structure — {root}/{guid}/
+        if (Directory.Exists(flatRoot))
+        {
+            foreach (var instanceDir in Directory.GetDirectories(flatRoot))
+            {
+                var dirName = Path.GetFileName(instanceDir);
+                if (dirName.Equals("release", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!Guid.TryParse(dirName, out _))
+                    continue;
+                var meta = GetInstanceMeta(instanceDir);
+                if (meta != null && meta.Version == version &&
+                    meta.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase))
+                    return instanceDir;
+            }
+        }
+
+        // Legacy fallback: branch subdirectory — {root}/{branch}/{...}/
+        var branchPath = Path.Combine(flatRoot, normalizedBranch);
         if (Directory.Exists(branchPath))
         {
             foreach (var instanceDir in Directory.GetDirectories(branchPath))
             {
                 var folderName = Path.GetFileName(instanceDir);
-                
+
                 // Skip "latest" folder
                 if (folderName.Equals("latest", StringComparison.OrdinalIgnoreCase))
                     continue;
-                
-                // Check if this is a legacy version-named folder (for backward compatibility)
+
+                // Legacy version-named folder
                 if (folderName == version.ToString())
                     return instanceDir;
-                
+
                 // Check meta.json for matching version
                 var meta = GetInstanceMeta(instanceDir);
-                if (meta != null && meta.Version == version && 
+                if (meta != null && meta.Version == version &&
                     meta.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase))
-                {
                     return instanceDir;
-                }
             }
         }
-        
-        // Not found - return path where a new instance would be created
-        // This is used when creating a new instance; actual folder name will be ID
-        return Path.Combine(branchPath, version.ToString());
+
+        // Not found - return a placeholder flat path; callers creating instances should use CreateInstanceDirectory
+        return Path.Combine(flatRoot, version.ToString());
     }
 
     /// <summary>
@@ -1181,160 +1271,174 @@ public class InstanceService : IInstanceService
     /// </summary>
     public List<InstalledInstance> GetInstalledInstances()
     {
-        var branches = new[] { "release", "pre-release" };
         var results = new List<InstalledInstance>();
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var root = GetInstanceRoot();
 
         if (!Directory.Exists(root)) return results;
 
-        foreach (var branch in branches)
+        // Shared logic for processing a single instance folder.
+        // branchHint is provided when descending into a legacy branch subdirectory.
+        void ProcessFolder(string folder, string? branchHint)
+        {
+            var dirName = Path.GetFileName(folder);
+            string? customName = null;
+            string instanceId = "";
+            int version = -1;
+            bool isLatest = false;
+            string branch = branchHint ?? "";
+            var metaPath = Path.Combine(folder, "meta.json");
+
+            if (File.Exists(metaPath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(metaPath);
+                    var meta = JsonSerializer.Deserialize<InstanceMeta>(json, JsonOptions);
+                    if (meta != null)
+                    {
+                        instanceId = meta.Id ?? "";
+                        customName = meta.Name;
+                        version = meta.Version;
+                        isLatest = meta.IsLatest;
+                        if (!string.IsNullOrEmpty(meta.Branch))
+                            branch = meta.Branch;
+                    }
+                }
+                catch { }
+            }
+
+            // If no meta.json, try to parse folder name
+            if (version < 0)
+            {
+                if (string.Equals(dirName, "latest", StringComparison.OrdinalIgnoreCase))
+                {
+                    version = 0;
+                    isLatest = true;
+                }
+                else if (int.TryParse(dirName, out var parsedVersion))
+                {
+                    version = parsedVersion;
+                }
+                else if (Guid.TryParse(dirName, out _))
+                {
+                    Logger.Warning("InstanceService", $"GUID folder without meta.json: {folder}");
+                    return;
+                }
+                else
+                {
+                    return; // Unknown folder format
+                }
+            }
+
+            var userDataPath = Path.Combine(folder, "UserData");
+            bool hasUserData = Directory.Exists(userDataPath);
+            long size = 0;
+            if (hasUserData)
+            {
+                try { size = new DirectoryInfo(userDataPath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length); }
+                catch { }
+            }
+
+            long totalSize = 0;
+            try { totalSize = new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length); }
+            catch { }
+
+            // Fallback: legacy metadata.json for custom name
+            if (string.IsNullOrEmpty(instanceId))
+            {
+                var metadataPath = Path.Combine(folder, "metadata.json");
+                if (File.Exists(metadataPath))
+                {
+                    try
+                    {
+                        var json = File.ReadAllText(metadataPath);
+                        var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
+                        metadata?.TryGetValue("customName", out customName);
+                    }
+                    catch { }
+                }
+            }
+
+            // Generate ID if not found and persist it
+            if (string.IsNullOrEmpty(instanceId))
+            {
+                if (!IsClientPresent(folder))
+                {
+                    Logger.Debug("InstanceService", $"Skipping non-installed placeholder folder: {folder}");
+                    return;
+                }
+
+                instanceId = Guid.NewGuid().ToString();
+                try
+                {
+                    var newMeta = new InstanceMeta
+                    {
+                        Id = instanceId,
+                        Name = customName ?? "",
+                        Branch = branch,
+                        Version = version,
+                        CreatedAt = DateTime.UtcNow,
+                        IsLatest = isLatest
+                    };
+                    var json = JsonSerializer.Serialize(newMeta, JsonOptions);
+                    File.WriteAllText(metaPath, json);
+                    Logger.Debug("InstanceService", $"Generated and persisted ID for {branch}/{version}: {instanceId}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("InstanceService", $"Failed to persist generated ID: {ex.Message}");
+                }
+            }
+
+            // Deduplicate: flat scan takes precedence; skip if already seen from flat scan
+            if (!string.IsNullOrEmpty(instanceId) && !seenIds.Add(instanceId))
+            {
+                Logger.Debug("InstanceService", $"Skipping duplicate instance {instanceId} at {folder}");
+                return;
+            }
+
+            var validationResult = ValidateGameIntegrity(folder);
+
+            results.Add(new InstalledInstance
+            {
+                Id = instanceId,
+                Branch = branch,
+                Version = version,
+                Path = folder,
+                HasUserData = hasUserData,
+                UserDataSize = size,
+                TotalSize = totalSize,
+                IsValid = validationResult.Status == InstanceValidationStatus.Valid,
+                ValidationStatus = validationResult.Status,
+                ValidationDetails = validationResult.Details,
+                CustomName = customName
+            });
+        }
+
+        // --- Primary: flat structure — {root}/{guid}/ ---
+        foreach (var folder in Directory.GetDirectories(root))
+        {
+            var dirName = Path.GetFileName(folder);
+            // Skip legacy branch subdirectories (handled below)
+            if (dirName.Equals("release", StringComparison.OrdinalIgnoreCase) ||
+                dirName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                continue;
+            // Only process GUID-named entries at root level
+            if (!Guid.TryParse(dirName, out _))
+                continue;
+            ProcessFolder(folder, null);
+        }
+
+        // --- Legacy fallback: branch subdirectories — {root}/{branch}/{...}/ ---
+        foreach (var branch in new[] { "release", "pre-release" })
         {
             var branchDir = Path.Combine(root, branch);
             if (!Directory.Exists(branchDir)) continue;
-
             try
             {
-                var folders = Directory.GetDirectories(branchDir);
-                foreach (var folder in folders)
-                {
-                    var dirName = Path.GetFileName(folder);
-                    
-                    // First try to load meta.json to get version and ID
-                    string? customName = null;
-                    string instanceId = "";
-                    int version = -1;
-                    bool isLatest = false;
-                    var metaPath = Path.Combine(folder, "meta.json");
-                    
-                    if (File.Exists(metaPath))
-                    {
-                        try
-                        {
-                            var json = File.ReadAllText(metaPath);
-                            var meta = JsonSerializer.Deserialize<InstanceMeta>(json, JsonOptions);
-                            if (meta != null)
-                            {
-                                instanceId = meta.Id ?? "";
-                                customName = meta.Name;
-                                version = meta.Version;
-                                isLatest = meta.IsLatest;
-                            }
-                        }
-                        catch { }
-                    }
-                    
-                    // If no meta.json, try to parse folder name
-                    if (version < 0)
-                    {
-                        if (string.Equals(dirName, "latest", StringComparison.OrdinalIgnoreCase))
-                        {
-                            version = 0;
-                            isLatest = true;
-                        }
-                        else if (int.TryParse(dirName, out var parsedVersion))
-                        {
-                            version = parsedVersion;
-                        }
-                        else if (Guid.TryParse(dirName, out _))
-                        {
-                            // GUID folder without meta.json - skip (shouldn't happen normally)
-                            Logger.Warning("InstanceService", $"GUID folder without meta.json: {folder}");
-                            continue;
-                        }
-                        else
-                        {
-                            // Unknown folder format, skip
-                            continue;
-                        }
-                    }
-
-                    var userDataPath = Path.Combine(folder, "UserData");
-                    bool hasUserData = Directory.Exists(userDataPath);
-                    long size = 0;
-                    if (hasUserData)
-                    {
-                        try
-                        {
-                            size = new DirectoryInfo(userDataPath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
-                        }
-                        catch { }
-                    }
-
-                    long totalSize = 0;
-                    try
-                    {
-                        totalSize = new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
-                    }
-                    catch { }
-
-                    // Fallback: try legacy metadata.json if no meta.json was found
-                    if (string.IsNullOrEmpty(instanceId))
-                    {
-                        var metadataPath = Path.Combine(folder, "metadata.json");
-                        if (File.Exists(metadataPath))
-                        {
-                            try
-                            {
-                                var json = File.ReadAllText(metadataPath);
-                                var metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
-                                metadata?.TryGetValue("customName", out customName);
-                            }
-                            catch { }
-                        }
-                    }
-                    
-                    // Generate ID if not found and persist it
-                    if (string.IsNullOrEmpty(instanceId))
-                    {
-                        // Do not materialize placeholder folders (e.g. accidental latest/UserData only)
-                        // as real instances unless game files are actually installed.
-                        if (!IsClientPresent(folder))
-                        {
-                            Logger.Debug("InstanceService", $"Skipping non-installed placeholder folder: {folder}");
-                            continue;
-                        }
-
-                        instanceId = Guid.NewGuid().ToString();
-                        // Persist the generated ID to meta.json
-                        try
-                        {
-                            var newMeta = new InstanceMeta
-                            {
-                                Id = instanceId,
-                                Name = customName ?? "",
-                                Branch = branch,
-                                Version = version,
-                                CreatedAt = DateTime.UtcNow,
-                                IsLatest = isLatest
-                            };
-                            var json = JsonSerializer.Serialize(newMeta, JsonOptions);
-                            File.WriteAllText(metaPath, json);
-                            Logger.Debug("InstanceService", $"Generated and persisted ID for {branch}/{version}: {instanceId}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Warning("InstanceService", $"Failed to persist generated ID: {ex.Message}");
-                        }
-                    }
-
-                    // Perform deep validation
-                    var validationResult = ValidateGameIntegrity(folder);
-
-                    results.Add(new InstalledInstance
-                    {
-                        Id = instanceId,
-                        Branch = branch,
-                        Version = version,
-                        Path = folder,
-                        HasUserData = hasUserData,
-                        UserDataSize = size,
-                        TotalSize = totalSize,
-                        IsValid = validationResult.Status == InstanceValidationStatus.Valid,
-                        ValidationStatus = validationResult.Status,
-                        ValidationDetails = validationResult.Details,
-                        CustomName = customName
-                    });
-                }
+                foreach (var folder in Directory.GetDirectories(branchDir))
+                    ProcessFolder(folder, branch);
             }
             catch (Exception ex)
             {
@@ -1694,19 +1798,10 @@ public class InstanceService : IInstanceService
         // For non-latest instances, we allow multiple instances of the same version
         // Each will have a unique ID and folder
 
-        // For "latest" instances, use the standard latest path
+        // All instances (including latest) use the flat structure: {root}/{instanceId}
         string instancePath;
         string instanceId = Guid.NewGuid().ToString();
-        
-        if (isLatest)
-        {
-            instancePath = GetLatestInstancePath(normalizedBranch);
-        }
-        else
-        {
-            // Create folder with ID as name (new structure)
-            instancePath = CreateInstanceDirectory(normalizedBranch, instanceId);
-        }
+        instancePath = CreateInstanceDirectory(normalizedBranch, instanceId);
 
         // Check if meta already exists at path (edge case)
         var pathMeta = GetInstanceMeta(instancePath);
@@ -1730,21 +1825,18 @@ public class InstanceService : IInstanceService
         // Save to disk
         SaveInstanceMeta(instancePath, meta);
 
-        // Also add to Config.Instances for fallback
-        var config = GetConfig();
-        config.Instances ??= new List<InstanceInfo>();
-        
-        var existingInfo = config.Instances.FirstOrDefault(i => i.Id == meta.Id);
-        if (existingInfo == null)
+        // Also add to instances.json cache
+        var cachedInstances = LoadInstanceCache();
+        if (!cachedInstances.Any(i => i.Id == meta.Id))
         {
-            config.Instances.Add(new InstanceInfo
+            cachedInstances.Add(new InstanceInfo
             {
                 Id = meta.Id,
                 Name = meta.Name,
                 Branch = meta.Branch,
                 Version = meta.Version
             });
-            SaveConfig(config);
+            SaveInstanceCache(cachedInstances);
         }
 
         Logger.Info("InstanceService", $"Created instance meta: {meta.Id} ({meta.Name})");
@@ -1787,7 +1879,6 @@ public class InstanceService : IInstanceService
     public void SetSelectedInstance(string instanceId)
     {
         var config = GetConfig();
-        config.Instances ??= new List<InstanceInfo>();
 
         var selected = FindInstanceById(instanceId);
         if (selected == null)
@@ -1812,17 +1903,14 @@ public class InstanceService : IInstanceService
     /// <inheritdoc/>
     public InstanceInfo? FindInstanceById(string instanceId)
     {
-        var config = GetConfig();
-        config.Instances ??= new List<InstanceInfo>();
-        
-        // First check Config.Instances
-        var info = config.Instances.FirstOrDefault(i => i.Id == instanceId);
+        // First check cached list
+        var info = LoadInstanceCache().FirstOrDefault(i => i.Id == instanceId);
         if (info != null)
             return info;
 
-        // If not in config, scan disk
+        // If not in cache, scan disk and rebuild
         SyncInstancesWithConfig();
-        return config.Instances.FirstOrDefault(i => i.Id == instanceId);
+        return LoadInstanceCache().FirstOrDefault(i => i.Id == instanceId);
     }
 
     /// <inheritdoc/>
@@ -1832,49 +1920,69 @@ public class InstanceService : IInstanceService
         config.Instances ??= new List<InstanceInfo>();
         var discoveredById = new Dictionary<string, InstanceInfo>(StringComparer.OrdinalIgnoreCase);
 
+        void ProcessInstanceDir(string instanceDir)
+        {
+            var meta = GetInstanceMeta(instanceDir);
+            if (meta == null) return;
+
+            if (string.IsNullOrWhiteSpace(meta.Id))
+            {
+                meta.Id = Guid.NewGuid().ToString();
+                SaveInstanceMeta(instanceDir, meta);
+                Logger.Warning("InstanceService", $"Recovered empty instance ID at {instanceDir}: generated {meta.Id}");
+            }
+
+            if (discoveredById.ContainsKey(meta.Id))
+            {
+                Logger.Warning("InstanceService", $"Duplicate instance ID detected during sync: {meta.Id}. Keeping first entry and skipping {instanceDir}");
+                return;
+            }
+
+            discoveredById[meta.Id] = new InstanceInfo
+            {
+                Id = meta.Id,
+                Name = meta.Name,
+                Branch = meta.Branch,
+                Version = meta.Version
+            };
+        }
+
         foreach (var root in GetInstanceRootsIncludingLegacy())
         {
             if (!Directory.Exists(root)) continue;
 
+            // Primary: flat structure — {root}/{guid}/
+            foreach (var instanceDir in Directory.GetDirectories(root))
+            {
+                var dirName = Path.GetFileName(instanceDir);
+                // Skip legacy branch subdirectories — handled below
+                if (dirName.Equals("release", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!Guid.TryParse(dirName, out _))
+                    continue;
+                ProcessInstanceDir(instanceDir);
+            }
+
+            // Legacy fallback: branch subdirectories — {root}/{branch}/{guid}/
             foreach (var branchDir in Directory.GetDirectories(root))
             {
                 var branchName = Path.GetFileName(branchDir);
+                if (!branchName.Equals("release", StringComparison.OrdinalIgnoreCase) &&
+                    !branchName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 foreach (var instanceDir in Directory.GetDirectories(branchDir))
-                {
-                    var meta = GetInstanceMeta(instanceDir);
-                    if (meta == null) continue;
-
-                    if (string.IsNullOrWhiteSpace(meta.Id))
-                    {
-                        meta.Id = Guid.NewGuid().ToString();
-                        SaveInstanceMeta(instanceDir, meta);
-                        Logger.Warning("InstanceService", $"Recovered empty instance ID at {instanceDir}: generated {meta.Id}");
-                    }
-
-                    if (discoveredById.ContainsKey(meta.Id))
-                    {
-                        Logger.Warning("InstanceService", $"Duplicate instance ID detected during sync: {meta.Id}. Keeping first entry and skipping {instanceDir}");
-                        continue;
-                    }
-
-                    discoveredById[meta.Id] = new InstanceInfo
-                    {
-                        Id = meta.Id,
-                        Name = meta.Name,
-                        Branch = meta.Branch,
-                        Version = meta.Version
-                    };
-                }
+                    ProcessInstanceDir(instanceDir);
             }
         }
 
-        config.Instances = discoveredById.Values
+        var synced = discoveredById.Values
             .OrderBy(i => i.Branch)
             .ThenByDescending(i => i.Version)
             .ToList();
-        
-        SaveConfig(config);
-        Logger.Debug("InstanceService", $"Synced {config.Instances.Count} instances with config");
+
+        SaveInstanceCache(synced);
+        Logger.Debug("InstanceService", $"Synced {synced.Count} instances with config");
     }
 
     /// <summary>
@@ -1930,21 +2038,30 @@ public class InstanceService : IInstanceService
         if (string.IsNullOrEmpty(instanceId))
             return null;
 
-        // Search in all branch directories for the instance with this ID
         var root = GetInstanceRoot();
         if (!Directory.Exists(root))
             return null;
 
+        // Primary: flat structure — {root}/{instanceId}
+        var flatPath = Path.Combine(root, instanceId);
+        if (Directory.Exists(flatPath))
+            return flatPath;
+
+        // Legacy fallback: branch subdirectories — {root}/{branch}/{instanceId or version-name}
         foreach (var branchDir in Directory.GetDirectories(root))
         {
+            var branchName = Path.GetFileName(branchDir);
+            // Only descend into known branch directories to avoid scanning GUID siblings
+            if (!branchName.Equals("release", StringComparison.OrdinalIgnoreCase) &&
+                !branchName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             foreach (var instanceDir in Directory.GetDirectories(branchDir))
             {
-                // Check if folder name is the ID (new structure)
                 var folderName = Path.GetFileName(instanceDir);
                 if (folderName == instanceId)
                     return instanceDir;
 
-                // Check meta.json for ID (compatibility with version-named folders)
                 var meta = GetInstanceMeta(instanceDir);
                 if (meta?.Id == instanceId)
                     return instanceDir;
@@ -1967,7 +2084,32 @@ public class InstanceService : IInstanceService
         if (info != null)
             return info;
 
-        // If not found, scan disk
+        // Check cache first before scanning disk
+        var cached = LoadInstanceCache();
+        var cachedMatch = cached.FirstOrDefault(i =>
+            i.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) && i.Version == version);
+        if (cachedMatch != null)
+            return cachedMatch;
+
+        // If not in cache, scan disk — primary: flat structure {root}/{guid}/
+        var root = GetInstanceRoot();
+        if (Directory.Exists(root))
+        {
+            foreach (var instanceDir in Directory.GetDirectories(root))
+            {
+                var dirName = Path.GetFileName(instanceDir);
+                if (dirName.Equals("release", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("pre-release", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!Guid.TryParse(dirName, out _))
+                    continue;
+                var meta = GetInstanceMeta(instanceDir);
+                if (meta != null && meta.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) && meta.Version == version)
+                    return new InstanceInfo { Id = meta.Id, Name = meta.Name, Branch = meta.Branch, Version = meta.Version };
+            }
+        }
+
+        // Legacy fallback: branch subdirectory — {root}/{branch}/{...}/
         var branchPath = GetBranchPath(normalizedBranch);
         if (!Directory.Exists(branchPath))
             return null;
@@ -1976,15 +2118,7 @@ public class InstanceService : IInstanceService
         {
             var meta = GetInstanceMeta(instanceDir);
             if (meta != null && meta.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) && meta.Version == version)
-            {
-                return new InstanceInfo
-                {
-                    Id = meta.Id,
-                    Name = meta.Name,
-                    Branch = meta.Branch,
-                    Version = meta.Version
-                };
-            }
+                return new InstanceInfo { Id = meta.Id, Name = meta.Name, Branch = meta.Branch, Version = meta.Version };
         }
 
         return null;
@@ -1993,8 +2127,9 @@ public class InstanceService : IInstanceService
     /// <inheritdoc/>
     public string CreateInstanceDirectory(string branch, string instanceId)
     {
-        var normalizedBranch = NormalizeVersionType(branch);
-        var path = Path.Combine(GetInstanceRoot(), normalizedBranch, instanceId);
+        // Branch is retained as a parameter for callers that pass it for metadata purposes,
+        // but the folder is created flat at {InstanceRoot}/{instanceId} — no branch subdir.
+        var path = Path.Combine(GetInstanceRoot(), instanceId);
         Directory.CreateDirectory(path);
         return path;
     }
@@ -2157,6 +2292,84 @@ public class InstanceService : IInstanceService
         }
     }
 
+    /// <inheritdoc/>
+    public void MigrateBranchSubdirectoriesToFlat()
+    {
+        try
+        {
+            Logger.Info("Migrate", "Starting branch-subdirectory → flat instance migration...");
+            var root = GetInstanceRoot();
+            if (!Directory.Exists(root))
+            {
+                Logger.Info("Migrate", "No instance root directory found, skipping flat migration");
+                return;
+            }
+
+            int migratedCount = 0;
+
+            foreach (var branch in new[] { "release", "pre-release" })
+            {
+                var branchDir = Path.Combine(root, branch);
+                if (!Directory.Exists(branchDir)) continue;
+
+                foreach (var instanceDir in Directory.GetDirectories(branchDir))
+                {
+                    var folderName = Path.GetFileName(instanceDir);
+
+                    // Only migrate GUID-named folders (version-to-ID migration must run first)
+                    if (!Guid.TryParse(folderName, out _))
+                    {
+                        Logger.Warning("Migrate", $"Skipping non-GUID folder in branch dir: {instanceDir}");
+                        continue;
+                    }
+
+                    var target = Path.Combine(root, folderName);
+                    if (Directory.Exists(target))
+                    {
+                        Logger.Debug("Migrate", $"Flat target already exists: {target}, skipping {instanceDir}");
+                        continue;
+                    }
+
+                    try
+                    {
+                        Directory.Move(instanceDir, target);
+                        migratedCount++;
+                        Logger.Success("Migrate", $"Flattened {branch}/{folderName} → {folderName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Migrate", $"Failed to flatten {instanceDir}: {ex.Message}");
+                    }
+                }
+
+                // Remove the branch directory if it is now empty
+                try
+                {
+                    if (Directory.Exists(branchDir) && !Directory.EnumerateFileSystemEntries(branchDir).Any())
+                    {
+                        Directory.Delete(branchDir);
+                        Logger.Info("Migrate", $"Removed empty branch directory: {branchDir}");
+                    }
+                }
+                catch { /* non-critical */ }
+            }
+
+            if (migratedCount > 0)
+            {
+                Logger.Success("Migrate", $"Flattened {migratedCount} instance(s) into {root}");
+                SyncInstancesWithConfig();
+            }
+            else
+            {
+                Logger.Info("Migrate", "No branch-subdirectory instances found to flatten");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Migrate", $"Failed to flatten branch subdirectories: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Changes the version/branch of an existing instance.
     /// For upgrades within the same branch: preserves game files and sets up for patching.
@@ -2239,13 +2452,14 @@ public class InstanceService : IInstanceService
                 SaveInstanceMeta(instancePath, meta);
             }
 
-            // Update Config.Instances entry as well
-            var config = GetConfig();
-            var configInstance = config.Instances?.FirstOrDefault(i => i.Id == instanceId);
-            if (configInstance != null)
+            // Update instances.json cache entry
+            var cachedInstances = LoadInstanceCache();
+            var cachedEntry = cachedInstances.FirstOrDefault(i => i.Id == instanceId);
+            if (cachedEntry != null)
             {
-                configInstance.Branch = normalizedBranch;
-                configInstance.Version = version;
+                cachedEntry.Branch = normalizedBranch;
+                cachedEntry.Version = version;
+                SaveInstanceCache(cachedInstances);
             }
 
             var mode = canUsePatch ? "patch" : "full-download";

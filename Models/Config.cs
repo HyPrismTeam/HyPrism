@@ -14,12 +14,26 @@ public class Config
     /// Empty string means no instance selected (will prompt to create one).
     /// </summary>
     public string SelectedInstanceId { get; set; } = "";
+
+    /// <summary>
+    /// ID of the currently active profile.
+    /// Empty string means no profile selected.
+    /// </summary>
+    public string SelectedProfileId { get; set; } = "";
+
+    /// <summary>
+    /// [DEPRECATED] Use SelectedProfileId instead.
+    /// Index-based active profile selection. Kept for backwards compatibility during migration.
+    /// </summary>
+    [Obsolete("Use SelectedProfileId instead")]
+    public int ActiveProfileIndex { get; set; } = -1;
     
     /// <summary>
-    /// List of known instances for quick lookup and fallback.
-    /// Synced with meta.json files in instance folders.
+    /// [DEPRECATED] Instance cache moved to Instances/instances.json.
+    /// Kept for reading old configs during migration only.
     /// </summary>
-    public List<InstanceInfo> Instances { get; set; } = new();
+    [Obsolete("Instance cache is now stored in Instances/instances.json")]
+    public List<InstanceInfo>? Instances { get; set; }
     
     /// <summary>
     /// [DEPRECATED] Use SelectedInstanceId instead.
@@ -132,15 +146,12 @@ public class Config
     public bool ShowAlphaMods { get; set; } = false;
     
     /// <summary>
-    /// List of saved profiles (UUID, name pairs).
+    /// [DEPRECATED] Profile list moved to Profiles/profiles.json.
+    /// Kept for reading old configs during migration only.
     /// </summary>
-    public List<Profile> Profiles { get; set; } = new();
-    
-    /// <summary>
-    /// Index of the currently active profile. -1 means no profile selected (use UUID/Nick directly).
-    /// </summary>
-    public int ActiveProfileIndex { get; set; } = -1;
-    
+    [Obsolete("Profile list is now stored in Profiles/profiles.json")]
+    public List<Profile>? Profiles { get; set; }
+
     /// <summary>
     /// Whether the user has completed the initial onboarding flow.
     /// </summary>

@@ -23,8 +23,8 @@ namespace HyPrism.Services.Core.App;
 /// </remarks>
 public class UpdateService : IUpdateService
 {
-    private const string GitHubApiUrl = "https://api.github.com/repos/HyPrismTeam/HyPrism/releases";
-    private const string ReleasesPageUrl = "https://github.com/HyPrismTeam/HyPrism/releases/latest";
+    private const string GitHubApiUrl = "https://api.github.com/repos/hyprismteam/HyPrism/releases";
+    private const string ReleasesPageUrl = "https://github.com/hyprismteam/HyPrism/releases/latest";
     
     private static readonly Lazy<string> _launcherVersion = new(() =>
     {
@@ -175,7 +175,7 @@ public class UpdateService : IUpdateService
     #region Public API
 
     /// <summary>
-    /// Возвращает текущую версию лаунчера.
+    /// Returns the current launcher version string.
     /// </summary>
     public string GetLauncherVersion() => _launcherVersion.Value;
 
@@ -185,14 +185,15 @@ public class UpdateService : IUpdateService
     public static string GetCurrentVersion() => _launcherVersion.Value;
 
     /// <summary>
-    /// Возвращает текущий канал обновлений (release/beta).
+    /// Returns the active update channel for the launcher (<c>"release"</c> or <c>"beta"</c>).
+    /// Falls back to <c>"release"</c> when no channel is configured.
     /// </summary>
     public string GetLauncherBranch() => 
         string.IsNullOrWhiteSpace(_config.LauncherBranch) ? "release" : _config.LauncherBranch;
 
     /// <summary>
-    /// Проверяет наличие обновлений лаунчера на GitHub.
-    /// При наличии вызывает событие LauncherUpdateAvailable.
+    /// Checks GitHub for a newer launcher release and raises <c>LauncherUpdateAvailable</c>
+    /// if one is found. Respects the configured update channel (release vs. beta).
     /// </summary>
     public async Task CheckForLauncherUpdatesAsync()
     {
@@ -434,8 +435,11 @@ public class UpdateService : IUpdateService
     }
 
     /// <summary>
-    /// Принудительно сбрасывает версию latest instance для триггера обновления игры.
+    /// Forces a reset of the stored latest instance version for the given branch,
+    /// triggering a game update check on next launch.
     /// </summary>
+    /// <param name="branch">The branch whose latest version entry should be reset (e.g. <c>"release"</c>).</param>
+    /// <returns><c>true</c> if the reset succeeded; <c>false</c> if no versions are available for the branch.</returns>
     public async Task<bool> ForceUpdateLatestAsync(string branch)
     {
         try
