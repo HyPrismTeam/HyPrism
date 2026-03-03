@@ -78,11 +78,6 @@ public interface IInstanceService
     void SaveLatestInfo(string branch, int version);
 
     /// <summary>
-    /// Migrates data from legacy installation formats to the current structure.
-    /// </summary>
-    void MigrateLegacyData();
-
-    /// <summary>
     /// Checks if the game client executable is present at the specified path.
     /// </summary>
     /// <param name="versionPath">The path to the game version directory.</param>
@@ -218,19 +213,6 @@ public interface IInstanceService
     /// <param name="version">The version number.</param>
     /// <returns>The instance info, or null if not found.</returns>
     InstanceInfo? FindInstanceByBranchAndVersion(string branch, int version);
-
-    /// <summary>
-    /// Migrates instance folders from version-based naming (e.g., release/5) to ID-based naming (e.g., release/{guid}).
-    /// Should be called during startup after MigrateLegacyData.
-    /// </summary>
-    void MigrateVersionFoldersToIdFolders();
-
-    /// <summary>
-    /// Migrates instance folders from the branch-subdirectory layout ({root}/{branch}/{guid})
-    /// to the flat layout ({root}/{guid}). Empty branch directories are removed afterwards.
-    /// Should be called during startup after MigrateVersionFoldersToIdFolders.
-    /// </summary>
-    void MigrateBranchSubdirectoriesToFlat();
 
     /// <summary>
     /// Creates a new instance directory with the given ID and returns the path.

@@ -83,6 +83,13 @@ public static class Bootstrapper
             services.AddSingleton<IInstanceService>(sp => sp.GetRequiredService<InstanceService>());
 
             services.AddSingleton(sp =>
+                new InstanceMigrationService(
+                    sp.GetRequiredService<AppPathConfiguration>(),
+                    sp.GetRequiredService<IConfigService>(),
+                    sp.GetRequiredService<IInstanceService>()));
+            services.AddSingleton<IInstanceMigrationService>(sp => sp.GetRequiredService<InstanceMigrationService>());
+
+            services.AddSingleton(sp =>
                 new AvatarService(
                     sp.GetRequiredService<IInstanceService>(),
                     sp.GetRequiredService<AppPathConfiguration>().AppDir));
@@ -161,7 +168,8 @@ public static class Bootstrapper
                     sp.GetRequiredService<HttpClient>(),
                     sp.GetRequiredService<IHytaleAuthService>(),
                     sp.GetRequiredService<IGpuDetectionService>(),
-                    sp.GetRequiredService<AppPathConfiguration>()));
+                    sp.GetRequiredService<AppPathConfiguration>(),
+                    sp.GetRequiredService<IProfileService>()));
             services.AddSingleton<IGameLauncher>(sp => sp.GetRequiredService<GameLauncher>());
 
             services.AddSingleton(sp =>
@@ -187,7 +195,8 @@ public static class Bootstrapper
                 new SkinService(
                     sp.GetRequiredService<AppPathConfiguration>(),
                     sp.GetRequiredService<IConfigService>(),
-                    sp.GetRequiredService<IInstanceService>()));
+                    sp.GetRequiredService<IInstanceService>(),
+                    sp.GetRequiredService<IProfileService>()));
             services.AddSingleton<ISkinService>(sp => sp.GetRequiredService<SkinService>());
 
             services.AddSingleton(sp =>
@@ -228,7 +237,8 @@ public static class Bootstrapper
                     sp.GetRequiredService<AppPathConfiguration>().AppDir,
                     sp.GetRequiredService<HttpClient>(),
                     sp.GetRequiredService<HytaleAuthService>(),
-                    sp.GetRequiredService<IConfigService>()));
+                    sp.GetRequiredService<IConfigService>(),
+                    sp.GetRequiredService<IProfileService>()));
 
             // Mirror sources are loaded from JSON meta files by MirrorLoaderService
             // (see VersionService registration above)

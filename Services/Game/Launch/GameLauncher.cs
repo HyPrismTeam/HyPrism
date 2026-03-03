@@ -40,6 +40,7 @@ public class GameLauncher : IGameLauncher
     private readonly HttpClient _httpClient;
     private readonly IHytaleAuthService _hytaleAuthService;
     private readonly IGpuDetectionService _gpuDetectionService;
+    private readonly IProfileService _profileService;
     private readonly string _appDir;
     
     private Config _config => _configService.Configuration;
@@ -83,7 +84,8 @@ public class GameLauncher : IGameLauncher
         HttpClient httpClient,
         IHytaleAuthService hytaleAuthService,
         IGpuDetectionService gpuDetectionService,
-        AppPathConfiguration appPath)
+        AppPathConfiguration appPath,
+        IProfileService profileService)
     {
         _configService = configService;
         _launchService = launchService;
@@ -98,6 +100,7 @@ public class GameLauncher : IGameLauncher
         _hytaleAuthService = hytaleAuthService;
         _gpuDetectionService = gpuDetectionService;
         _appDir = appPath.AppDir;
+        _profileService = profileService;
         _gameProcessService.ProcessExited += OnGameProcessExited;
     }
 
@@ -131,7 +134,7 @@ public class GameLauncher : IGameLauncher
 
         // Validate profile/server compatibility before proceeding
         string sessionUuid = _userIdentityService.GetUuidForUser(_config.Nick);
-        var currentProfile = _config.Profiles?.FirstOrDefault(p => p.UUID == sessionUuid);
+        var currentProfile = _profileService.GetProfiles().FirstOrDefault(p => p.UUID == sessionUuid);
         bool isOfficialProfile = currentProfile?.IsOfficial == true;
 
         if (!isOfficialProfile && IsOfficialDomain(_config.AuthDomain) && _config.OnlineMode)
@@ -260,7 +263,7 @@ public class GameLauncher : IGameLauncher
     private bool IsOfficialServerMode()
     {
         var currentUuid = _userIdentityService.GetUuidForUser(_config.Nick);
-        var currentProfile = _config.Profiles?.FirstOrDefault(p => p.UUID == currentUuid);
+        var currentProfile = _profileService.GetProfiles().FirstOrDefault(p => p.UUID == currentUuid);
         return currentProfile?.IsOfficial == true;
     }
 
@@ -539,7 +542,7 @@ public class GameLauncher : IGameLauncher
         string? authPlayerName = null;
 
         // Check if the active profile is an official Hytale account
-        var currentProfile = _config.Profiles?.FirstOrDefault(p => p.UUID == sessionUuid);
+        var currentProfile = _profileService.GetProfiles().FirstOrDefault(p => p.UUID == sessionUuid);
         bool isOfficialProfile = currentProfile?.IsOfficial == true;
 
         if (isOfficialProfile)
@@ -720,7 +723,7 @@ public class GameLauncher : IGameLauncher
 
     private void RestoreProfileSkinData(string sessionUuid, string userDataDir)
     {
-        var currentProfile = _config.Profiles?.FirstOrDefault(p => p.UUID == sessionUuid);
+        var currentProfile = _profileService.GetProfiles().FirstOrDefault(p => p.UUID == sessionUuid);
         if (currentProfile == null) return;
 
         _skinService.RestoreProfileSkinData(currentProfile);

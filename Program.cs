@@ -145,11 +145,11 @@ class Program
         var ipcService = services.GetRequiredService<IpcService>();
         ipcService.RegisterAll();
 
-        // Run instance migrations
-        var instanceService = services.GetRequiredService<IInstanceService>();
-        instanceService.MigrateLegacyData();
-        instanceService.MigrateVersionFoldersToIdFolders();
-        instanceService.MigrateBranchSubdirectoriesToFlat();
+        // Run instance migrations (delegated to the dedicated migration service)
+        var migrationService = services.GetRequiredService<IInstanceMigrationService>();
+        migrationService.MigrateLegacyData();
+        migrationService.MigrateVersionFoldersToIdFolders();
+        migrationService.MigrateBranchSubdirectoriesToFlat();
 
         // Repair legacy profile mods symlink/junction if present and ensure
         // mods are stored in instance-local UserData/Mods.

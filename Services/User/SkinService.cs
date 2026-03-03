@@ -24,6 +24,7 @@ public class SkinService : ISkinService
 
     private readonly IConfigService _configService;
     private readonly IInstanceService _instanceService;
+    private readonly IProfileService _profileService;
     private readonly string _appDir;
 
     /// <summary>
@@ -35,11 +36,13 @@ public class SkinService : ISkinService
     public SkinService(
         AppPathConfiguration appPath,
         IConfigService configService,
-        IInstanceService instanceService)
+        IInstanceService instanceService,
+        IProfileService profileService)
     {
         _appDir = appPath.AppDir;
         _configService = configService;
         _instanceService = instanceService;
+        _profileService = profileService;
     }
 
     #region Skin Protection
@@ -235,7 +238,7 @@ public class SkinService : ISkinService
             
             // Get all existing UUIDs from Profiles
             var knownUuids = new HashSet<string>(
-                (config.Profiles?.Select(p => p.UUID) ?? Enumerable.Empty<string>())
+                _profileService.GetProfiles().Select(p => p.UUID)
                     .Concat(new[] { config.UUID ?? "" })
                     .Where(u => !string.IsNullOrEmpty(u)),
                 StringComparer.OrdinalIgnoreCase
@@ -307,7 +310,7 @@ public class SkinService : ISkinService
             
             // Get all existing UUIDs from Profiles
             var knownUuids = new HashSet<string>(
-                (config.Profiles?.Select(p => p.UUID) ?? Enumerable.Empty<string>())
+                _profileService.GetProfiles().Select(p => p.UUID)
                     .Concat(new[] { config.UUID ?? "" })
                     .Where(u => !string.IsNullOrEmpty(u)),
                 StringComparer.OrdinalIgnoreCase
@@ -447,7 +450,7 @@ public class SkinService : ISkinService
         {
             var config = _configService.Configuration;
             // Find the profile by UUID
-            var profile = config.Profiles?.FirstOrDefault(p => p.UUID == uuid);
+            var profile = _profileService.GetProfiles().FirstOrDefault(p => p.UUID == uuid);
             if (profile == null)
             {
                 return;
