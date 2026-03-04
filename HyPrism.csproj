@@ -69,7 +69,7 @@
 
   <!-- Electron.NET + Core packages -->
   <ItemGroup>
-    <PackageReference Include="ElectronNET.Core" Version="0.4.0" />
+    <PackageReference Include="ElectronNET.Core" Version="0.4.1" />
     <PackageReference Include="DiscordRichPresence" Version="1.143.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.5-beta1" />
@@ -86,8 +86,10 @@
   </ItemGroup>
 
   <!-- Legacy source retained in tree for reference only; excluded from build -->
+  <!-- Also exclude the IpcGen tool — it's a separate project with its own csproj -->
   <ItemGroup>
     <Compile Remove="Services/Game/Sources/MirrorVersionSource.cs" />
+    <Compile Remove="HyPrism.IpcGen/**/*.cs" />
   </ItemGroup>
 
   <!-- ElectronNET custom startup hook: IPv6 loopback socket bridge (VPN compatibility) -->
@@ -109,9 +111,9 @@
     <Exec Command="npm ci --prefer-offline" WorkingDirectory="Frontend" />
   </Target>
 
-  <Target Name="GenerateIpcTs" BeforeTargets="BuildFrontend" DependsOnTargets="NpmInstall" Inputs="Services/Core/IpcService.cs" Outputs="Frontend/src/lib/ipc.ts" Condition="Exists('Scripts/generate-ipc.mjs')">
-    <Message Importance="high" Text="→ Generating ipc.ts from IpcService.cs" />
-    <Exec Command="node Scripts/generate-ipc.mjs" />
+  <Target Name="GenerateIpcTs" BeforeTargets="BuildFrontend" DependsOnTargets="NpmInstall" Condition="Exists('HyPrism.IpcGen/HyPrism.IpcGen.csproj')">
+    <Message Importance="high" Text="→ Generating ipc.ts (Roslyn IpcGen)" />
+    <Exec Command="dotnet run --project HyPrism.IpcGen/HyPrism.IpcGen.csproj -- --project &quot;$(MSBuildProjectFullPath)&quot; --output &quot;$(MSBuildProjectDirectory)/Frontend/src/lib/ipc.ts&quot;" />
   </Target>
 
   <Target Name="BuildFrontend" BeforeTargets="Build" Inputs="Frontend/src/**/*;Frontend/index.html;Frontend/vite.config.ts;Frontend/tsconfig.json;Frontend/tsconfig.app.json" Outputs="wwwroot/index.html" Condition="Exists('Frontend/package.json')">
