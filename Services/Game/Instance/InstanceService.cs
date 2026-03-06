@@ -1352,7 +1352,6 @@ public class InstanceService : IInstanceService
     public void SyncInstancesWithConfig()
     {
         var config = GetConfig();
-        config.Instances ??= new List<InstanceInfo>();
         var discoveredById = new Dictionary<string, InstanceInfo>(StringComparer.OrdinalIgnoreCase);
 
         void ProcessInstanceDir(string instanceDir)
@@ -1511,13 +1510,14 @@ public class InstanceService : IInstanceService
     {
         var normalizedBranch = NormalizeVersionType(branch);
         var config = GetConfig();
-        config.Instances ??= new List<InstanceInfo>();
 
-        // First check Config.Instances
-        var info = config.Instances.FirstOrDefault(i => 
+        // Legacy fallback: some old config.json files still have Instances embedded.
+#pragma warning disable CS0618
+        var legacyInfo = config.Instances?.FirstOrDefault(i =>
             i.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) && i.Version == version);
-        if (info != null)
-            return info;
+#pragma warning restore CS0618
+        if (legacyInfo != null)
+            return legacyInfo;
 
         // Check cache first before scanning disk
         var cached = LoadInstanceCache();
