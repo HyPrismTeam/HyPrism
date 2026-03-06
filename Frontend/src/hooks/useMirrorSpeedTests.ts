@@ -1,16 +1,22 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ipc, MirrorInfo, MirrorSpeedTestResult } from '@/lib/ipc';
 
+/** Re-export of {@link MirrorSpeedTestResult} under a shorter alias for convenience. */
 export type { MirrorSpeedTestResult as MirrorSpeedResult };
 
+/**
+ * Per-mirror testing state: the last speed-test result and whether a test is currently running.
+ */
 interface MirrorState {
   result: MirrorSpeedTestResult | null;
   isTesting: boolean;
 }
 
 /**
- * Hook to manage dynamic mirror list and speed tests.
- * Loads mirrors from backend and supports add/remove/toggle operations.
+ * Manages the dynamic mirror list and per-mirror speed-test state.
+ * Supports adding, removing, toggling, and testing mirrors against the backend.
+ *
+ * @returns Mirror list, speed-test state, and management/test handlers.
  */
 export function useMirrorSpeedTests() {
   const [mirrors, setMirrors] = useState<MirrorInfo[]>([]);

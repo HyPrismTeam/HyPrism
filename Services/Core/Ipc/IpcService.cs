@@ -48,6 +48,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 {
     #region Launcher Update
 
+    /// <summary>Triggers an asynchronous check for available launcher updates.</summary>
     [IpcInvoke("hyprism:update:check")]
     public async Task<SuccessResult> CheckForUpdate()
     {
@@ -55,6 +56,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new SuccessResult(true);
     }
 
+    /// <summary>Downloads and installs the pending launcher update, then restarts the app.</summary>
     [IpcInvoke("hyprism:update:install", 300_000)]
     public async Task<bool> InstallUpdate()
     {
@@ -68,6 +70,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return ok;
     }
 
+    /// <summary>Subscribes the renderer to launcher-update-available push notifications.</summary>
     [IpcEvent("hyprism:update:available")]
     public void SubscribeUpdateAvailable(Action<LauncherUpdateInfo> emit)
     {
@@ -83,6 +86,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         };
     }
 
+    /// <summary>Subscribes the renderer to launcher update download progress events.</summary>
     [IpcEvent("hyprism:update:progress")]
     public void SubscribeUpdateProgress(Action<LauncherUpdateProgress> emit)
     {
@@ -102,6 +106,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Config
 
+    /// <summary>Returns the current application configuration snapshot needed by the renderer.</summary>
     [IpcInvoke("hyprism:config:get")]
     public AppConfig GetConfig()
     {
@@ -109,6 +114,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new AppConfig(config.Language, Services.GetRequiredService<AppPathConfiguration>().AppDir);
     }
 
+    /// <summary>Flushes the current in-memory configuration to disk.</summary>
     [IpcInvoke("hyprism:config:save")]
     public SuccessResult SaveConfig()
     {
@@ -120,26 +126,32 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Game Session
 
+    /// <summary>Starts the game download and/or launch sequence for the currently selected instance.</summary>
     [IpcSend("hyprism:game:launch")]
     public void LaunchGame(LaunchGameRequest? req)
         => _ = LaunchGameAsync(req);
 
+    /// <summary>Cancels an in-progress game download.</summary>
     [IpcSend("hyprism:game:cancel")]
     public void CancelGame()
         => Services.GetRequiredService<IGameSessionService>().CancelDownload();
 
+    /// <summary>Sends an exit signal to the running game process.</summary>
     [IpcInvoke("hyprism:game:stop")]
     public bool StopGame()
         => Services.GetRequiredService<IGameProcessService>().ExitGame();
 
+    /// <summary>Returns a list of all locally installed game instances with validation status.</summary>
     [IpcInvoke("hyprism:game:instances")]
     public List<InstalledInstance> GetInstances()
         => Services.GetRequiredService<IInstanceService>().GetInstalledInstances();
 
+    /// <summary>Returns whether the game process is currently running.</summary>
     [IpcInvoke("hyprism:game:isRunning")]
     public bool IsGameRunning()
         => Services.GetRequiredService<IGameProcessService>().CheckForRunningGame();
 
+    /// <summary>Returns the list of available game version numbers for the given branch.</summary>
     [IpcInvoke("hyprism:game:versions")]
     public async Task<List<int>> GetVersions(GetVersionsRequest? req)
     {
@@ -150,6 +162,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return await Services.GetRequiredService<IVersionService>().GetVersionListAsync(branch);
     }
 
+    /// <summary>Returns available game versions enriched with download-source metadata (official and mirror).</summary>
     [IpcInvoke("hyprism:game:versionsWithSources")]
     public async Task<VersionListResponse> GetVersionsWithSources(GetVersionsRequest? req)
     {
@@ -160,6 +173,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return await Services.GetRequiredService<IVersionService>().GetVersionListWithSourcesAsync(branch);
     }
 
+    /// <summary>Subscribes the renderer to real-time download/install progress updates.</summary>
     [IpcEvent("hyprism:game:progress")]
     public void SubscribeGameProgress(Action<ProgressUpdate> emit)
     {
@@ -170,6 +184,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         };
     }
 
+    /// <summary>Subscribes the renderer to game lifecycle state change events (e.g. running, stopped).</summary>
     [IpcEvent("hyprism:game:state")]
     public void SubscribeGameState(Action<GameState> emit)
     {
@@ -179,6 +194,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         };
     }
 
+    /// <summary>Subscribes the renderer to game error events (download failures, launch errors).</summary>
     [IpcEvent("hyprism:game:error")]
     public void SubscribeGameError(Action<GameError> emit)
     {
@@ -192,6 +208,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Instance Management
 
+    /// <summary>Creates a new game instance metadata entry and returns its info record.</summary>
     [IpcInvoke("hyprism:instance:create")]
     public InstanceInfo? CreateInstance(CreateInstanceRequest req)
     {
@@ -203,10 +220,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         };
     }
 
+    /// <summary>Deletes a game instance by ID, removing its directory and metadata.</summary>
     [IpcInvoke("hyprism:instance:delete")]
     public bool DeleteInstance(InstanceIdRequest req)
         => Services.GetRequiredService<IInstanceService>().DeleteGameById(req.InstanceId);
 
+    /// <summary>Sets the specified instance as the currently selected instance to launch.</summary>
     [IpcInvoke("hyprism:instance:select")]
     public bool SelectInstance(SelectInstanceRequest req)
     {
@@ -215,10 +234,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return true;
     }
 
+    /// <summary>Returns the currently selected instance info, or null if none is selected.</summary>
     [IpcInvoke("hyprism:instance:getSelected")]
     public InstanceInfo? GetSelectedInstance()
         => Services.GetRequiredService<IInstanceService>().GetSelectedInstance();
 
+    /// <summary>Returns a list of all known instances with lightweight info (name, branch, version, installed state).</summary>
     [IpcInvoke("hyprism:instance:list")]
     public List<InstanceInfo> ListInstances()
     {
@@ -234,6 +255,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         }).ToList();
     }
 
+    /// <summary>Sets a custom display name for the specified instance.</summary>
     [IpcInvoke("hyprism:instance:rename")]
     public bool RenameInstance(RenameInstanceRequest req)
     {
@@ -242,11 +264,13 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return true;
     }
 
+    /// <summary>Changes the target version (or branch) of a "latest" instance.</summary>
     [IpcInvoke("hyprism:instance:changeVersion")]
     public bool ChangeVersion(ChangeVersionRequest req)
         => Services.GetRequiredService<IInstanceService>()
             .ChangeInstanceVersion(req.InstanceId, req.Branch, req.Version);
 
+    /// <summary>Opens the instance directory in the system file manager.</summary>
     [IpcSend("hyprism:instance:openFolder")]
     public void OpenInstanceFolder(InstanceIdRequest req)
     {
@@ -255,6 +279,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             Services.GetRequiredService<IFileService>().OpenFolder(path);
     }
 
+    /// <summary>Opens the instance's UserData/Mods directory in the system file manager, creating it if needed.</summary>
     [IpcSend("hyprism:instance:openModsFolder")]
     public void OpenModsFolder(InstanceIdRequest req)
     {
@@ -266,18 +291,22 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         Services.GetRequiredService<IFileService>().OpenFolder(modsPath);
     }
 
+    /// <summary>Exports the specified instance as a ZIP archive and returns the path to the archive.</summary>
     [IpcInvoke("hyprism:instance:export", 300_000)]
     public async Task<string> ExportInstance(InstanceIdRequest req)
         => await ExportInstanceAsync(req.InstanceId);
 
+    /// <summary>Prompts the user to select an instance ZIP and imports it.</summary>
     [IpcInvoke("hyprism:instance:import", 300_000)]
     public async Task<bool> ImportInstance()
         => await ImportInstanceAsync();
 
+    /// <summary>Returns a list of save folders found inside the instance's UserData/Saves directory.</summary>
     [IpcInvoke("hyprism:instance:saves")]
     public List<SaveInfo> GetSaves(InstanceIdRequest req)
         => GetInstanceSaves(req.InstanceId);
 
+    /// <summary>Opens a specific save folder inside the instance in the system file manager.</summary>
     [IpcSend("hyprism:instance:openSaveFolder")]
     public void OpenSaveFolder(OpenSaveFolderRequest req)
     {
@@ -288,6 +317,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             Services.GetRequiredService<IFileService>().OpenFolder(savePath);
     }
 
+    /// <summary>Returns a <c>file://</c> URL to the instance icon image with a cache-busting query parameter.</summary>
     [IpcInvoke("hyprism:instance:getIcon")]
     public string? GetInstanceIcon(InstanceIdRequest req)
     {
@@ -301,6 +331,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return $"file://{found.Replace("\\", "/")}?v={bust}";
     }
 
+    /// <summary>Crops and saves a base64-encoded image as the instance icon (logo.png).</summary>
     [IpcInvoke("hyprism:instance:setIcon")]
     public async Task<bool> SetInstanceIcon(SetIconRequest req)
     {
@@ -328,6 +359,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region News
 
+    /// <summary>Fetches the latest 20 news items from the Hytale blog and launcher announcement feed.</summary>
     [IpcInvoke("hyprism:news:get")]
     public async Task<List<NewsItemResponse>> GetNews()
         => await Services.GetRequiredService<INewsService>().GetNewsAsync(count: 20);
@@ -336,6 +368,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Profiles
 
+    /// <summary>Returns the current active profile's nickname, UUID, and avatar preview.</summary>
     [IpcInvoke("hyprism:profile:get")]
     public ProfileSnapshot GetProfile()
     {
@@ -343,12 +376,14 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new ProfileSnapshot(svc.GetNick(), svc.GetUUID(), svc.GetAvatarPreview());
     }
 
+    /// <summary>Returns a list of all saved profiles (id, name, uuid, isOfficial).</summary>
     [IpcInvoke("hyprism:profile:list")]
     public List<IpcProfile> ListProfiles()
         => Services.GetRequiredService<IProfileManagementService>().GetProfiles()
             .Select(p => new IpcProfile(p.Id, p.Name, p.UUID, p.IsOfficial))
             .ToList();
 
+    /// <summary>Switches to the specified profile and reloads the Hytale auth session accordingly.</summary>
     [IpcInvoke("hyprism:profile:switch")]
     public SuccessResult SwitchProfile(SwitchProfileRequest req)
     {
@@ -358,14 +393,17 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new SuccessResult(ok);
     }
 
+    /// <summary>Updates the display name of the currently active profile.</summary>
     [IpcInvoke("hyprism:profile:setNick")]
     public SuccessResult SetNick(string nick)
         => new(Services.GetRequiredService<IProfileService>().SetNick(nick));
 
+    /// <summary>Updates the UUID of the currently active profile.</summary>
     [IpcInvoke("hyprism:profile:setUuid")]
     public SuccessResult SetUuid(string uuid)
         => new(Services.GetRequiredService<IProfileService>().SetUUID(uuid));
 
+    /// <summary>Creates a new profile with the given name and UUID, optionally marking it as an official Hytale account.</summary>
     [IpcInvoke("hyprism:profile:create")]
     public IpcProfile? CreateProfile(CreateProfileRequest req)
     {
@@ -379,18 +417,22 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new IpcProfile(profile.Id, profile.Name, profile.UUID, profile.IsOfficial);
     }
 
+    /// <summary>Deletes the profile with the specified ID.</summary>
     [IpcInvoke("hyprism:profile:delete")]
     public SuccessResult DeleteProfile(string id)
         => new(Services.GetRequiredService<IProfileManagementService>().DeleteProfile(id));
 
+    /// <summary>Returns the zero-based index of the currently active profile in the profile list.</summary>
     [IpcInvoke("hyprism:profile:activeIndex")]
     public int GetActiveProfileIndex()
         => Services.GetRequiredService<IProfileManagementService>().GetActiveProfileIndex();
 
+    /// <summary>Saves the current active profile state as a named profile entry.</summary>
     [IpcInvoke("hyprism:profile:save")]
     public SuccessResult SaveProfile()
         => new(Services.GetRequiredService<IProfileManagementService>().SaveCurrentAsProfile() != null);
 
+    /// <summary>Creates a copy of the specified profile (without copying its user data).</summary>
     [IpcInvoke("hyprism:profile:duplicate")]
     public IpcProfile? DuplicateProfile(string id)
     {
@@ -398,10 +440,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return p == null ? null : new IpcProfile(p.Id, p.Name, p.UUID, p.IsOfficial);
     }
 
+    /// <summary>Opens the current profile's data directory in the system file manager.</summary>
     [IpcSend("hyprism:profile:openFolder")]
     public void OpenProfileFolder()
         => Services.GetRequiredService<IProfileManagementService>().OpenCurrentProfileFolder();
 
+    /// <summary>Returns a base64-encoded avatar preview image for the given UUID.</summary>
     [IpcInvoke("hyprism:profile:avatarForUuid")]
     public string GetAvatarForUuid(string uuid)
         => Services.GetRequiredService<IProfileService>().GetAvatarPreviewForUUID(uuid) ?? "";
@@ -410,10 +454,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Hytale Auth
 
+    /// <summary>Returns the current Hytale account authentication status and linked profile info.</summary>
     [IpcInvoke("hyprism:auth:status")]
     public HytaleAuthStatus GetAuthStatus()
         => MapAuthStatus(Services.GetRequiredService<HytaleAuthService>().GetAuthStatus());
 
+    /// <summary>Opens the Hytale OAuth login flow and returns the resulting auth status.</summary>
     [IpcInvoke("hyprism:auth:login")]
     public async Task<HytaleAuthStatus> Login()
     {
@@ -437,6 +483,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         }
     }
 
+    /// <summary>Revokes the current Hytale session token and clears stored credentials.</summary>
     [IpcInvoke("hyprism:auth:logout")]
     public SuccessResult Logout()
     {
@@ -448,6 +495,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Settings
 
+    /// <summary>Returns a complete settings snapshot for the renderer (all launcher settings in one call).</summary>
     [IpcInvoke("hyprism:settings:get")]
     public SettingsSnapshot GetSettings()
     {
@@ -482,6 +530,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             UseDualAuth: s.GetUseDualAuth());
     }
 
+    /// <summary>Applies a partial settings update from the renderer and saves to disk; triggers update check if branch changed.</summary>
     [IpcInvoke("hyprism:settings:update")]
     public SuccessResult UpdateSettings(UpdateSettingsRequest req)
     {
@@ -498,16 +547,19 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new SuccessResult(true);
     }
 
+    /// <summary>Runs a speed test for the specified community mirror and returns the result.</summary>
     [IpcInvoke("hyprism:settings:testMirrorSpeed")]
     public async Task<MirrorSpeedTestResult> TestMirrorSpeed(TestMirrorSpeedRequest req)
         => await Services.GetRequiredService<IVersionService>()
             .TestMirrorSpeedAsync(req.MirrorId, req.ForceRefresh ?? false);
 
+    /// <summary>Runs a speed test for the official Hytale download servers and returns the result.</summary>
     [IpcInvoke("hyprism:settings:testOfficialSpeed")]
     public async Task<MirrorSpeedTestResult> TestOfficialSpeed(TestOfficialSpeedRequest? req)
         => await Services.GetRequiredService<IVersionService>()
             .TestOfficialSpeedAsync(req?.ForceRefresh ?? false);
 
+    /// <summary>Returns a summary of available download sources (official account state, enabled mirror count).</summary>
     [IpcInvoke("hyprism:settings:hasDownloadSources")]
     public DownloadSourcesSummary GetDownloadSources()
     {
@@ -515,6 +567,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new DownloadSourcesSummary(vs.HasDownloadSources(), vs.HasOfficialAccount, vs.EnabledMirrorCount);
     }
 
+    /// <summary>Returns the list of all configured mirrors with their metadata and hostname.</summary>
     [IpcInvoke("hyprism:settings:getMirrors")]
     public List<MirrorInfo> GetMirrors()
     {
@@ -524,6 +577,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             .ToList();
     }
 
+    /// <summary>Discovers a mirror from a URL, saves it to disk, and reloads mirror sources.</summary>
     [IpcInvoke("hyprism:settings:addMirror", 0)]
     public async Task<AddMirrorResult> AddMirror(AddMirrorRequest req)
     {
@@ -560,6 +614,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new AddMirrorResult(true, Mirror: mirrorDto);
     }
 
+    /// <summary>Deletes the mirror with the given ID from disk and reloads mirror sources.</summary>
     [IpcInvoke("hyprism:settings:deleteMirror")]
     public SuccessResult DeleteMirror(MirrorIdRequest req)
     {
@@ -571,6 +626,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new SuccessResult(deleted);
     }
 
+    /// <summary>Enables or disables the specified mirror and persists the change to disk.</summary>
     [IpcInvoke("hyprism:settings:toggleMirror")]
     public SuccessResult ToggleMirror(ToggleMirrorRequest req)
     {
@@ -584,14 +640,17 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new SuccessResult(true);
     }
 
+    /// <summary>Returns the absolute path to the launcher data directory.</summary>
     [IpcInvoke("hyprism:settings:launcherPath")]
     public string GetLauncherPath()
         => Services.GetRequiredService<AppPathConfiguration>().AppDir;
 
+    /// <summary>Returns the default path for game instances (AppDir/Instances).</summary>
     [IpcInvoke("hyprism:settings:defaultInstanceDir")]
     public string GetDefaultInstanceDir()
         => Path.Combine(Services.GetRequiredService<AppPathConfiguration>().AppDir, "Instances");
 
+    /// <summary>Changes the root directory for game instances, migrating existing data if needed.</summary>
     [IpcInvoke("hyprism:settings:setInstanceDir", 300_000)]
     public async Task<SetInstanceDirResult> SetInstanceDir(string path)
         => await SetInstanceDirAsync(path);
@@ -600,6 +659,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Network
 
+    /// <summary>Pings the configured auth server and returns latency and reachability info.</summary>
     [IpcInvoke("hyprism:network:pingAuthServer")]
     public async Task<AuthServerPingResult> PingAuthServer(PingAuthServerRequest? req)
         => await PingAuthServerAsync(req?.AuthDomain);
@@ -608,10 +668,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Localisation
 
+    /// <summary>Returns the BCP 47 language code currently active in the launcher.</summary>
     [IpcInvoke("hyprism:i18n:current")]
     public string GetCurrentLanguage()
         => Services.GetRequiredService<LocalizationService>().CurrentLanguage;
 
+    /// <summary>Sets the launcher UI language and persists the setting; returns the resolved language code.</summary>
     [IpcInvoke("hyprism:i18n:set")]
     public SetLanguageResult SetLanguage(string lang)
     {
@@ -622,6 +684,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         return new SetLanguageResult(ok, ok ? lang : l.CurrentLanguage);
     }
 
+    /// <summary>Returns the list of all supported UI languages with their display names.</summary>
     [IpcInvoke("hyprism:i18n:languages")]
     public List<LanguageInfo> GetLanguages()
         => LocalizationService.GetAvailableLanguages()
@@ -632,10 +695,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Window Controls
 
+    /// <summary>Minimizes the main browser window to the taskbar.</summary>
     [IpcSend("hyprism:window:minimize")]
     public void MinimizeWindow()
         => Electron.WindowManager.BrowserWindows.FirstOrDefault()?.Minimize();
 
+    /// <summary>Maximizes or restores (un-maximizes) the main browser window.</summary>
     [IpcSend("hyprism:window:maximize")]
     public async void MaximizeWindow()
     {
@@ -645,10 +710,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         else win.Maximize();
     }
 
+    /// <summary>Closes the main browser window.</summary>
     [IpcSend("hyprism:window:close")]
     public void CloseWindow()
         => Electron.WindowManager.BrowserWindows.FirstOrDefault()?.Close();
 
+    /// <summary>Exits the Electron process, causing the OS to restart the app if configured to do so.</summary>
     [IpcSend("hyprism:window:restart")]
     public void RestartApp()
     {
@@ -656,6 +723,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         catch { Electron.WindowManager.BrowserWindows.FirstOrDefault()?.Close(); }
     }
 
+    /// <summary>Opens an external URL in the system default browser.</summary>
     [IpcSend("hyprism:browser:open")]
     public void OpenBrowser(string url)
     {
@@ -667,6 +735,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Mods
 
+    /// <summary>Returns installed mods for the currently selected instance.</summary>
     [IpcInvoke("hyprism:mods:list")]
     public List<InstalledMod> ListMods()
     {
@@ -676,12 +745,14 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             : Services.GetRequiredService<IModService>().GetInstanceInstalledMods(path);
     }
 
+    /// <summary>Searches CurseForge for mods matching the query, with pagination and filtering.</summary>
     [IpcInvoke("hyprism:mods:search", 30_000)]
     public async Task<ModSearchResult> SearchMods(ModSearchRequest req)
         => await Services.GetRequiredService<IModService>().SearchModsAsync(
             req.Query, req.Page, req.PageSize,
             req.Categories.ToArray(), req.SortField, req.SortOrder);
 
+    /// <summary>Returns installed mods for the specified instance.</summary>
     [IpcInvoke("hyprism:mods:installed")]
     public List<InstalledMod> GetInstalledMods(ModInstalledRequest req)
     {
@@ -691,10 +762,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             : Services.GetRequiredService<IModService>().GetInstanceInstalledMods(path);
     }
 
+    /// <summary>Removes the specified mod from the instance's Mods directory.</summary>
     [IpcInvoke("hyprism:mods:uninstall")]
     public async Task<bool> UninstallMod(ModUninstallRequest req)
         => await UninstallModAsync(req.ModId, req.InstanceId);
 
+    /// <summary>Checks CurseForge for updates to all installed mods in the specified instance and returns updated entries.</summary>
     [IpcInvoke("hyprism:mods:checkUpdates", 30_000)]
     public async Task<List<InstalledMod>> CheckModUpdates(ModCheckUpdatesRequest req)
     {
@@ -704,6 +777,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
             : await Services.GetRequiredService<IModService>().CheckInstanceModUpdatesAsync(path);
     }
 
+    /// <summary>Downloads and installs a specific CurseForge mod file into the instance's Mods directory.</summary>
     [IpcInvoke("hyprism:mods:install", 300_000)]
     public async Task<bool> InstallMod(ModInstallRequest req)
     {
@@ -713,24 +787,29 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
                    .InstallModFileToInstanceAsync(req.ModId, req.FileId, path);
     }
 
+    /// <summary>Returns a paged list of files available for the specified CurseForge mod.</summary>
     [IpcInvoke("hyprism:mods:files")]
     public async Task<ModFilesResult> GetModFiles(ModFilesRequest req)
         => await Services.GetRequiredService<IModService>()
             .GetModFilesAsync(req.ModId, req.Page ?? 0, req.PageSize ?? 20);
 
+    /// <summary>Returns detailed information about the specified CurseForge mod.</summary>
     [IpcInvoke("hyprism:mods:info", 30_000)]
     public async Task<ModInfo?> GetModInfo(ModInfoRequest req)
         => await Services.GetRequiredService<IModService>().GetModAsync(req.ModId);
 
+    /// <summary>Returns the changelog text for the specified mod file.</summary>
     [IpcInvoke("hyprism:mods:changelog")]
     public async Task<string> GetModChangelog(ModChangelogRequest req)
         => await Services.GetRequiredService<IModService>()
                .GetModFileChangelogAsync(req.ModId, req.FileId) ?? "";
 
+    /// <summary>Returns all available CurseForge mod categories for Hytale.</summary>
     [IpcInvoke("hyprism:mods:categories")]
     public async Task<List<ModCategory>> GetModCategories()
         => await Services.GetRequiredService<IModService>().GetModCategoriesAsync();
 
+    /// <summary>Copies a local JAR/ZIP file into the instance's Mods directory.</summary>
     [IpcInvoke("hyprism:mods:installLocal")]
     public async Task<bool> InstallLocalMod(ModInstallLocalRequest req)
     {
@@ -739,6 +818,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
                await Services.GetRequiredService<IModService>().InstallLocalModFile(req.SourcePath, path);
     }
 
+    /// <summary>Decodes a base64-encoded mod file and installs it into the instance's Mods directory.</summary>
     [IpcInvoke("hyprism:mods:installBase64")]
     public async Task<bool> InstallModFromBase64(ModInstallBase64Request req)
     {
@@ -747,6 +827,7 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
                await Services.GetRequiredService<IModService>().InstallModFromBase64(req.FileName, req.Base64Content, path);
     }
 
+    /// <summary>Opens the instance's UserData/Mods directory in the system file manager.</summary>
     [IpcSend("hyprism:mods:openFolder")]
     public void OpenModsFolder(ModOpenFolderRequest req)
     {
@@ -757,14 +838,17 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
         Electron.Shell.OpenPathAsync(modsPath);
     }
 
+    /// <summary>Toggles a mod's enabled state by adding or removing the <c>.disabled</c> extension.</summary>
     [IpcInvoke("hyprism:mods:toggle")]
     public async Task<bool> ToggleMod(ModToggleRequest req)
         => await ToggleModAsync(req.ModId, req.InstanceId);
 
+    /// <summary>Exports the instance's mod list to a folder as JSON or individual JARs.</summary>
     [IpcInvoke("hyprism:mods:exportToFolder")]
     public async Task<string> ExportModsToFolder(ModExportRequest req)
         => await ExportModsAsync(req.InstanceId, req.ExportPath, req.ExportType ?? "modlist");
 
+    /// <summary>Imports a mod list JSON and installs all listed mods into the instance.</summary>
     [IpcInvoke("hyprism:mods:importList")]
     public async Task<int> ImportModList(ModImportListRequest req)
         => await ImportModListAsync(req.ListPath, null);
@@ -773,10 +857,12 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region System Info
 
+    /// <summary>Returns a list of detected GPU adapters with vendor and name information.</summary>
     [IpcInvoke("hyprism:system:gpuAdapters")]
     public List<GpuAdapterInfo> GetGpuAdapters()
         => Services.GetRequiredService<GpuDetectionService>().GetAdapters();
 
+    /// <summary>Returns the current operating system platform information.</summary>
     [IpcInvoke("hyprism:system:platform")]
     public PlatformInfo GetPlatform()
     {
@@ -791,15 +877,19 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region Console / Logs
 
+    /// <summary>Forwards an informational log message from the renderer to the .NET logger.</summary>
     [IpcSend("hyprism:console:log")]
     public void ConsoleLog(string msg) => Logger.Info("Renderer", msg);
 
+    /// <summary>Forwards a warning log message from the renderer to the .NET logger.</summary>
     [IpcSend("hyprism:console:warn")]
     public void ConsoleWarn(string msg) => Logger.Warning("Renderer", msg);
 
+    /// <summary>Forwards an error log message from the renderer to the .NET logger.</summary>
     [IpcSend("hyprism:console:error")]
     public void ConsoleError(string msg) => Logger.Error("Renderer", msg);
 
+    /// <summary>Returns the most recent log lines from the .NET logger ring buffer.</summary>
     [IpcInvoke("hyprism:logs:get")]
     public List<string> GetLogs(GetLogsRequest? req)
         => Logger.GetRecentLogs(req?.Count ?? 100);
@@ -808,20 +898,24 @@ public class IpcService(IServiceProvider services) : IpcServiceBase(services)
 
     #region File Dialogs
 
+    /// <summary>Opens a native folder picker dialog and returns the selected path, or an empty string if cancelled.</summary>
     [IpcInvoke("hyprism:file:browseFolder", 300_000)]
     public async Task<string> BrowseFolder(string? initialPath)
         => await Services.GetRequiredService<IFileDialogService>()
                .BrowseFolderAsync(string.IsNullOrEmpty(initialPath) ? null : initialPath) ?? "";
 
+    /// <summary>Opens a native file picker filtered to Java executables and returns the selected path.</summary>
     [IpcInvoke("hyprism:file:browseJavaExecutable", 300_000)]
     public async Task<string> BrowseJavaExecutable()
         => await Services.GetRequiredService<IFileDialogService>().BrowseJavaExecutableAsync() ?? "";
 
+    /// <summary>Opens a native file picker for JAR/ZIP files and returns the selected paths.</summary>
     [IpcInvoke("hyprism:file:browseModFiles")]
     public async Task<string[]> BrowseModFiles()
         => await Services.GetRequiredService<IFileDialogService>().BrowseModFilesAsync()
            ?? Array.Empty<string>();
 
+    /// <summary>Returns whether the file at the given absolute path exists on disk.</summary>
     [IpcInvoke("hyprism:file:exists")]
     public bool FileExists(string path)
         => !string.IsNullOrWhiteSpace(path) && File.Exists(path);

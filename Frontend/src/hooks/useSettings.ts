@@ -23,6 +23,9 @@ export {
   sanitizeAdvancedJavaArguments,
 } from '@/lib/java-utils';
 
+/**
+ * A GitHub contributor record as returned by the GitHub Contributors API.
+ */
 export interface Contributor {
   login: string;
   avatar_url: string;
@@ -30,6 +33,9 @@ export interface Contributor {
   contributions: number;
 }
 
+/**
+ * Union type of all valid settings page tab identifiers.
+ */
 export type SettingsTab = 
   | 'general' 
   | 'downloads' 
@@ -43,6 +49,9 @@ export type SettingsTab =
   | 'about' 
   | 'developer';
 
+/**
+ * Options accepted by the {@link useSettings} hook.
+ */
 export interface UseSettingsOptions {
   launcherBranch: string;
   onLauncherBranchChange: (branch: string) => void;
@@ -53,9 +62,7 @@ export interface UseSettingsOptions {
   onClose?: () => void;
 }
 
-// ============================================================================
-// IPC Helper Functions
-// ============================================================================
+// #region IPC Helper Functions
 
 async function GetCloseAfterLaunch(): Promise<boolean> { 
   return (await ipc.settings.get()).closeAfterLaunch ?? false; 
@@ -153,16 +160,27 @@ async function GetInstalledVersionsDetailed(): Promise<InstalledVersionInfo[]> {
   }));
 }
 
+// #endregion
 
-// ============================================================================
-// Environment Variable Helpers
-// ============================================================================
+// #region Environment Variable Helpers
 
+/**
+ * Predefined environment variable presets for common Linux/graphics configurations.
+ */
 export const ENV_PRESETS = {
   forceX11: 'SDL_VIDEODRIVER=x11',
   disableVkLayers: 'VK_LOADER_LAYERS_DISABLE=all',
 } as const;
 
+/**
+ * Adds or removes a preset environment variable from the given space-separated
+ * env-vars string.
+ *
+ * @param currentVars - The current space-separated `KEY=VALUE` string.
+ * @param preset - The preset string to toggle (e.g. `"SDL_VIDEODRIVER=x11"`).
+ * @param enabled - `true` to add the preset, `false` to remove it.
+ * @returns Updated space-separated env-vars string.
+ */
 export const toggleEnvPreset = (currentVars: string, preset: string, enabled: boolean): string => {
   const vars = currentVars.split(/\s+/).filter(v => v.trim());
   const withoutPreset = vars.filter(v => !v.startsWith(preset.split('=')[0] + '='));
@@ -170,6 +188,13 @@ export const toggleEnvPreset = (currentVars: string, preset: string, enabled: bo
   return withoutPreset.join(' ');
 };
 
+/**
+ * Validates a space-separated list of `KEY=VALUE` environment variable pairs.
+ *
+ * @param value - The raw env-vars string to validate.
+ * @param t - i18next translation function for localized error messages.
+ * @returns `{ valid, error }` — `valid` is `false` and `error` is non-empty if validation fails.
+ */
 export const validateEnvVars = (value: string, t: (key: string) => string): { valid: boolean; error: string } => {
   if (!value.trim()) return { valid: true, error: '' };
 
@@ -184,10 +209,18 @@ export const validateEnvVars = (value: string, t: (key: string) => string): { va
   return { valid: true, error: '' };
 };
 
-// ============================================================================
-// Main Hook
-// ============================================================================
+// #endregion
 
+// #region Main Hook
+
+/**
+ * Manages all launcher settings page state: tab selection, settings loading,
+ * persistence, Java configuration, background, GPU, network, data management,
+ * and all handler callbacks.
+ *
+ * @param options - Hook options. See {@link UseSettingsOptions}.
+ * @returns The complete settings state and handler bag.
+ */
 export function useSettings(options: UseSettingsOptions) {
   const { t, i18n } = useTranslation();
   const { accentColor, accentTextColor, setAccentColor: setAccentColorContext } = useAccentColor();
@@ -276,9 +309,7 @@ export function useSettings(options: UseSettingsOptions) {
   // Glass control class
   const gc = 'glass-control-solid';
 
-  // ============================================================================
-  // Effects
-  // ============================================================================
+  // #region Effects
 
   // Notify parent about moving state change
   useEffect(() => {
@@ -491,9 +522,9 @@ export function useSettings(options: UseSettingsOptions) {
     };
   }, [options.onClose, showAllBackgrounds]);
 
-  // ============================================================================
-  // Handlers
-  // ============================================================================
+  // #endregion
+
+  // #region Handlers
 
   const handleLanguageSelect = useCallback(async (langCode: Language) => {
     setIsLanguageOpen(false);
@@ -898,4 +929,6 @@ export function useSettings(options: UseSettingsOptions) {
     t,
     i18n,
   };
+  // #endregion
 }
+// #endregion

@@ -26,10 +26,11 @@ import { ContentTab } from '@/pages/instances/ContentTab';
 import { WorldsTab } from '@/pages/instances/WorldsTab';
 import { BulkUpdateModal, BulkDeleteModal } from '@/pages/instances/BulkOperationModals';
 
-// ============================================================================
-// Props
-// ============================================================================
+// #region Props
 
+/**
+ * Props for the {@link InstancesPage} component.
+ */
 interface InstancesPageProps {
   onInstanceDeleted?: () => void;
   onInstanceSelected?: () => void;
@@ -54,10 +55,17 @@ interface InstancesPageProps {
   hasDownloadSources?: boolean;
 }
 
-// ============================================================================
-// Component
-// ============================================================================
+// #endregion
 
+// #region Component
+
+/**
+ * Full-page component that displays the installed Hytale instances list,
+ * mod management tabs (content/browse/worlds), download progress overlays,
+ * and all associated modals.
+ *
+ * @param props - See {@link InstancesPageProps}.
+ */
 export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
   const {
     progress = 0,
@@ -571,3 +579,5 @@ export const InstancesPage: React.FC<InstancesPageProps> = (props) => {
     </motion.div>
   );
 };
+
+// #endregion

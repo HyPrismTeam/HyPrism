@@ -12,6 +12,7 @@ namespace HyPrism.Services.User;
 /// </summary>
 public class ProfileManagementService : IProfileManagementService
 {
+    #region Fields and Constructor
     private readonly string _appDir;
     private readonly IConfigService _configService;
     private readonly ISkinService _skinService;
@@ -50,6 +51,7 @@ public class ProfileManagementService : IProfileManagementService
         PropertyNameCaseInsensitive = true,
         WriteIndented = true
     };
+    #endregion
 
     /// <summary>Returns the path to the profile cache file inside the profiles folder.</summary>
     private string GetProfileCachePath() => Path.Combine(GetProfilesFolder(), "profiles.json");
@@ -769,7 +771,7 @@ public class ProfileManagementService : IProfileManagementService
         return UtilityService.GetProfilesRoot(_appDir);
     }
 
-    // ========== Private Helper Methods ==========
+    #region Private Helper Methods
     
     /// <summary>
     /// Gets the path to a profile's mods folder.
@@ -1022,4 +1024,5 @@ export HYPRISM_PROFILE_ID=""{profile.Id}""
     {
         UtilityService.CopyDirectory(sourceDir, destDir);
     }
+    #endregion
 }

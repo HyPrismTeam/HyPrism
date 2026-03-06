@@ -2,19 +2,38 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ipc, send, type InstanceInfo } from '@/lib/ipc';
 
+/** Interval in milliseconds at which the progress flush timer ticks. */
 const FLUSH_INTERVAL_MS = 1000;
 
+/**
+ * Options passed into the {@link useGameSession} hook.
+ */
 export interface UseGameSessionOptions {
+  /** Ref to the currently selected instance; used to resolve the running instance ID after launch. */
   selectedInstanceRef: React.MutableRefObject<InstanceInfo | null>;
+  /** Callback to reload the instance list from the backend. */
   refreshInstances: () => Promise<void>;
+  /** The currently running launcher version string. */
   launcherVersion: string;
 }
 
+/**
+ * Parameters for starting a game download/launch operation.
+ */
 export interface StartDownloadOptions {
+  /** The ID of the instance to download/launch. */
   instanceId: string;
+  /** Whether to launch the game automatically after the download completes. */
   launchAfterDownload?: boolean;
 }
 
+/**
+ * Manages game session lifecycle: download progress, game running state,
+ * IPC event subscriptions, and related action handlers.
+ *
+ * @param options - See {@link UseGameSessionOptions}.
+ * @returns Game session state and handler functions.
+ */
 export function useGameSession({
   selectedInstanceRef,
   refreshInstances,

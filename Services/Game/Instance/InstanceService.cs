@@ -849,7 +849,7 @@ public class InstanceService : IInstanceService
             });
         }
 
-        // --- Primary: flat structure — {root}/{guid}/ ---
+        // Primary: flat structure — {root}/{guid}/
         foreach (var folder in Directory.GetDirectories(root))
         {
             var dirName = Path.GetFileName(folder);
@@ -863,7 +863,7 @@ public class InstanceService : IInstanceService
             ProcessFolder(folder, null);
         }
 
-        // --- Legacy fallback: branch subdirectories — {root}/{branch}/{...}/ ---
+        // Legacy fallback: branch subdirectories — {root}/{branch}/{...}/
         foreach (var branch in new[] { "release", "pre-release" })
         {
             var branchDir = Path.Combine(root, branch);

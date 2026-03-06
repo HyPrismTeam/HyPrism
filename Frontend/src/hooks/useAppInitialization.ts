@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ipc } from '@/lib/ipc';
 
-// Stub — no IPC channel exists yet for Rosetta check
+/**
+ * Checks whether Rosetta 2 needs to be installed (macOS only).
+ * This is a stub — no IPC channel exists yet; always resolves to `null` on non-macOS platforms.
+ * @returns Rosetta install instructions, or `null` if not needed / not applicable.
+ */
 const CheckRosettaStatus = async (): Promise<{
   NeedsInstall: boolean;
   Message: string;
@@ -9,6 +13,13 @@ const CheckRosettaStatus = async (): Promise<{
   TutorialUrl?: string;
 } | null> => null;
 
+/**
+ * Performs application initialization on first mount: loads settings, profile,
+ * checks onboarding status, parses Rosetta warnings, and hydrates launcher-level state.
+ *
+ * @returns Application-level state including profile info, background mode, mute state,
+ *   onboarding visibility, and reload/refresh helpers.
+ */
 export function useAppInitialization() {
   const [username, setUsername] = useState('HyPrism');
   const [uuid, setUuid] = useState('');

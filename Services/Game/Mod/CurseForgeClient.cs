@@ -13,6 +13,8 @@ namespace HyPrism.Services.Game.Mod;
 /// </summary>
 internal sealed class CurseForgeClient
 {
+    #region Fields and Constructor
+
     private const string ApiBaseUrl = "https://api.curseforge.com";
 
     /// <summary>Hytale game identifier on CurseForge.</summary>
@@ -39,9 +41,9 @@ internal sealed class CurseForgeClient
         _getApiKey = getApiKey;
     }
 
-    // -------------------------------------------------------------------------
-    // Public helpers
-    // -------------------------------------------------------------------------
+    #endregion
+
+    #region Public Helpers
 
     /// <summary>
     /// Returns <c>true</c> when a CurseForge API key is configured; otherwise logs a warning and returns <c>false</c>.
@@ -153,9 +155,9 @@ internal sealed class CurseForgeClient
         return null;
     }
 
-    // -------------------------------------------------------------------------
-    // Static helper
-    // -------------------------------------------------------------------------
+    #endregion
+
+    #region Static Helper
 
     /// <summary>
     /// Builds a deterministic edge.forgecdn.net CDN URL from the numeric file ID and file name.
@@ -174,4 +176,6 @@ internal sealed class CurseForgeClient
         var encodedFileName = Uri.EscapeDataString(fileName.Trim());
         return $"https://edge.forgecdn.net/files/{firstPart}/{secondPart}/{encodedFileName}";
     }
+
+    #endregion
 }

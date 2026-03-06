@@ -13,17 +13,33 @@ import type { GcMode, RuntimeMode } from '@/types/java';
 
 export { formatRamLabel };
 
-// IPC helpers
+// #region IPC Helpers
+/**
+ * Checks whether a file exists at the given path.
+ * @param path - Absolute file system path to check.
+ * @returns `true` if the file exists, `false` otherwise.
+ */
 async function FileExists(path: string): Promise<boolean> { return await ipc.file.exists(path); }
+/**
+ * Opens a native file picker pre-filtered to Java executables.
+ * @returns The selected file path, or an empty string if the user cancelled.
+ */
 async function BrowseJavaExecutable(): Promise<string> { return (await ipc.file.browseJavaExecutable()) ?? ''; }
+// #endregion
 
+/**
+ * Options accepted by the {@link useJavaSettings} hook.
+ */
 interface UseJavaSettingsOptions {
   systemMemoryMb: number;
 }
 
 /**
- * Hook to manage all Java-related settings.
- * Consolidates RAM sliders, GC mode, runtime mode, custom path logic.
+ * Manages all Java runtime settings: maximum/initial RAM allocation, GC mode,
+ * runtime selection (bundled vs custom), and the custom Java path.
+ *
+ * @param options - System memory available, used to cap the maximum allocatable RAM.
+ * @returns Java settings state, computed limits, setters, and action handlers.
  */
 export function useJavaSettings({ systemMemoryMb }: UseJavaSettingsOptions) {
   const { t } = useTranslation();
@@ -42,7 +58,10 @@ export function useJavaSettings({ systemMemoryMb }: UseJavaSettingsOptions) {
   const [javaArgumentsError, setJavaArgumentsError] = useState('');
 
   /**
-   * Initialize Java settings from stored config
+   * Initialises all Java settings state from a persisted settings snapshot.
+   * Call this once after loading settings from the backend.
+   *
+   * @param settingsSnapshot - A subset of the persisted settings object.
    */
   const loadFromSettings = useCallback((settingsSnapshot: {
     javaArguments?: string;

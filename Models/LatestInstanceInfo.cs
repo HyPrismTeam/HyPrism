@@ -7,6 +7,8 @@ namespace HyPrism.Services;
 /// </summary>
 public sealed class LatestInstanceInfo
 {
+    /// <summary>Latest installed game version number.</summary>
     public int Version { get; set; }
+    /// <summary>Timestamp when this version info was last updated.</summary>
     public DateTime UpdatedAt { get; set; }
 }

@@ -11,9 +11,7 @@ namespace HyPrism.Services.Game.Sources;
 /// </summary>
 internal static class MirrorSchemaInferrer
 {
-    // -------------------------------------------------------------------------
-    // URI helpers
-    // -------------------------------------------------------------------------
+    #region URI Helpers
 
     /// <summary>
     /// Produces a safe, lowercase identifier from the given <paramref name="uri"/>'s hostname
@@ -47,9 +45,9 @@ internal static class MirrorSchemaInferrer
         return host;
     }
 
-    // -------------------------------------------------------------------------
-    // MirrorMeta builders
-    // -------------------------------------------------------------------------
+    #endregion
+
+    #region MirrorMeta Builders
 
     /// <summary>
     /// Builds a <see cref="MirrorMeta"/> for mirrors that expose version info via
@@ -256,9 +254,9 @@ internal static class MirrorSchemaInferrer
         };
     }
 
-    // -------------------------------------------------------------------------
-    // JSON structure helpers
-    // -------------------------------------------------------------------------
+    #endregion
+
+    #region JSON Structure Helpers
 
     /// <summary>
     /// Inspects the <c>hytale</c> JSON node of a mirror index API response and returns
@@ -286,4 +284,5 @@ internal static class MirrorSchemaInferrer
         }
         return "flat";
     }
+    #endregion
 }

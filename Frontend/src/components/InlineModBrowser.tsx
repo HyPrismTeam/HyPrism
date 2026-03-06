@@ -20,8 +20,11 @@ import {
   ImageLightbox,
 } from '@/components/ui/Controls';
 
-// ------- Props -------
+// #region Props
 
+/**
+ * Props for the {@link InlineModBrowser} component.
+ */
 export interface InlineModBrowserProps {
   currentInstanceId?: string;
   installedModIds?: Set<string>;
@@ -31,8 +34,17 @@ export interface InlineModBrowserProps {
   refreshSignal?: number;
 }
 
-// ------- Component -------
+// #endregion
 
+// #region Component
+
+/**
+ * Inline mod browser panel embedded within the instances page.
+ * Provides CurseForge search, download queue, drag-and-drop import,
+ * and mod detail view.
+ *
+ * @param props - See {@link InlineModBrowserProps}.
+ */
 export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
   const { onBack } = props;
 
@@ -621,3 +633,4 @@ export const InlineModBrowser: React.FC<InlineModBrowserProps> = (props) => {
     </div>
   );
 };
+// #endregion

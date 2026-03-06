@@ -4,7 +4,11 @@ import type { InstalledVersionInfo, InstalledModInfo } from '@/types';
 import { getInstanceInstalledMods, checkInstanceModUpdates, uninstallInstanceMod } from './useInstanceActions';
 
 /**
- * Normalize backend mod payload casing and defaults.
+ * Normalizes raw backend mod payload objects, handling PascalCase and camelCase property names
+ * and converting numeric IDs from strings where needed.
+ *
+ * @param mods - Array of raw mod objects as returned by the IPC layer.
+ * @returns A normalized array of {@link InstalledModInfo} objects.
  */
 export function normalizeInstalledMods(mods: unknown[]): InstalledModInfo[] {
   return (mods || []).map((m: unknown) => {
@@ -42,6 +46,9 @@ export function normalizeInstalledMods(mods: unknown[]): InstalledModInfo[] {
   });
 }
 
+/**
+ * Options accepted by the {@link useModManager} hook.
+ */
 export interface UseModManagerOptions {
   selectedInstance: InstalledVersionInfo | null;
   setMessage: (msg: { type: 'success' | 'error'; text: string } | null) => void;
@@ -49,8 +56,11 @@ export interface UseModManagerOptions {
 }
 
 /**
- * Hook for managing installed mods state and operations.
- * Extracted from InstancesPage to reduce component complexity.
+ * Manages installed-mod state for the currently selected game instance,
+ * including loading, filtering, selection, update-checking, and deletion.
+ *
+ * @param options - See {@link UseModManagerOptions}.
+ * @returns The complete mod-manager state and handler bag.
  */
 export function useModManager({ selectedInstance, setMessage, t }: UseModManagerOptions) {
   const [installedMods, setInstalledMods] = useState<InstalledModInfo[]>([]);

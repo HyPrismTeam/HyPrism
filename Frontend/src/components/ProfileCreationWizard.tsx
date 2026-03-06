@@ -11,19 +11,24 @@ import { generateRandomNick } from '@/utils/randomNick';
 type WizardStep = 'choose-type' | 'official-auth' | 'unofficial-name' | 'done';
 type ErrorLevel = 'error' | 'warning';
 
-/** Offline nickname regex: 3-16 chars, English letters, digits, dash, underscore */
+/** Validation regex for offline usernames: 3–16 characters, ASCII letters, digits, `-`, and `_`. */
 const NICK_REGEX = /^[a-zA-Z0-9_-]{3,16}$/;
 
+/**
+ * Props for the {@link ProfileCreationWizard} component.
+ */
 interface ProfileCreationWizardProps {
     onComplete: (profile: Profile) => void;
     onCancel: () => void;
     initialStep?: WizardStep;
 }
 
+/** @returns A randomly generated offline username. */
 function generateRandomName(): string {
     return generateRandomNick();
 }
 
+/** Generates a random UUID v4 string. @returns A UUID v4 string in `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` format. */
 function generateUUID(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = (Math.random() * 16) | 0;
@@ -32,6 +37,12 @@ function generateUUID(): string {
     });
 }
 
+/**
+ * Multi-step wizard for creating a new launcher profile.
+ * Supports official Hytale authentication and offline (unofficial) name-only profiles.
+ *
+ * @param props - See {@link ProfileCreationWizardProps}.
+ */
 export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ onComplete, onCancel, initialStep = 'choose-type' }) => {
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
@@ -42,7 +53,7 @@ export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ on
     const [error, setError] = useState<string | null>(null);
     const [errorLevel, setErrorLevel] = useState<ErrorLevel>('error');
 
-    // --- Step: Choose Type ---
+    // #region Step: Choose Type
     const handleChooseOfficial = () => {
         setStep('official-auth');
         setError(null);
@@ -53,7 +64,9 @@ export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ on
         setError(null);
     };
 
-    // --- Step: Official Auth ---
+    // #endregion
+
+    // #region Step: Official Auth
     const handleStartAuth = async () => {
         setIsLoading(true);
         setError(null);
@@ -91,7 +104,9 @@ export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ on
         }
     };
 
-    // --- Step: Unofficial Name ---
+    // #endregion
+
+    // #region Step: Unofficial Name
     const isNickValid = useMemo(() => NICK_REGEX.test(name.trim()), [name]);
 
     const handleCreateUnofficial = async () => {
@@ -136,6 +151,7 @@ export const ProfileCreationWizard: React.FC<ProfileCreationWizardProps> = ({ on
         exit: { opacity: 0, x: -40 },
     };
 
+    // #endregion
     return (
         <div className="flex flex-col items-center justify-center h-full px-8 py-6">
             <AnimatePresence mode="wait">

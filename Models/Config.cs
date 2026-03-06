@@ -5,8 +5,11 @@ namespace HyPrism.Models;
 
 public class Config
 {
+    /// <summary>Launcher config schema version string.</summary>
     public string Version { get; set; } = "2.0.0";
+    /// <summary>Unique machine/installation identifier (UUID v4).</summary>
     public string UUID { get; set; } = "";
+    /// <summary>Offline display name shown in-game and on the launcher.</summary>
     public string Nick { get; set; } = "Hyprism";
     
     /// <summary>
@@ -49,7 +52,9 @@ public class Config
     [Obsolete("Use SelectedInstanceId and Instances instead")]
     public int SelectedVersion { get; set; } = 0;
     
+    /// <summary>Custom root directory for game instances. Empty string means the default OS-specific path is used.</summary>
     public string InstanceDirectory { get; set; } = "";
+    /// <summary>Whether the launcher background music is enabled.</summary>
     public bool MusicEnabled { get; set; } = true;
     
     /// <summary>
