@@ -679,8 +679,9 @@ do_flatpak_publish() {
     fi
 
     # Copy publish output into manifest 'bundle' source (manifest expects a 'bundle' dir)
-local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
+    local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
     local bundle_dir="$manifest_dir/bundle"
+    local manifest_name="io.github.hyprismteam.HyPrism.yml"
     rm -rf "$bundle_dir"
     mkdir -p "$bundle_dir"
     cp -a "$publish_dir/." "$bundle_dir/"
@@ -701,7 +702,7 @@ local manifest_dir="$PROJECT_ROOT/Properties/linux/flatpak"
     rm -rf "$build_dir"
     mkdir -p "$build_dir"
 
-    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" io.github.hyprismteam.HyPrism.yml); then
+    if ! (cd "$manifest_dir" && flatpak-builder --force-clean --repo="$repo_dir" --install-deps-from=flathub --install-deps-from=flathub-beta "$build_dir" "$manifest_name"); then
         log_error "flatpak-builder failed for $arch"
         rm -rf "$bundle_dir" "$build_dir"
         FAIL_COUNT=$((FAIL_COUNT + 1))
