@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.HyPrismTeam.HyPrism</id>
+  <id>io.github.hyprismteam.HyPrism</id>
   <name>HyPrism</name>
   <summary>Cross-platform Hytale launcher and mod manager</summary>
-  <icon type="cached">io.github.HyPrismTeam.HyPrism</icon>
+  <icon type="cached">io.github.hyprismteam.HyPrism</icon>
   <metadata_license>MIT</metadata_license>
   <project_license>MIT</project_license>
 
@@ -20,17 +20,17 @@
     </ul>
   </description>
 
-  <launchable type="desktop-id">io.github.HyPrismTeam.HyPrism.desktop</launchable>
+  <launchable type="desktop-id">io.github.hyprismteam.HyPrism.desktop</launchable>
 
   <screenshots>
     <screenshot type="default">
       <caption>HyPrism launcher dashboard</caption>
-      <image>https://raw.githubusercontent.com/HyPrismTeam.HyPrism/HyPrism/main/assets/screenshot.png</image>
+      <image>https://raw.githubusercontent.com/hyprismteam.HyPrism/HyPrism/main/assets/screenshot.png</image>
     </screenshot>
   </screenshots>
 
-  <url type="homepage">https://github.com/HyPrismTeam.HyPrism/HyPrism</url>
-  <url type="bugtracker">https://github.com/HyPrismTeam.HyPrism/HyPrism/issues</url>
+  <url type="homepage">https://github.com/hyprismteam.HyPrism/HyPrism</url>
+  <url type="bugtracker">https://github.com/hyprismteam.HyPrism/HyPrism/issues</url>
   <developer_name>HyPrism Team</developer_name>
 
   <provides>
