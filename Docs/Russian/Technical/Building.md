@@ -75,6 +75,8 @@ dotnet publish -c Release -r linux-x64
 ```
 
 Упаковка Flatpak теперь генерируется через `Scripts/publish.sh` и Electron Builder.
+
+**CI-сборка:** В GitHub Actions pipeline для Linux теперь запускается цель `flatpak` вместе с остальными, поэтому .flatpak автоматически создаётся и загружается в артефакты воркфлоу. В релизе этот файл прикрепляется наряду с AppImage, DEB, RPM и TAR.
 Linux-иконки генерируются из `Frontend/public/icon.png` в `Build/icons/` во время публикации.
 Источник AppStream-метаданных остаётся `Properties/linux/io.github.hyprismteam.HyPrism.metainfo.xml`.
 
