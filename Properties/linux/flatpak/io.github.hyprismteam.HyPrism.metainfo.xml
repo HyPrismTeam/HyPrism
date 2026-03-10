@@ -5,8 +5,10 @@
   <name>HyPrism</name>
   <summary>Cross-platform Hytale launcher and mod manager</summary>
   <developer_name>HyPrism Team</developer_name>
+  <icon type="stock">io.github.hyprismteam.HyPrism</icon>
   <url type="vcs-browser">https://github.com/hyprismteam/HyPrism</url>
   <url type="bugtracker">https://github.com/hyprismteam/HyPrism/issues</url>
+  <url type="homepage">https://hyprismteam.github.io/hyprism-site/</url>
 
   <content_rating type="oars-1.0" />
     <screenshots>
@@ -51,10 +53,6 @@
   </branding>
   <project_license>GPL-3.0</project_license>
   <metadata_license>CC0-1.0</metadata_license>
-
-  <url type="homepage">https://hyprismteam.github.io/hyprism-site/</url>
-  <url type="bugtracker">https://github.com/hyprismteam.HyPrism/HyPrism/issues</url>
-  <developer_name>HyPrism Team</developer_name>
 
   <categories>
     <category>Game</category>
