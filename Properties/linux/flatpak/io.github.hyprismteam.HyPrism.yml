@@ -4,32 +4,21 @@ runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
 base-version: '25.08'
-command: hyprism-launcher-wrapper
-
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.node22
-
-add-extensions:
-  org.freedesktop.Platform.codecs_extra.i386:
-    directory: lib/i386-linux-gnu/codecs-extra
-    version: '25.08-extra'
-    autodelete: false
-    add-ld-path: lib
-      
-build-options:
-  append-path: /usr/lib/sdk/node22/bin
+command: hyprism-launcher-wrapper.sh
 
 finish-args:
   - --share=ipc
-  - --socket=fallback-x11
   - --socket=wayland
+  - --socket=fallback-x11
   - --socket=pulseaudio
   - --share=network
   - --device=dri
+  - --device=input
   - --talk-name=org.freedesktop.Notifications
   - --env=LD_LIBRARY_PATH=/app/lib
   - --env=ELECTRON_TRASH=gio
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  - --env=ELECTRON_OZONE_PLATFORM_HINT=auto
 
 modules:
 
@@ -42,7 +31,7 @@ modules:
       - cp -R wwwroot /app/wwwroot || cp -R linux-unpacked/wwwroot /app/wwwroot && rm -rf linux-unpacked/wwwroot 
       - cp -R linux-unpacked/* /app/HyPrism
       - chmod +x /app/HyPrism/chrome-sandbox /app/HyPrism/HyPrism
-      - install -Dm755 Properties/linux/flatpak/hyprism-launcher-wrapper.sh /app/bin/hyprism-launcher-wrapper
+      - install -Dm755 Properties/linux/flatpak/hyprism-launcher-wrapper.sh /app/bin/hyprism-launcher-wrapper.sh
       - install -Dm644 Properties/linux/flatpak/io.github.hyprismteam.HyPrism.png /app/share/icons/hicolor/256x256/apps/io.github.hyprismteam.HyPrism.png
       - install -Dm644 Properties/linux/flatpak/io.github.hyprismteam.HyPrism.desktop /app/share/applications/io.github.hyprismteam.HyPrism.desktop
       - install -Dm644 Properties/linux/flatpak/io.github.hyprismteam.HyPrism.metainfo.xml /app/share/metainfo/io.github.hyprismteam.HyPrism.metainfo.xml

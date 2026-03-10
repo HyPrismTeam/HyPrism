@@ -5,6 +5,8 @@
   <name>HyPrism</name>
   <summary>Cross-platform Hytale launcher and mod manager</summary>
   <developer_name>HyPrism Team</developer_name>
+  <url type="vcs-browser">https://github.com/hyprismteam/HyPrism</url>
+  <url type="bugtracker">https://github.com/hyprismteam/HyPrism/issues</url>
 
   <content_rating type="oars-1.0" />
     <screenshots>
@@ -13,20 +15,20 @@
       <image>https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/preview_launcher.png</image>
     </screenshot>
     <screenshot>
-      <image>
-        https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/instances.png</image>
+      <caption>Instance management with mod browser and world saves</caption>
+      <image>https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/instances.png</image>
     </screenshot>
     <screenshot>
-      <image>
-        https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/news.png</image>
+      <caption>News feed with latest Hytale updates and announcements</caption>
+      <image>https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/news.png</image>
     </screenshot>
     <screenshot>
-      <image>
-        https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/profiles.png</image>
+      <caption>User profile management and customization</caption>
+      <image>https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/profiles.png</image>
     </screenshot>
     <screenshot>
-      <image>
-        https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/settings.png</image>
+      <caption>Comprehensive settings with GPU selection and mod management</caption>
+      <image>https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/dev/Frontend/public/settings.png</image>
     </screenshot>
   </screenshots>
 
