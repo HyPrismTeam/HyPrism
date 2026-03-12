@@ -45,12 +45,8 @@ fi
 # header=$(printf '%s' "$header" | sed '/^modules:$/d')
 
 # capture modules section from module file
-# replace placeholders on url/sha lines, remove leading blank then drop first line (modules:)
-modules=$(sed \
-    -e "s|HYPRISM_MAIN_BRANCH|$MAIN_SHA|" \
-    "$MODULE_FILE" \
-  | sed '1{/^$/d}' \
-  | sed '1d')
+# replace placeholders of commit hashes
+sed -i -e "s|HYPRISM_MAIN_BRANCH|$MAIN_SHA|" "$MANIFEST"
 
 # # write combined manifest
 # {
