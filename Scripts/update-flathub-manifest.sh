@@ -24,69 +24,84 @@ if [[ -z "$MAIN_SHA" || "$MAIN_SHA" == "null" ]]; then
     exit 1
 fi
 
-
-# find the first asset matching our pattern
-read -r url name < <(curl -s "$API" \
-    | jq -r '.assets[] |
-        select(.name | test("HyPrism-linux-x64-.*\\.tar\\.xz$")) |
-        "\(.browser_download_url) \(.name)"' | head -n1)
-
-if [[ -z "$url" || -z "$name" ]]; then
-    echo "error: unable to locate HyPrism-linux-x64 archive in latest release" >&2
-    exit 1
-fi
-
-echo "Latest asset: $name"
-
-# download the asset to a temporary directory
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
-
-curl -L -o "$tmpdir/$name" "$url"
-
-# compute sha256
-sha=$(sha256sum "$tmpdir/$name" | cut -d' ' -f1)
-
-echo "computed sha256: $sha"
-
 # build final manifest by combining header and module fragments
 # header comes from flatpak yaml, modules from flathub module file
-FLATPAK="$(dirname "$MANIFEST")/../flatpak/io.github.hyprismteam.HyPrism.yml"
-MODULE_FILE="$(dirname "$MANIFEST")/io.github.hyprismteam.HyPrism.module.yml"
+# FLATPAK="$(dirname "$MANIFEST")/../flatpak/io.github.hyprismteam.HyPrism.yml"
+# MODULE_FILE="$(dirname "$MANIFEST")/io.github.hyprismteam.HyPrism.module.yml"
 
-if [[ ! -f "$FLATPAK" ]]; then
-    echo "error: flatpak header file not found: $FLATPAK" >&2
-    exit 1
-fi
-if [[ ! -f "$MODULE_FILE" ]]; then
-    echo "error: module file not found: $MODULE_FILE" >&2
-    exit 1
-fi
+# if [[ ! -f "$FLATPAK" ]]; then
+#     echo "error: flatpak header file not found: $FLATPAK" >&2
+#     exit 1
+# fi
+# if [[ ! -f "$MODULE_FILE" ]]; then
+#     echo "error: module file not found: $MODULE_FILE" >&2
+#     exit 1
+# fi
 
-# capture header (everything before the modules: directive)
-# use sed to stop before printing the modules: line
-header=$(sed '/^modules:/q' "$FLATPAK")
-# remove any trailing modules: if accidentally included
-header=$(printf '%s' "$header" | sed '/^modules:$/d')
+# # capture header (everything before the modules: directive)
+# # use sed to stop before printing the modules: line
+# header=$(sed '/^modules:/q' "$FLATPAK")
+# # remove any trailing modules: if accidentally included
+# header=$(printf '%s' "$header" | sed '/^modules:$/d')
 
 # capture modules section from module file
-# replace placeholders on url/sha lines, remove leading blank then drop first line (modules:)
-modules=$(sed \
-    -e "s|HYPRISM_RELEASE_URL|$url|" \
-    -e "s|HYPRISM_RELEASE_SHA256|$sha|" \
-    -e "s|HYPRISM_MAIN_BRANCH|$MAIN_SHA|" \
-    "$MODULE_FILE" \
-  | sed '1{/^$/d}' \
-  | sed '1d')
+# replace placeholders of commit hashes
+sed -i -e "s|HYPRISM_MAIN_BRANCH|$MAIN_SHA|" "$MANIFEST"
 
-# write combined manifest
-{
-    printf '%s
-' "$header"
-    printf 'modules:
-'
-    printf '%s
-' "$modules"
-} >"$MANIFEST"
+# # write combined manifest
+# {
+#     printf '%s
+# ' "$header"
+#     printf 'modules:
+# '
+#     printf '%s
+# ' "$modules"
+# } >"$MANIFEST"
 
-echo "Manifest regenerated and updated: $MANIFEST"
+# echo "Manifest regenerated and updated: $MANIFEST"
+
+echo "Generating nuget sources file for Flathub manifest..."
+
+runtime=$(grep -m1 '^runtime:' "$MANIFEST" | awk '{print $NF}')
+# the manifest keeps the runtime version in a separate field; pull that out so we can
+# use it when installing the SDK extension locally.  strip surrounding quotes if any.
+runtime_version=$(grep -m1 '^runtime-version:' "$MANIFEST" | awk '{print $NF}' | tr -d "'\"")
+
+# the manifest lists the full extension id (e.g. org.freedesktop.Sdk.Extension.dotnet10)
+# but the Python generator expects just the numeric version ("10").
+raw_dotnet=$(grep -m1 'org.freedesktop.Sdk.Extension.dotnet' "$MANIFEST" | awk '{print $NF}')
+# strip prefix to obtain the version number
+# shell parameter expansion removes everything up to the last ".dotnet".
+dotnet=${raw_dotnet##*.dotnet}
+
+echo "Extracted runtime: $runtime"
+echo "Extracted dotnet extension id: $raw_dotnet"
+echo "Using dotnet version: $dotnet"
+
+flatpak install -y --user org.freedesktop.Sdk.Extension.dotnet$dotnet/x86_64/$runtime_version
+
+# When invoking the generator we also need to tell it which freedesktop runtime
+# version to use; otherwise it defaults to 24.08 and will restore packages inside
+# the wrong runtime (see the earlier error message).  Use the version extracted
+# from the manifest.
+# NOTE: the Flatpak "runtime" field (e.g. org.freedesktop.Platform) is *not* a
+# .NET runtime identifier, so we don't pass it to the generator.  The CLI's
+# `--runtime` option is intended for dotnet RIDs such as linux-x64.
+# compute absolute path to the project file (script may be run from any cwd)
+project_file="$(dirname "${BASH_SOURCE[0]}")/../HyPrism.csproj"
+
+echo "Executing: python3 Properties/linux/flathub/flatpak-dotnet-generator.py \
+    --only-arches x86_64 \
+    --freedesktop \"$runtime_version\" \
+    --dotnet \"$dotnet\" \
+    Properties/linux/flathub/nuget-sources.json \"$project_file\""
+
+python3 Properties/linux/flathub/flatpak-dotnet-generator.py \
+    --only-arches x86_64 \
+    --freedesktop "$runtime_version" \
+    --dotnet "$dotnet" \
+    Properties/linux/flathub/nuget-sources.json "$project_file"
+
+pipx install git+https://github.com/flatpak/flatpak-builder-tools.git#subdirectory=node
+
+flatpak-node-generator --output "Properties/linux/flathub/generated-sources.json" npm Frontend/package-lock.json

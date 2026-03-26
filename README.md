@@ -1,4 +1,4 @@
-<img src="Frontend/src/assets/images/preview_logo.png" alt="HyPrism Logo" height="128" />
+<img src="https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/main/Frontend/src/assets/images/preview_logo.png" alt="HyPrism Logo" height="128" />
 
   *A multiplatform Hytale launcher with mod manager and more!*
 
@@ -11,8 +11,8 @@
 
 > Disclaimer: HyPrism has no any connection to [PrismLauncher](https://github.com/PrismLauncher/PrismLauncher). HyPrism is an application that is being developed **INDEPENDENTLY** of the PrismLauncher project or its team. Thank you for your understanding
 
-<img src="Frontend/public/preview_launcher.png" alt="HyPrism Dashboard"/>
-<p align='center'><img width='400px' src="Frontend/public/news.png" alt="HyPrism News"/><img width='400px' src="Frontend/public/profiles.png" alt="HyPrism Profiles"/><img width='400px' src="Frontend/public/settings.png" alt="HyPrism Settings"/></p>
+<img src="https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/main/Frontend/public/preview_launcher.png" alt="HyPrism Dashboard"/>
+<p align='center'><img width='400px' src="https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/main/Frontend/public/news.png" alt="HyPrism News"/><img width='400px' src="https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/main/Frontend/public/profiles.png" alt="HyPrism Profiles"/><img width='400px' src="https://raw.githubusercontent.com/hyprismteam/HyPrism/refs/heads/main/Frontend/public/settings.png" alt="HyPrism Settings"/></p>
 
 ## Installation
 
@@ -26,6 +26,7 @@ Downloads are available in [Releases](https://github.com/yyyumeniku/HyPrism/rele
 
 **Requirements:**
 - .NET 10.0 SDK
+- Node.JS 20+
 
 **Build:**
 ```bash
